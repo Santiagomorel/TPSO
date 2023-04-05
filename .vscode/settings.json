@@ -1,6 +1,0 @@
-{
-    "files.associations": {
-        "hello.h": "c",
-        "valgrind.h": "c"
-    }
-}
