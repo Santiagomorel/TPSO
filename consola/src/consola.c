@@ -24,6 +24,7 @@ int main(int argc, char *argv[]) {
     // config_destroy(config);
     // hello_world();
     funcion("Hola Mundo", 42);
+    printf("test\n");
     return 0;
 }
 
