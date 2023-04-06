@@ -22,7 +22,7 @@ int main(int argc, char *argv[]) {
     // dictionary_iterator(config->properties, print_key_and_value);
 
     // config_destroy(config);
-    // hello_world();
+    hello_world();
     funcion("Hola Mundo", 42);
     printf("test\n");
     return 0;

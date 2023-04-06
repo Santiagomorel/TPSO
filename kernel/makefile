@@ -77,6 +77,9 @@ $(sort $(dir $(BIN) $(OBJS))):
 
 
 ################################################################################
+.PHONY: default
+default: $(BIN)
+	./$(BIN) $(ARGS)
 
 .PHONY: start
 start: $(BIN)
