@@ -77,6 +77,11 @@ $(sort $(dir $(BIN) $(OBJS))):
 
 
 ################################################################################
+.PHONY: files
+files:
+	mkdir config
+	mkdir runlogs
+
 .PHONY: default
 default: $(BIN)
 	./$(BIN) $(ARGS)

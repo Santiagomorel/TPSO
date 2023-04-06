@@ -14,8 +14,8 @@ CRELEASE=-O3 -Wall -DNDEBUG
 ARGS=./config/consola.config
 
 # Valgrind flags
-MEMCHECK_FLAGS=--track-origins=yes --log-file="runlog/memcheck.log"
-HELGRIND_FLAGS=--log-file="runlog/helgrind.log"
+MEMCHECK_FLAGS=--track-origins=yes --log-file="runlogs/memcheck.log"
+HELGRIND_FLAGS=--log-file="runlogs/helgrind.log"
 
 # Source files (*.c) to be excluded from tests compilation
 TEST_EXCLUDE=src/main.c
