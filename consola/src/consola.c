@@ -19,15 +19,17 @@ int main(int argc, char *argv[]) {
     // void print_key_and_value(char *key, void *value) {
     //     printf("%s => %s\n", key, (char *)value);
     // }
+    
     // dictionary_iterator(config->properties, print_key_and_value);
 
     // config_destroy(config);
     hello_world();
-    funcion("Hola Mundo", 42);
-    printf("test\n");
+    // funcion("Hola Mundo", 42);
+    // printf("test\n");
     return 0;
 }
 
 void funcion(char *str, int i) {
     VALGRIND_PRINTF_BACKTRACE("%s: %d\n", str, i);
     }
+
