@@ -7,6 +7,7 @@
         "readline.h": "c",
         "valgrind.h": "c",
         "utils_server.h": "c",
-        "assert.h": "c"
+        "assert.h": "c",
+        "stdio.h": "c"
     }
 }

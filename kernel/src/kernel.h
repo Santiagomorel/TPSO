@@ -5,6 +5,7 @@
 #include <utils/utils_server.h>
 #include <utils/utils_config.h>
 
+void load_config(void);
 typedef struct{
 
     char* ip_memoria;
@@ -34,5 +35,4 @@ Kernel_config kernel_config;
 t_log * kernel_logger;
 t_config * kernel_config_file;
 
-void load_config();
 #endif /* KERNEL_H_ */
