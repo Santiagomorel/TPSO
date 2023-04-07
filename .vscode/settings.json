@@ -1,0 +1,11 @@
+{
+    "C_Cpp.errorSquiggles": "disabled",
+    "files.associations": {
+        "consola.h": "c",
+        "utils.h": "c",
+        "utils_client.h": "c",
+        "readline.h": "c",
+        "valgrind.h": "c",
+        "utils_server.h": "c"
+    }
+}

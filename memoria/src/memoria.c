@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <commons/config.h>
-#include <utils/hello.h>
+#include <utils/utils.h>
 #include <valgrind/valgrind.h>
 
 void funcion(char *str, int i) {
