@@ -11,7 +11,7 @@
       "program": "${workspaceFolder}/bin/${workspaceFolderBasename}.out",
       "args": [
         // TODO: Agregar los argumentos que se necesiten
-        "kernel.config"
+        "./config/kernel.config"
       ],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
