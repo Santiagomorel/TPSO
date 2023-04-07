@@ -2,10 +2,8 @@
 
 t_log* logger;
 
-int iniciar_servidor(void)
+int iniciar_servidor(char* port)
 {
-	// Quitar esta línea cuando hayamos terminado de implementar la funcion
-	
 	int socket_servidor;
 
 	struct addrinfo hints, *servinfo, *p;
@@ -15,7 +13,7 @@ int iniciar_servidor(void)
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;
 
-	getaddrinfo(IP, PUERTO, &hints, &servinfo);
+	getaddrinfo(IP, port, &hints, &servinfo);
 	// Creamos el socket de escucha del servidor
 	socket_servidor = socket(servinfo->ai_family,
                          servinfo->ai_socktype,

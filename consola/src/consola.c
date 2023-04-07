@@ -8,7 +8,6 @@ int main(void)
 	int conexion;
 	char* ip;
 	char* puerto;
-	char* valor;
 
 	t_log* logger;
 	t_config* config;
@@ -17,23 +16,21 @@ int main(void)
 
 	logger = iniciar_logger();
 	log_info(logger, "Hola! Soy un log");
-	// Usando el logger creado previamente
-	// Escribi: "Hola! Soy un log"
 
 
 	/* ---------------- ARCHIVOS DE CONFIGURACION ---------------- */
 
 	config = iniciar_config();
-	ip = config_get_string_value(config,"IP");
-	puerto = config_get_string_value(config,"PUERTO");
-	valor = config_get_string_value(config,"CLAVE");
+	ip = config_get_string_value(config,"IP_KERNEL");
+	puerto = config_get_string_value(config,"PUERTO_KERNEL");
+
 
 	
 	// Usando el config creado previamente, leemos los valores del config y los 
 	// dejamos en las variables 'ip', 'puerto' y 'valor'
 
 	// Loggeamos el valor de config
-	log_info(logger,"IP: %s // port:%s // key:%s\n",ip,puerto,valor);
+	log_info(logger,"IP: %s // port:%s\n",ip,puerto);
 	/* ---------------- LEER DE CONSOLA ---------------- */
 	log_info(logger,"Ahora estas en la consola (guardando en tp0.log) ");
 	leer_consola(logger);
@@ -42,9 +39,12 @@ int main(void)
 
 	// ADVERTENCIA: Antes de continuar, tenemos que asegurarnos que el servidor esté corriendo para poder conectarnos a él
 	// Creamos una conexión hacia el servidor
+	log_info(logger,"Ahora saliste de la consola");
 	conexion = crear_conexion(ip, puerto); 
+	
 	// Enviamos al servidor el valor de CLAVE como mensaje
-	enviar_mensaje(valor,conexion);
+	enviar_mensaje(ip,conexion);
+	enviar_mensaje(puerto,conexion);
 	log_info(logger,"Mensaje enviado");
 	// Armamos y enviamos el paquete
 	log_info(logger,"Estas por mandar un paquete, todo lo que escribas lo recibira el server ");
@@ -87,6 +87,7 @@ void leer_consola(t_log* logger)
 	while(strcmp(leido, "")) {
 		log_info(logger, leido);
 		leido = readline("> ");
+		
 	}
 
 	// ¡No te olvides de liberar las lineas antes de regresar!

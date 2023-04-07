@@ -6,6 +6,7 @@
         "utils_client.h": "c",
         "readline.h": "c",
         "valgrind.h": "c",
-        "utils_server.h": "c"
+        "utils_server.h": "c",
+        "list.h": "c"
     }
 }

@@ -3,7 +3,7 @@
 int main(void) {
 	logger = log_create("runlogs/server.log", "Servidor", 1, LOG_LEVEL_TRACE);
 
-	int server_fd = iniciar_servidor();
+	int server_fd = iniciar_servidor(KERNEL_PORT);
 	log_info(logger, "Servidor listo para recibir al cliente");
 	int cliente_fd = esperar_cliente(server_fd);
 
