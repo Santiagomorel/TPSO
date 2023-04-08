@@ -27,6 +27,9 @@ int main(int argc, char ** argv)
     log_info(kernel_logger, "aca no llego si esta la funcion load config puesta");
     log_info(kernel_logger, "%s", kernel_config.ip_kernel);
     log_info(kernel_logger, "%s", kernel_config.puerto_kernel);
+
+
+    end_program(0/*cambiar por conexion*/, kernel_logger, kernel_config)
     return 0;
 }
 
@@ -54,4 +57,9 @@ void load_config(void){
     kernel_config.puerto_kernel                = config_get_string_value(kernel_config_file, "PUERTO_KERNEL");
     
     // log_info(kernel_logger, "config cargada en 'kernel_cofig_data'");
+}
+void end_program(int socket, t_log* log, t_config* config){
+    log_destroy(log);
+    config_destroy(config);
+    liberar_conexion(socket);
 }

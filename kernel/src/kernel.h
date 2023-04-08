@@ -6,6 +6,7 @@
 #include <utils/utils_config.h>
 
 void load_config(void);
+void end_program(int, t_log*, t_config*);
 typedef struct{
 
     char* ip_memoria;
