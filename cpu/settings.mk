@@ -1,5 +1,5 @@
 # Libraries
-LIBS=utils commons
+LIBS=utils commons readline
 
 
 # Custom libraries' paths

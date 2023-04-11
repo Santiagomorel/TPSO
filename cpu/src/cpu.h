@@ -1,4 +1,4 @@
-#ifndef CPU_H_
+#ifndef CPU
 #define CPU_H_
 
 #include<stdio.h>
@@ -7,10 +7,8 @@
 #include<commons/string.h>
 #include<commons/config.h>
 #include<readline/readline.h>
-//#include <cspecs/cspec.h>
-
-
 #include<utils/utils_client.h>
+#include <valgrind/valgrind.h>
 
 
 t_log* iniciar_logger(void);
@@ -19,6 +17,4 @@ void leer_consola(t_log*);
 void paquete(int);
 void terminar_programa(int, t_log*, t_config*);
 
-
-
-#endif 
+#endif
