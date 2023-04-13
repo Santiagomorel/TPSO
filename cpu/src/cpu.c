@@ -10,7 +10,13 @@ void funcion(char *str, int i) {
 }
 
 int main() {
-    int conexion_cpu;
+    
+	establecer_conexion();
+
+}
+
+void establecer_conexion(){
+	int conexion_cpu;
 	char* ip_memoria;
 	char* puerto_memoria;
 	char* retardo_instruccion;
@@ -65,6 +71,7 @@ int main() {
 
 	// Armamos y enviamos el paquete
 	paquete(conexion_cpu);
+	
 
 	terminar_programa(conexion_cpu, logger, config);
 
@@ -89,7 +96,7 @@ t_config* iniciar_config(void)
 {
 	t_config* nuevo_config;
 
-	if ((nuevo_config = config_create("/home/utnso/Desktop/TP 2023/tp-2023-1c-EAB-MODEL/cpu/config/cpu.config")) == NULL){
+	if ((nuevo_config = config_create("./config/cpu.config")) == NULL){
 		printf("No se pudo leer la config");
 		exit(2);
 	}
