@@ -12,34 +12,16 @@ void funcion(char *str, int i) {
 }
 
 int main() {
-    
-	establecer_conexion();
-
-}
-
-void establecer_conexion(){
-	int conexion_cpu;
+    int conexion_cpu;
 	char* ip_memoria;
 	char* puerto_memoria;
 	char* retardo_instruccion;
 	char* puerto_escucha;
 	char* tam_max_segmento;
 
-	t_log* logger;
 	t_config* config;
 
-    /* ---------------- LOGGING ---------------- */
-
-	logger = iniciar_logger();
-
-
-	// Usando el logger creado previamente
-	// Escribi: "Hola! Soy un log"
-
-	log_info(logger, "Hola! Soy un Log");
-
 	/* ---------------- ARCHIVOS DE CONFIGURACION ---------------- */
-
 	config = iniciar_config();
 
 	// Usando el config creado previamente, leemos los valores del config y los 
@@ -51,7 +33,25 @@ void establecer_conexion(){
 	puerto_escucha = config_get_string_value(config, "PUERTO_ESCUCHA");
 	tam_max_segmento = config_get_string_value(config, "TAM_MAX_SEGMENTO");
 
+	establecer_conexion(ip_memoria, puerto_memoria, conexion_cpu, config);
+
+
+
+}
+
+void establecer_conexion(char * ip_memoria, char* puerto_memoria, int conexion_cpu, t_config* config){
+
+	t_log* logger;
 	
+    /* ---------------- LOGGING ---------------- */
+
+	logger = iniciar_logger();
+
+
+	// Usando el logger creado previamente
+	// Escribi: "Hola! Soy un log"
+
+	log_info(logger, "Hola! Soy un Log");
 
 	log_info(logger,"Lei la IP %s , el Puerto Memoria %s ", ip_memoria, puerto_memoria);
 
@@ -63,7 +63,6 @@ void establecer_conexion(){
 	leer_consola(logger);
 
 	/*----------------------------------------------------------------------------------------------------------------*/
-
 
 	// Creamos una conexión hacia el servidor
 	conexion_cpu = crear_conexion(ip_memoria, puerto_memoria);
