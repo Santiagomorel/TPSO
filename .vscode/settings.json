@@ -8,6 +8,8 @@
         "valgrind.h": "c",
         "utils_server.h": "c",
         "stdlib.h": "c",
-        "list.h": "c"
+        "list.h": "c",
+        "assert.h": "c",
+        "stdio.h": "c"
     }
 }

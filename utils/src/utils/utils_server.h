@@ -1,5 +1,5 @@
-#ifndef UTILS_H_
-#define UTILS_H_
+#ifndef UTILS_SERVER_H_
+#define UTILS_SERVER_H_
 
 #include<stdio.h>
 #include<stdlib.h>
@@ -15,11 +15,11 @@
 
 #define IP "127.0.0.1"
 
-typedef enum
-{
-	MENSAJE,
-	PAQUETE
-}op_code;
+// typedef enum
+// {
+// 	MENSAJE,
+// 	PAQUETE
+// }op_code;
 
 extern t_log* logger;
 
@@ -31,4 +31,4 @@ t_list* recibir_paquete(int);
 void recibir_mensaje(int);
 int recibir_operacion(int);
 
-#endif /* UTILS_H_ */
+#endif /* UTILS_SERVER_H_ */
