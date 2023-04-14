@@ -39,7 +39,7 @@ int main() {
 
 	establecer_conexion(ip_memoria, puerto_memoria, conexion_cpu, config, logger);
 
-	socket_cpu = iniciar_servidor(puerto_escucha);
+	socket_cpu = iniciar_servidor(puerto_escucha, logger);
 	esperar_cliente(socket_cpu);
 
 	terminar_programa(conexion_cpu, logger, config);
