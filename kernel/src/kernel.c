@@ -4,7 +4,7 @@
 int main(int argc, char ** argv)
 {
     // ----------------------- creo el log del kernel ----------------------- //
-    kernel_logger = log_create("./runlogs/kernel.log", "KERNEL", 1, LOG_LEVEL_INFO);
+    kernel_logger = log_create("./runlogs/kernel.log", "KERNEL", 1, LOG_LEVEL_TRACE);
 
     // ----------------------- levanto la configuracion del kernel ----------------------- //
 
@@ -24,12 +24,11 @@ int main(int argc, char ** argv)
     log_info(kernel_logger, "cargo la configuracion del kernel");
     
     load_config();
-    log_info(kernel_logger, "aca no llego si esta la funcion load config puesta");
-    log_info(kernel_logger, "%s", kernel_config.ip_kernel);
-    log_info(kernel_logger, "%s", kernel_config.puerto_kernel);
+    
+    socket_kernel = iniciar_servidor(kernel_config.puerto_escucha, kernel_logger);
+    log_info(kernel_logger, "inicia el servidor");
 
-
-    end_program(0/*cambiar por conexion*/, kernel_logger, kernel_config)
+    end_program(0/*cambiar por conexion*/, kernel_logger, kernel_config_file);
     return 0;
 }
 

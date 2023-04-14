@@ -36,6 +36,8 @@ typedef struct{
 
 Kernel_config kernel_config;
 
+int socket_kernel;
+
 t_log * kernel_logger;
 t_config * kernel_config_file;
 

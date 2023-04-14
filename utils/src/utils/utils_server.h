@@ -21,11 +21,9 @@
 // 	PAQUETE
 // }op_code;
 
-extern t_log* logger;
-
 void* recibir_buffer(int*, int);
 
-int iniciar_servidor(char* port);
+int iniciar_servidor(char* port, t_log* logger);
 int esperar_cliente(int);
 t_list* recibir_paquete(int);
 void recibir_mensaje(int);

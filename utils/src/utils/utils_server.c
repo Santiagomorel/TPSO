@@ -1,8 +1,6 @@
 #include"utils_server.h"
 
-t_log* logger;
-
-int iniciar_servidor(char* port)
+int iniciar_servidor(char* port, t_log* logger)
 {
 	int socket_servidor;
 
@@ -19,12 +17,12 @@ int iniciar_servidor(char* port)
                          servinfo->ai_socktype,
                          servinfo->ai_protocol);
 
-	// log_trace(logger,"Se inicio el server");
+	log_trace(logger,"Se inicio el server");
 	// Asociamos el socket a un puerto
 	bind(socket_servidor, servinfo->ai_addr, servinfo->ai_addrlen);
 	// Escuchamos las conexiones entrantes
 	listen(socket_servidor, SOMAXCONN);
-	// log_trace(logger, "Listo para escuchar a mi cliente");
+	log_trace(logger, "Listo para escuchar a mi cliente");
 	
 
 
