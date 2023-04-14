@@ -1,8 +1,6 @@
 #include"utils_server.h"
 
-
-
-int iniciar_servidor(char* port)
+int iniciar_servidor(char* port, t_log* logger)
 {
 	int socket_servidor;
 
