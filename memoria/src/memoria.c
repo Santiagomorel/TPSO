@@ -2,17 +2,54 @@
 #include <stdio.h>
 #include <commons/config.h>
 #include <utils/utils.h>
+#include <commons/log.h>
 #include <valgrind/valgrind.h>
+#include "memoria.h"
+
+
+ typedef enum
+ {
+ 	MENSAJE,
+ 	PAQUETE
+ }op_code_memoria;
 
 void funcion(char *str, int i) {
     VALGRIND_PRINTF_BACKTRACE("%s: %d\n", str, i);
 }
 
-int main() {
-    funcion("Hola Mundo", 42);
-    return 0;
-}
+int main(void) {
 
+    t_log* log_memoria = log_create("./runlogs/memoria.log", "Memoria", 1, LOG_LEVEL_INFO);
+
+    int server_memoria_fd = iniciar_servidor();
+    log_info(log_memoria, "Servidor Memoria listo para recibir al cliente");
+    int cliente_memoria_fd = esperar_cliente(server_memoria_fd);
+
+    t_list* lista_Memoria;
+    while (1)
+    {
+        int cod_op_mem = recibir_operacion(cliente_memoria_fd);
+        switch (cod_op_mem){
+        case MENSAJE:
+            recibir_mensaje(cliente_memoria_fd);
+            break;
+        case PAQUETE:
+            lista_Memoria = recibir_paquete(cliente_memoria_fd);
+            log_info(log_memoria, "Me llegaron los siguientes valores:\n");
+            list_iterate(lista_Memoria, (void*) iterator);
+            break;
+        case -1:
+            log_warning(logger, "el cliente se desconecto. Terminando servidor");
+            return EXIT_FAILURE;
+        default:
+            log_error(log_memoria, "Operacion desconocida.")
+        }
+    }
+    return EXIT_SUCCESS;
+}
+void iterator(char* value) {
+	log_info(logger,"%s", value);
+}
 
 /*int main(void) {
   hello_world();

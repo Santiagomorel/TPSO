@@ -2,10 +2,8 @@
 
 t_log* logger;
 
-int iniciar_servidor(void)
+int iniciar_servidor(char* port)
 {
-	// Quitar esta línea cuando hayamos terminado de implementar la funcion
-	
 	int socket_servidor;
 
 	struct addrinfo hints, *servinfo, *p;
@@ -15,18 +13,18 @@ int iniciar_servidor(void)
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;
 
-	getaddrinfo(IP, PUERTO, &hints, &servinfo);
+	getaddrinfo(IP, port, &hints, &servinfo);
 	// Creamos el socket de escucha del servidor
 	socket_servidor = socket(servinfo->ai_family,
                          servinfo->ai_socktype,
                          servinfo->ai_protocol);
 
-	log_trace(logger,"Se inicio el server");
+	// log_trace(logger,"Se inicio el server");
 	// Asociamos el socket a un puerto
 	bind(socket_servidor, servinfo->ai_addr, servinfo->ai_addrlen);
 	// Escuchamos las conexiones entrantes
 	listen(socket_servidor, SOMAXCONN);
-	log_trace(logger, "Listo para escuchar a mi cliente");
+	// log_trace(logger, "Listo para escuchar a mi cliente");
 	
 
 
@@ -40,7 +38,7 @@ int esperar_cliente(int socket_servidor)
 
 	// Aceptamos un nuevo cliente
 	int socket_cliente = accept(socket_servidor, NULL, NULL);
-	log_info(logger, "Se conecto un cliente!");
+	// log_info(logger, "Se conecto un cliente!");
 
 	return socket_cliente;
 }
@@ -72,28 +70,28 @@ void recibir_mensaje(int socket_cliente)
 {
 	int size;
 	char* buffer = recibir_buffer(&size, socket_cliente);
-	log_info(logger, "Me llego el mensaje %s", buffer);
+	// log_info(logger, "Me llego el mensaje %s", buffer);
 	free(buffer);
 }
 
-t_list* recibir_paquete(int socket_cliente)
-{
-	int size;
-	int desplazamiento = 0;
-	void * buffer;
-	t_list* valores = list_create();
-	int tamanio;
+// t_list* recibir_paquete(int socket_cliente)
+// {
+// 	int size;
+// 	int desplazamiento = 0;
+// 	void * buffer;
+// 	t_list* valores = list_create();
+// 	int tamanio;
 
-	buffer = recibir_buffer(&size, socket_cliente);
-	while(desplazamiento < size)
-	{
-		memcpy(&tamanio, buffer + desplazamiento, sizeof(int));
-		desplazamiento+=sizeof(int);
-		char* valor = malloc(tamanio);
-		memcpy(valor, buffer+desplazamiento, tamanio);
-		desplazamiento+=tamanio;
-		list_add(valores, valor);
-	}
-	free(buffer);
-	return valores;
-}
+// 	buffer = recibir_buffer(&size, socket_cliente);
+// 	while(desplazamiento < size)
+// 	{
+// 		memcpy(&tamanio, buffer + desplazamiento, sizeof(int));
+// 		desplazamiento+=sizeof(int);
+// 		char* valor = malloc(tamanio);
+// 		memcpy(valor, buffer+desplazamiento, tamanio);
+// 		desplazamiento+=tamanio;
+// 		list_add(valores, valor);
+// 	}
+// 	free(buffer);
+// 	return valores;
+// }

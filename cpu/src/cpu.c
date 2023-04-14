@@ -5,8 +5,6 @@
 #include <commons/log.h>
 #include "cpu.h"
 
-
-
 void funcion(char *str, int i) {
     VALGRIND_PRINTF_BACKTRACE("%s: %d\n", str, i);
 }
@@ -75,7 +73,11 @@ void establecer_conexion(char * ip_memoria, char* puerto_memoria, int conexion_c
 	
 
 	terminar_programa(conexion_cpu, logger, config);
+
+
 }
+
+
 
 t_log* iniciar_logger(void)
 {
