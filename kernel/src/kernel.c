@@ -4,7 +4,7 @@
 int main(int argc, char ** argv)
 {
     // ----------------------- creo el log del kernel ----------------------- //
-    t_log * kernel_logger = log_create("./runlogs/kernel.log", "KERNEL", 1, LOG_LEVEL_INFO);
+    kernel_logger = log_create("./runlogs/kernel.log", "KERNEL", 1, LOG_LEVEL_INFO);
 
     // ----------------------- levanto la configuracion del kernel ----------------------- //
 
