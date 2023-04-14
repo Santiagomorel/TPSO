@@ -37,10 +37,11 @@ int main() {
 	puerto_escucha = config_get_string_value(config, "PUERTO_ESCUCHA");
 	tam_max_segmento = config_get_string_value(config, "TAM_MAX_SEGMENTO");
 
-	establecer_conexion(ip_memoria, puerto_memoria, conexion_cpu, config, logger);
-
 	socket_cpu = iniciar_servidor(puerto_escucha, logger);
 	esperar_cliente(socket_cpu);
+
+	establecer_conexion(ip_memoria, puerto_memoria, conexion_cpu, config, logger);
+
 
 	terminar_programa(conexion_cpu, logger, config);
 
@@ -68,6 +69,7 @@ void establecer_conexion(char * ip_memoria, char* puerto_memoria, int conexion_c
 	conexion_cpu = crear_conexion(ip_memoria, puerto_memoria);
 
 	// Enviamos al servidor el valor de ip como mensaje
+	
 	enviar_mensaje(ip_memoria, conexion_cpu);
 	
 
