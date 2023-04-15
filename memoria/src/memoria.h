@@ -14,7 +14,7 @@ typedef struct{
 
 } Memoria_config;
 
-Memoria_config kernel_config;
+Memoria_config memoria_config;
 #endif /*MEMORIA_H_*/
 
 
