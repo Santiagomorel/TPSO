@@ -50,7 +50,9 @@ int main(void) {
 void iterator(char* value) {
 	log_info(logger,"%s", value);
 }
-void load_config(void){}
+void load_config(void){
+    
+}
 /*int main(void) {
   hello_world();
   return 0;
