@@ -67,9 +67,11 @@ void establecer_conexion(char * ip_memoria, char* puerto_memoria, int conexion_c
 	// Creamos una conexión hacia el servidor
 	conexion_cpu = crear_conexion(ip_memoria, puerto_memoria);
 
+	log_info(logger,"Me conecto con memoria");
 	// Enviamos al servidor el valor de ip como mensaje
 	enviar_mensaje(ip_memoria, conexion_cpu);
 	
+
 
 }
 

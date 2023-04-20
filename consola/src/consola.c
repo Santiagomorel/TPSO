@@ -3,43 +3,76 @@
 
 int main(int argc, char ** argv)
 {
-	char * test = argv[2];
-	
+	char * path = argv[2];
+	    printf("%s\n",path);
 	int conexion;
 	char* ip;
 	char* puerto;
-
 	t_log* logger;
 	t_config* config;
+	char* buffer;
+ 	FILE* file = fopen(path, "r"); //abro archivo pseudocodigo
 
+/*-------------------------------------Leo pseudocodigo--------------------------------------*/
 
+	/*buffer = readFile(path,file,logger);
+
+	  if(buffer == NULL){
+        log_error(logger, "No se encontraron instrucciones.");
+        return EXIT_FAILURE; 
+    }
+	log_info(logger, "Lectura del buffer: \n%s ", buffer);*/
+/*-------------------------------------Inicio Logger--------------------------------------*/
 	logger = iniciar_logger();
 	log_info(logger, "Hola! Soy un log");
-    printf("%s\n",test);
-
+/*-------------------------------------Inicio Config--------------------------------------*/
 	config = iniciar_config();
 	ip = config_get_string_value(config,"IP_KERNEL");
 	puerto = config_get_string_value(config,"PUERTO_KERNEL");
 
 	log_info(logger,"IP: %s // port:%s\n",ip,puerto);
 
-	log_info(logger,"Ahora estas en la consola (guardando en tp0.log) ");
+	log_info(logger,"Ahora estas en la consola (guardando en consola.log) ");
 	leer_consola(logger);
 
-
 	log_info(logger,"Ahora saliste de la consola");
-	conexion = crear_conexion(ip, puerto); 
 
+	/*-------------------------------------Inicio Conexion con Kernel--------------------------------------*/
+	conexion = crear_conexion(ip, puerto); 
 	
+	if(conexion == -1) {
+        log_info(logger, "No se pudo conectar al servidor");
+        exit(2);
+    }
+	
+    log_info(logger, "Pudimos realizar la conexion");
+
 	enviar_mensaje(ip,conexion);
 	enviar_mensaje(puerto,conexion);
+
 	log_info(logger,"Mensaje enviado");
-	
-	log_info(logger,"Estas por mandar un paquete, todo lo que escribas lo recibira el server ");
-	paquete(conexion);
+	/*-------------------------------------Paquete--------------------------------------*/
+	log_info(logger,"Estas por mandar un paquete");
+	//paquete(conexion,buffer);
 
-	terminar_programa(conexion, logger, config);
+/*-------------------------------------Fin ejecucion--------------------------------------*/
+	terminar_programa(conexion, logger, config, file, buffer);
 
+}
+
+char* readFile(char* path, FILE* file,t_log* logger){
+    if(file == NULL){
+        log_error(logger, "No se encontro el archivo: %s", path);
+        exit(1);
+    }
+
+    struct stat stat_file;
+    stat(path, &stat_file);
+
+    char* buffer = calloc(1, stat_file.st_size + 1);
+    fread(buffer, stat_file.st_size, 1, file);
+
+    return buffer;
 }
 
 t_log* iniciar_logger(void)
@@ -79,22 +112,14 @@ void leer_consola(t_log* logger)
 	free(leido);
 }
 
-void paquete(int conexion)
+void paquete(int conexion,char * buffer)
 {
 
 	t_paquete* paquete = crear_paquete();
-	char* leido = readline("> ");
-	
+	agregar_a_paquete(paquete,buffer, strlen(buffer) + 1);
 
-	while(strcmp(leido, "")) { 
-	
-		agregar_a_paquete(paquete, leido, strlen(leido) + 1);
-		free(leido);
-		leido = readline("> ");
-	}
 	enviar_paquete(paquete, conexion);
 	eliminar_paquete(paquete);
-	free(leido);
 	}
 
 
@@ -102,7 +127,7 @@ void paquete(int conexion)
 
 
 
-void terminar_programa(int conexion, t_log* logger, t_config* config)
+void terminar_programa(int conexion, t_log* logger, t_config* config,FILE * file, char * buffer)
 {
 	if (logger !=NULL){
 	log_destroy(logger);
@@ -112,4 +137,6 @@ void terminar_programa(int conexion, t_log* logger, t_config* config)
 	config_destroy(config);
 	}
 	liberar_conexion(conexion);
+	fclose(file);
+	free(buffer);
 }
