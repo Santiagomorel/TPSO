@@ -117,3 +117,11 @@ void liberar_conexion(int socket_cliente)
 {
 	close(socket_cliente);
 }
+
+void send_handshake(int socket_cliente){
+uint32_t handshake = 1;
+uint32_t result;
+
+send(socket_cliente, &handshake, sizeof(uint32_t), NULL);
+recv(socket_cliente, &result, sizeof(uint32_t), MSG_WAITALL);
+}

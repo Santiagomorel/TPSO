@@ -3,6 +3,8 @@
 
 int main(int argc, char ** argv)
 {
+	
+
 	// ----------------------- creo el log de la consola ----------------------- //
 
 	consola_logger = init_logger("./runlogs/consola.log", "Consola", 1, LOG_LEVEL_INFO);
@@ -35,37 +37,34 @@ int main(int argc, char ** argv)
 
 /*-------------------------------------Leo pseudocodigo--------------------------------------*/
 
-	/*buffer = readFile(path,file,logger);
+	buffer = readFile(path,file);
 
 	  if(buffer == NULL){
-        log_error(logger, "No se encontraron instrucciones.");
+        log_error(consola_logger, "No se encontraron instrucciones.");
         return EXIT_FAILURE; 
     }
-	log_info(logger, "Lectura del buffer: \n%s ", buffer);*/
-	log_info(consola_logger, "Hola! Soy un log");
+	log_info(consola_logger, "Lectura del buffer: \n%s ", buffer);
 /*-------------------------------------Inicio Config--------------------------------------*/
 
 	log_info(consola_logger,"IP: %s // port:%s\n", consola_config.ip_kernel,consola_config.puerto_kernel);
 
-	// log_info(logger,"Ahora estas en la consola (guardando en consola.log) ");
-	//leer_consola(logger);
+	 log_info(consola_logger,"Ahora estas en la consola (guardando en consola.log) ");
+	 leer_consola();
 
-	// log_info(logger,"Ahora saliste de la consola");
+	 log_info(consola_logger,"Ahora saliste de la consola");
 
 	/*-------------------------------------Inicio Conexion con Kernel--------------------------------------*/
-	// conexion = crear_conexion(ip, puerto); 
+	if(conexion = crear_conexion(consola_config.ip_kernel, consola_config.puerto_kernel) == -1) {
+       log_info(consola_logger, "No se pudo conectar al servidor");
+        exit(2);
+     }
+	 send_handshake(conexion);
 	
-	// if(conexion == -1) {
-    //     log_info(logger, "No se pudo conectar al servidor");
-    //     exit(2);
-    // }
-	
-    // log_info(logger, "Pudimos realizar la conexion");
+    log_info(consola_logger, "Pudimos realizar la conexion con kernel");
+	 enviar_mensaje(consola_config.ip_kernel,conexion);
+	 enviar_mensaje(consola_config.puerto_kernel,conexion);
 
-	// enviar_mensaje(ip,conexion);
-	// enviar_mensaje(puerto,conexion);
-
-	// log_info(logger,"Mensaje enviado");
+	 log_info(consola_logger,"Mensaje enviado");
 	/*-------------------------------------Paquete--------------------------------------*/
 	// log_info(logger,"Estas por mandar un paquete");
 	//paquete(conexion,buffer);
@@ -75,9 +74,9 @@ int main(int argc, char ** argv)
 
 }
 
-char* readFile(char* path, FILE* file, t_log* logger){
+char* readFile(char* path, FILE* file){
     if(file == NULL){
-        log_error(logger, "No se encontro el archivo: %s", path);
+        log_error(consola_logger, "No se encontro el archivo: %s", path);
         exit(1);
     }
 

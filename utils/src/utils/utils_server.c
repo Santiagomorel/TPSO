@@ -30,13 +30,13 @@ int iniciar_servidor(char* port, t_log* logger)
 	return socket_servidor;			
 }
 
-int esperar_cliente(int socket_servidor)
+int esperar_cliente(int socket_servidor,t_log* logger)
 {
 	// Quitar esta línea cuando hayamos terminado de implementar la funcion
 
 	// Aceptamos un nuevo cliente
 	int socket_cliente = accept(socket_servidor, NULL, NULL);
-	// log_info(logger, "Se conecto un cliente!");
+	 log_info(logger, "Se conecto un cliente!");
 
 	return socket_cliente;
 }
@@ -64,13 +64,26 @@ void* recibir_buffer(int* size, int socket_cliente)
 	return buffer;
 }
 
-void recibir_mensaje(int socket_cliente)
+void recibir_mensaje(int socket_cliente,t_log* logger)
 {
-	int size;
+	char* size;
 	char* buffer = recibir_buffer(&size, socket_cliente);
-	// log_info(logger, "Me llego el mensaje %s", buffer);
+	log_info(logger, "Me llego el mensaje %s", buffer);
 	free(buffer);
 }
+
+void recieve_handshake(int socket_cliente){
+uint32_t handshake;
+uint32_t resultOk = 0;
+uint32_t resultError = -1;
+
+
+recv(socket_cliente, &handshake, sizeof(uint32_t), MSG_WAITALL);
+if(handshake == 1)
+   send(socket_cliente, &resultOk, sizeof(uint32_t), NULL);
+else
+   send(socket_cliente, &resultError, sizeof(uint32_t), NULL);
+   }
 
 // t_list* recibir_paquete(int socket_cliente)
 // {

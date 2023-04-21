@@ -28,6 +28,13 @@ int main(int argc, char ** argv)
     socket_kernel = iniciar_servidor(kernel_config.puerto_escucha, kernel_logger);
     log_info(kernel_logger, "inicia el servidor");
 
+    int socket_cliente = esperar_cliente(socket_kernel,kernel_logger);
+
+    recieve_handshake(socket_cliente);
+
+    recibir_mensaje(socket_cliente,kernel_logger);
+    recibir_mensaje(socket_cliente,kernel_logger);
+
     end_program(0/*cambiar por conexion*/, kernel_logger, kernel_config_file);
     return 0;
 }

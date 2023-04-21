@@ -13,7 +13,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-char* readFile(char*,FILE*,t_log*);
+char* readFile(char*,FILE*);
 void leer_consola(void);
 void paquete(int,char*);
 void terminar_programa(int, t_log*, t_config*,FILE*,char * buffer);
