@@ -72,7 +72,7 @@ void establecer_conexion(char * ip_memoria, char* puerto_memoria, int conexion_c
 
 	// Enviamos al servidor el valor de ip como mensaje si es que levanta el cliente
 	if((crear_conexion(ip_memoria, puerto_memoria)) == -1){
-		log_info(logger, "Error al conectar con el servidor. El servidor no esta activo");
+		log_info(logger, "Error al conectar con Memoria. El servidor no esta activo");
 		exit(-1);
 	}else{
 		enviar_mensaje(ip_memoria, conexion_cpu);
