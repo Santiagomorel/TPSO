@@ -1,5 +1,5 @@
-#ifndef UTILS_CONFIG_H_
-#define UTILS_CONFIG_H_
+#ifndef UTILS_START_H_
+#define UTILS_START_H_
 
 #include<stdio.h>
 #include<stdlib.h>
@@ -11,4 +11,4 @@
 
 t_config* init_config(char * config_path);
 
-#endif /* UTILS_CONFIG_H_ */
+#endif /* UTILS_START_H_ */

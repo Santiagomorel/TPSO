@@ -33,7 +33,7 @@ int main(int argc, char ** argv)
 	log_info(logger,"IP: %s // port:%s\n",ip,puerto);
 
 	log_info(logger,"Ahora estas en la consola (guardando en consola.log) ");
-	leer_consola(logger);
+	//leer_consola(logger);
 
 	log_info(logger,"Ahora saliste de la consola");
 
@@ -60,7 +60,7 @@ int main(int argc, char ** argv)
 
 }
 
-char* readFile(char* path, FILE* file,t_log* logger){
+char* readFile(char* path, FILE* file, t_log* logger){
     if(file == NULL){
         log_error(logger, "No se encontro el archivo: %s", path);
         exit(1);

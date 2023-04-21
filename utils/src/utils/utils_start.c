@@ -1,4 +1,4 @@
-#include "utils_config.h"
+#include "utils_start.h"
 
 t_config* init_config(char * config_path)
 {
