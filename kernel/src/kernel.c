@@ -13,7 +13,7 @@ int main(int argc, char ** argv)
         fprintf(stderr, "Se esperaba: %s [CONFIG_PATH]\n", argv[0]);
         exit(1);
     }
-
+    
     kernel_config_file = init_config(argv[1]);
 
     if (kernel_config_file == NULL) {
@@ -55,7 +55,7 @@ void load_config(void){
     kernel_config.ip_kernel                    = config_get_string_value(kernel_config_file, "IP_KERNEL");
     kernel_config.puerto_kernel                = config_get_string_value(kernel_config_file, "PUERTO_KERNEL");
     
-    // log_info(kernel_logger, "config cargada en 'kernel_cofig_data'");
+    log_info(kernel_logger, "config cargada en 'kernel_cofig_file'");
 }
 void end_program(int socket, t_log* log, t_config* config){
     log_destroy(log);
