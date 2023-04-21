@@ -11,4 +11,5 @@
 
 t_config* init_config(char * config_path);
 
+t_log* init_logger(char *file, char *process_name, bool is_active_console, t_log_level level);
 #endif /* UTILS_START_H_ */
