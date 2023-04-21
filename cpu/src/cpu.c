@@ -37,10 +37,13 @@ int main() {
 	puerto_escucha = config_get_string_value(config, "PUERTO_ESCUCHA");
 	tam_max_segmento = config_get_string_value(config, "TAM_MAX_SEGMENTO");
 
+
+
 	establecer_conexion(ip_memoria, puerto_memoria, conexion_cpu, config, logger);
 
 	socket_cpu = iniciar_servidor(puerto_escucha, logger);
 	esperar_cliente(socket_cpu);
+
 
 	terminar_programa(conexion_cpu, logger, config);
 
@@ -67,9 +70,18 @@ void establecer_conexion(char * ip_memoria, char* puerto_memoria, int conexion_c
 	// Creamos una conexión hacia el servidor
 	conexion_cpu = crear_conexion(ip_memoria, puerto_memoria);
 
-	log_info(logger,"Me conecto con memoria");
-	// Enviamos al servidor el valor de ip como mensaje
-	enviar_mensaje(ip_memoria, conexion_cpu);
+	// Enviamos al servidor el valor de ip como mensaje si es que levanta el cliente
+	if((crear_conexion(ip_memoria, puerto_memoria)) == -1){
+		log_info(logger, "Error al conectar con Memoria. El servidor no esta activo");
+		exit(-1);
+	}else{
+		enviar_mensaje(ip_memoria, conexion_cpu);
+	}
+
+	
+	
+	
+	
 	
 
 
