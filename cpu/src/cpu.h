@@ -10,10 +10,24 @@
 #include<utils/utils_client.h>
 #include <valgrind/valgrind.h>
 #include <utils/utils_server.h>
+#include <utils/utils_start.h>
+
+typedef struct{
+    char* ip_memoria;
+	char* puerto_memoria;
+	char* retardo_instruccion;
+	char* puerto_escucha;
+	char* tam_max_segmento;
+
+}CPU_config;
+
+CPU_config cpu_config;
+
+t_log * cpu_logger;
+t_config * cpu_config_file;
 
 
-t_log* iniciar_logger(void);
-t_config* iniciar_config(void);
+
 void leer_consola(t_log*);
 void paquete(int);
 void terminar_programa(int, t_log*, t_config*);

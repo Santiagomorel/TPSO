@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdbool.h>
-//#include <cspecs/cspec.h>
+#include <cspecs/cspec.h>
 
 context (example) {
     bool la_verdad = true;
