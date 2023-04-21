@@ -9,39 +9,27 @@ void funcion(char *str, int i) {
     VALGRIND_PRINTF_BACKTRACE("%s: %d\n", str, i);
 }
 
+t_log* logger;
+
 int main() {
-    
-	establecer_conexion();
-
-}
-
-void establecer_conexion(){
-	int conexion_cpu;
+    int conexion_cpu;
 	char* ip_memoria;
 	char* puerto_memoria;
 	char* retardo_instruccion;
 	char* puerto_escucha;
 	char* tam_max_segmento;
+	int socket_cpu;
 
-	t_log* logger;
 	t_config* config;
-
+	
+	
     /* ---------------- LOGGING ---------------- */
 
 	logger = iniciar_logger();
 
-
-	// Usando el logger creado previamente
-	// Escribi: "Hola! Soy un log"
-
-	log_info(logger, "Hola! Soy un Log");
-
 	/* ---------------- ARCHIVOS DE CONFIGURACION ---------------- */
-
 	config = iniciar_config();
 
-	// Usando el config creado previamente, leemos los valores del config y los 
-	// dejamos en las variables 'ip', 'puerto' y 'valor'
 
 	ip_memoria = config_get_string_value(config, "IP_MEMORIA");
 	puerto_memoria = config_get_string_value(config, "PUERTO_MEMORIA");
@@ -49,7 +37,21 @@ void establecer_conexion(){
 	puerto_escucha = config_get_string_value(config, "PUERTO_ESCUCHA");
 	tam_max_segmento = config_get_string_value(config, "TAM_MAX_SEGMENTO");
 
+	establecer_conexion(ip_memoria, puerto_memoria, conexion_cpu, config, logger);
+
+	socket_cpu = iniciar_servidor(puerto_escucha, logger);
+	esperar_cliente(socket_cpu);
+
+	terminar_programa(conexion_cpu, logger, config);
+
+	return 0;
+
+}
+
+void establecer_conexion(char * ip_memoria, char* puerto_memoria, int conexion_cpu, t_config* config, t_log* logger){
+
 	
+	log_info(logger, "Inicio como cliente");
 
 	log_info(logger,"Lei la IP %s , el Puerto Memoria %s ", ip_memoria, puerto_memoria);
 
@@ -58,22 +60,17 @@ void establecer_conexion(){
 
     /* ---------------- LEER DE CONSOLA ---------------- */
 
-	leer_consola(logger);
+	//leer_consola(logger);
 
 	/*----------------------------------------------------------------------------------------------------------------*/
-
 
 	// Creamos una conexión hacia el servidor
 	conexion_cpu = crear_conexion(ip_memoria, puerto_memoria);
 
+	log_info(logger,"Me conecto con memoria");
 	// Enviamos al servidor el valor de ip como mensaje
 	enviar_mensaje(ip_memoria, conexion_cpu);
-
-	// Armamos y enviamos el paquete
-	paquete(conexion_cpu);
 	
-
-	terminar_programa(conexion_cpu, logger, config);
 
 
 }
@@ -84,7 +81,7 @@ t_log* iniciar_logger(void)
 {
 	t_log* nuevo_logger;
 
-	if ((nuevo_logger = log_create("tp0.log", "Logs tp0",1 , LOG_LEVEL_INFO)) == NULL){
+	if ((nuevo_logger = log_create("./runlogs/cpu.log", "Logs CPU",1 , LOG_LEVEL_TRACE)) == NULL){
 		printf("No se pudo crear el logger \n");
 		exit(1);
 	}
@@ -109,10 +106,9 @@ void leer_consola(t_log* logger)
 	
     char* leido;
 
-    // La primera te la dejo de yapa
+ 
     leido = readline("> ");
 
-    // El resto, las vamos leyendo y logueando hasta recibir un string vacío
     while(strcmp(leido, "")) {
         log_info(logger, leido);
         leido = readline("> "); 
@@ -120,31 +116,10 @@ void leer_consola(t_log* logger)
 	free(leido); 
 }
 
-void paquete(int conexion)
-{
-	// Ahora toca lo divertido!
-	t_paquete* paquete = crear_paquete();
-	char* leido = readline("> ");
 
-	// Leemos y esta vez agregamos las lineas al paquete
-	while(strcmp(leido, "")) {
-		agregar_a_paquete(paquete, leido, strlen(leido) + 1);
-		free(leido);
-		leido = readline("> ");
-	}
-	enviar_paquete(paquete, conexion);
-
-	// ¡No te olvides de liberar las líneas y el paquete antes de regresar!
-
-	eliminar_paquete(paquete);
-	free(leido);
-	
-}
 
 void terminar_programa(int conexion, t_log* logger, t_config* config)
 {
-	/* Y por ultimo, hay que liberar lo que utilizamos (conexion, log y config) 
-	  con las funciones de las commons y del TP mencionadas en el enunciado */
 
 	if(logger != NULL){
 		log_destroy(logger);

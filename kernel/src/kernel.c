@@ -4,7 +4,7 @@
 int main(int argc, char ** argv)
 {
     // ----------------------- creo el log del kernel ----------------------- //
-    t_log * kernel_logger = log_create("./runlogs/kernel.log", "KERNEL", 1, LOG_LEVEL_INFO);
+    kernel_logger = init_logger("./runlogs/kernel.log", "KERNEL", 1, LOG_LEVEL_TRACE);
 
     // ----------------------- levanto la configuracion del kernel ----------------------- //
 
@@ -13,7 +13,7 @@ int main(int argc, char ** argv)
         fprintf(stderr, "Se esperaba: %s [CONFIG_PATH]\n", argv[0]);
         exit(1);
     }
-
+    
     kernel_config_file = init_config(argv[1]);
 
     if (kernel_config_file == NULL) {
@@ -24,12 +24,11 @@ int main(int argc, char ** argv)
     log_info(kernel_logger, "cargo la configuracion del kernel");
     
     load_config();
-    log_info(kernel_logger, "aca no llego si esta la funcion load config puesta");
-    log_info(kernel_logger, "%s", kernel_config.ip_kernel);
-    log_info(kernel_logger, "%s", kernel_config.puerto_kernel);
+    
+    socket_kernel = iniciar_servidor(kernel_config.puerto_escucha, kernel_logger);
+    log_info(kernel_logger, "inicia el servidor");
 
-
-    end_program(0/*cambiar por conexion*/, kernel_logger, kernel_config)
+    end_program(0/*cambiar por conexion*/, kernel_logger, kernel_config_file);
     return 0;
 }
 
@@ -56,7 +55,7 @@ void load_config(void){
     kernel_config.ip_kernel                    = config_get_string_value(kernel_config_file, "IP_KERNEL");
     kernel_config.puerto_kernel                = config_get_string_value(kernel_config_file, "PUERTO_KERNEL");
     
-    // log_info(kernel_logger, "config cargada en 'kernel_cofig_data'");
+    log_info(kernel_logger, "config cargada en 'kernel_cofig_file'");
 }
 void end_program(int socket, t_log* log, t_config* config){
     log_destroy(log);

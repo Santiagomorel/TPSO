@@ -3,67 +3,100 @@
 
 int main(int argc, char ** argv)
 {
-	char * test = argv[2];
-	
+	// ----------------------- creo el log de la consola ----------------------- //
+
+	consola_logger = init_logger("./runlogs/consola.log", "Consola", 1, LOG_LEVEL_INFO);
+
+	// ----------------------- levanto la configuracion de la consola ----------------------- //
+
+    log_info(consola_logger, "levanto la configuracion de la consola");
+    if (argc < 2) {
+        fprintf(stderr, "Se esperaba: %s [CONFIG_PATH]\n", argv[0]);
+        exit(1);
+    }
+
+	consola_config_file = init_config(argv[1]);
+
+	if (consola_config_file == NULL) {
+        perror("Ocurrió un error al intentar abrir el archivo config");
+        exit(1);
+    }
+
+    log_info(consola_logger, "cargo la configuracion de la consola");
+
+	load_config();
+	// ----------------------- levanto el archivo de pseudocodigo de la consola ----------------------- //
+
+	char * path = argv[2];
 	int conexion;
-	char* ip;
-	char* puerto;
 
-	t_log* logger;
-	t_config* config;
+	char* buffer;
+ 	FILE* file = fopen(path, "r"); //abro archivo pseudocodigo
 
+/*-------------------------------------Leo pseudocodigo--------------------------------------*/
 
-	logger = iniciar_logger();
-	log_info(logger, "Hola! Soy un log");
-    printf("%s\n",test);
+	/*buffer = readFile(path,file,logger);
 
-	config = iniciar_config();
-	ip = config_get_string_value(config,"IP_KERNEL");
-	puerto = config_get_string_value(config,"PUERTO_KERNEL");
+	  if(buffer == NULL){
+        log_error(logger, "No se encontraron instrucciones.");
+        return EXIT_FAILURE; 
+    }
+	log_info(logger, "Lectura del buffer: \n%s ", buffer);*/
+	log_info(consola_logger, "Hola! Soy un log");
+/*-------------------------------------Inicio Config--------------------------------------*/
 
-	log_info(logger,"IP: %s // port:%s\n",ip,puerto);
+	log_info(consola_logger,"IP: %s // port:%s\n", consola_config.ip_kernel,consola_config.puerto_kernel);
 
-	log_info(logger,"Ahora estas en la consola (guardando en tp0.log) ");
-	leer_consola(logger);
+	// log_info(logger,"Ahora estas en la consola (guardando en consola.log) ");
+	//leer_consola(logger);
 
+	// log_info(logger,"Ahora saliste de la consola");
 
-	log_info(logger,"Ahora saliste de la consola");
-	conexion = crear_conexion(ip, puerto); 
-
+	/*-------------------------------------Inicio Conexion con Kernel--------------------------------------*/
+	// conexion = crear_conexion(ip, puerto); 
 	
-	enviar_mensaje(ip,conexion);
-	enviar_mensaje(puerto,conexion);
-	log_info(logger,"Mensaje enviado");
+	// if(conexion == -1) {
+    //     log_info(logger, "No se pudo conectar al servidor");
+    //     exit(2);
+    // }
 	
-	log_info(logger,"Estas por mandar un paquete, todo lo que escribas lo recibira el server ");
-	paquete(conexion);
+    // log_info(logger, "Pudimos realizar la conexion");
 
-	terminar_programa(conexion, logger, config);
+	// enviar_mensaje(ip,conexion);
+	// enviar_mensaje(puerto,conexion);
 
-}
+	// log_info(logger,"Mensaje enviado");
+	/*-------------------------------------Paquete--------------------------------------*/
+	// log_info(logger,"Estas por mandar un paquete");
+	//paquete(conexion,buffer);
 
-t_log* iniciar_logger(void)
-{
-	t_log* nuevo_logger;
-	 if((nuevo_logger = log_create("./runlogs/consola.log", "Consola", 1, LOG_LEVEL_INFO)) == NULL){
-		printf("No se puede iniciar el logger\n");
-		exit(1);
-	 }
-	 return nuevo_logger;
+/*-------------------------------------Fin ejecucion--------------------------------------*/
+	// terminar_programa(conexion, logger, config, file, buffer);
 
 }
 
-t_config* iniciar_config(void)
-{
-	t_config* nuevo_config;
-	if((nuevo_config = config_create("./config/consola.config")) == NULL){
-		printf("No pude leer la config\n");
-		exit(2);	
-}
-	return nuevo_config;
+char* readFile(char* path, FILE* file, t_log* logger){
+    if(file == NULL){
+        log_error(logger, "No se encontro el archivo: %s", path);
+        exit(1);
+    }
+
+    struct stat stat_file;
+    stat(path, &stat_file);
+
+    char* buffer = calloc(1, stat_file.st_size + 1);
+    fread(buffer, stat_file.st_size, 1, file);
+
+    return buffer;
 }
 
-void leer_consola(t_log* logger)
+void load_config(void){
+	consola_config.ip_kernel                   = config_get_string_value(consola_config_file, "IP_KERNEL");
+	consola_config.puerto_kernel                   = config_get_string_value(consola_config_file, "PUERTO_KERNEL");
+	log_info(consola_logger, "config cargada en 'consola_cofig_file'");
+}
+
+void leer_consola(void)
 {
 	char* leido;
 
@@ -71,7 +104,7 @@ void leer_consola(t_log* logger)
 	leido = readline("> ");
 	
 	while(strcmp(leido, "")) {
-		log_info(logger, leido);
+		log_info(consola_logger, leido);
 		leido = readline("> ");
 		
 	}
@@ -79,22 +112,14 @@ void leer_consola(t_log* logger)
 	free(leido);
 }
 
-void paquete(int conexion)
+void paquete(int conexion,char * buffer)
 {
 
 	t_paquete* paquete = crear_paquete();
-	char* leido = readline("> ");
-	
+	agregar_a_paquete(paquete,buffer, strlen(buffer) + 1);
 
-	while(strcmp(leido, "")) { 
-	
-		agregar_a_paquete(paquete, leido, strlen(leido) + 1);
-		free(leido);
-		leido = readline("> ");
-	}
 	enviar_paquete(paquete, conexion);
 	eliminar_paquete(paquete);
-	free(leido);
 	}
 
 
@@ -102,7 +127,7 @@ void paquete(int conexion)
 
 
 
-void terminar_programa(int conexion, t_log* logger, t_config* config)
+void terminar_programa(int conexion, t_log* logger, t_config* config,FILE * file, char * buffer)
 {
 	if (logger !=NULL){
 	log_destroy(logger);
@@ -112,4 +137,6 @@ void terminar_programa(int conexion, t_log* logger, t_config* config)
 	config_destroy(config);
 	}
 	liberar_conexion(conexion);
+	fclose(file);
+	free(buffer);
 }
