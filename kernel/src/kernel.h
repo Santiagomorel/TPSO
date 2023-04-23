@@ -41,4 +41,6 @@ int socket_kernel;
 t_log * kernel_logger;
 t_config * kernel_config_file;
 
+void iterator(char*);
+
 #endif /* KERNEL_H_ */

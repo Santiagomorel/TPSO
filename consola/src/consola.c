@@ -48,30 +48,29 @@ int main(int argc, char ** argv)
 
 	log_info(consola_logger,"IP: %s // port:%s\n", consola_config.ip_kernel,consola_config.puerto_kernel);
 
-	 log_info(consola_logger,"Ahora estas en la consola (guardando en consola.log) ");
-	 leer_consola();
+	//  log_info(consola_logger,"Ahora estas en la consola (guardando en consola.log) ");
+	//  leer_consola();
 
-	 log_info(consola_logger,"Ahora saliste de la consola");
+	//  log_info(consola_logger,"Ahora saliste de la consola");
 
 	/*-------------------------------------Inicio Conexion con Kernel--------------------------------------*/
-	if(conexion = crear_conexion(consola_config.ip_kernel, consola_config.puerto_kernel) == -1) {
+	if((conexion = crear_conexion(consola_config.ip_kernel, consola_config.puerto_kernel)) == -1) {
        log_info(consola_logger, "No se pudo conectar al servidor");
         exit(2);
-     }
-	 send_handshake(conexion);
+    }
+	send_handshake(conexion);
 	
     log_info(consola_logger, "Pudimos realizar la conexion con kernel");
-	 enviar_mensaje(consola_config.ip_kernel,conexion);
-	 enviar_mensaje(consola_config.puerto_kernel,conexion);
-
-	 log_info(consola_logger,"Mensaje enviado");
+	enviar_mensaje(consola_config.ip_kernel,conexion);
+	enviar_mensaje(consola_config.puerto_kernel,conexion);
+	log_info(consola_logger,"Mensaje enviado");
 	/*-------------------------------------Paquete--------------------------------------*/
 	// log_info(logger,"Estas por mandar un paquete");
-	//paquete(conexion,buffer);
+	paquete(conexion,buffer);
 
 /*-------------------------------------Fin ejecucion--------------------------------------*/
-	// terminar_programa(conexion, logger, config, file, buffer);
-
+	terminar_programa(conexion, consola_logger, consola_config_file, file, buffer);
+	return 0;
 }
 
 char* readFile(char* path, FILE* file){
@@ -121,7 +120,7 @@ void paquete(int conexion,char * buffer)
 	eliminar_paquete(paquete);
 	}
 
-
+// procesID payload
 
 
 

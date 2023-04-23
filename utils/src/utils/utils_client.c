@@ -1,5 +1,5 @@
 #include "utils_client.h"
-
+#include <errno.h>
 
 void* serializar_paquete(t_paquete* paquete, int bytes)
 {
@@ -26,9 +26,11 @@ int crear_conexion(char *ip, char* puerto)
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;
 
-	getaddrinfo(ip, puerto, &hints, &server_info);
+	int return_value_getaddrinfo = getaddrinfo(ip, puerto, &hints, &server_info);
+	// printf("\nEl valor de retorno de la funcion getaddrinfo es %s \n", return_value_getaddrinfo);
 
 	int socket_cliente = socket(server_info->ai_family, server_info->ai_socktype, server_info->ai_protocol);
+	// printf("\nel valor de retorno del socket cliente cuando se genera en crear_conexion es %d \n", socket_cliente);
 
 	if(connect(socket_cliente, server_info->ai_addr, server_info->ai_addrlen) == -1) {
 		return -1;
@@ -53,8 +55,8 @@ void enviar_mensaje(char* mensaje, int socket_cliente)
 
 	void* a_enviar = serializar_paquete(paquete, bytes);
 
-	send(socket_cliente, a_enviar, bytes, 0);
-
+	int return_value_send = send(socket_cliente, a_enviar, bytes, 0);
+	// printf("\nEl valor de retorno de send en la funcion enviar mensaje es %d\n", return_value_send);
 	free(a_enviar);
 	eliminar_paquete(paquete);
 }
@@ -124,4 +126,5 @@ uint32_t result;
 
 send(socket_cliente, &handshake, sizeof(uint32_t), NULL);
 recv(socket_cliente, &result, sizeof(uint32_t), MSG_WAITALL);
+printf("El valor de retorno del handshake es: %d", result);
 }

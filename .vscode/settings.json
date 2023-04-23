@@ -12,6 +12,9 @@
         "assert.h": "c",
         "stdio.h": "c",
         "utils_config.h": "c",
-        "log.h": "c"
+        "log.h": "c",
+        "kernel.h": "c",
+        "socket.h": "c",
+        "errno.h": "c"
     }
 }

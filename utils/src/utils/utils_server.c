@@ -4,10 +4,10 @@ int iniciar_servidor(char* port, t_log* logger)
 {
 	int socket_servidor;
 
-	struct addrinfo hints, *servinfo, *p;
+	struct addrinfo hints, *servinfo;
 
 	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = AF_UNSPEC;
+	hints.ai_family = AF_INET;
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;
 
@@ -44,8 +44,9 @@ int esperar_cliente(int socket_servidor,t_log* logger)
 int recibir_operacion(int socket_cliente)
 {
 	int cod_op;
-	if(recv(socket_cliente, &cod_op, sizeof(int), MSG_WAITALL) > 0)
+	if(recv(socket_cliente, &cod_op, sizeof(int), MSG_WAITALL) > 0){
 		return cod_op;
+	}
 	else
 	{
 		close(socket_cliente);
@@ -64,9 +65,9 @@ void* recibir_buffer(int* size, int socket_cliente)
 	return buffer;
 }
 
-void recibir_mensaje(int socket_cliente,t_log* logger)
+void recibir_mensaje(int socket_cliente, t_log* logger)
 {
-	char* size;
+	int size;
 	char* buffer = recibir_buffer(&size, socket_cliente);
 	log_info(logger, "Me llego el mensaje %s", buffer);
 	free(buffer);
@@ -85,24 +86,24 @@ else
    send(socket_cliente, &resultError, sizeof(uint32_t), NULL);
    }
 
-// t_list* recibir_paquete(int socket_cliente)
-// {
-// 	int size;
-// 	int desplazamiento = 0;
-// 	void * buffer;
-// 	t_list* valores = list_create();
-// 	int tamanio;
+t_list* recibir_paquete(int socket_cliente)
+{
+	int size;
+	int desplazamiento = 0;
+	void * buffer;
+	t_list* valores = list_create();
+	int tamanio;
 
-// 	buffer = recibir_buffer(&size, socket_cliente);
-// 	while(desplazamiento < size)
-// 	{
-// 		memcpy(&tamanio, buffer + desplazamiento, sizeof(int));
-// 		desplazamiento+=sizeof(int);
-// 		char* valor = malloc(tamanio);
-// 		memcpy(valor, buffer+desplazamiento, tamanio);
-// 		desplazamiento+=tamanio;
-// 		list_add(valores, valor);
-// 	}
-// 	free(buffer);
-// 	return valores;
-// }
+	buffer = recibir_buffer(&size, socket_cliente);
+	while(desplazamiento < size)
+	{
+		memcpy(&tamanio, buffer + desplazamiento, sizeof(int));
+		desplazamiento+=sizeof(int);
+		char* valor = malloc(tamanio);
+		memcpy(valor, buffer+desplazamiento, tamanio);
+		desplazamiento+=tamanio;
+		list_add(valores, valor);
+	}
+	free(buffer);
+	return valores;
+}
