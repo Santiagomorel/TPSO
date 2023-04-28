@@ -10,6 +10,7 @@
         "stdlib.h": "c",
         "list.h": "c",
         "assert.h": "c",
-        "stdio.h": "c"
+        "stdio.h": "c",
+        "config.h": "c"
     }
 }
