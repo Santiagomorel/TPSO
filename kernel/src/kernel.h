@@ -3,7 +3,10 @@
 
 #include <utils/utils_client.h>
 #include <utils/utils_server.h>
-#include <utils/utils_config.h>
+#include <utils/utils_start.h>
+
+#define IP_KERNEL "127.0.0.1"
+#define PUERTO_KERNEL ""
 
 void load_config(void);
 void end_program(int, t_log*, t_config*);
@@ -33,7 +36,11 @@ typedef struct{
 
 Kernel_config kernel_config;
 
+int socket_kernel;
+
 t_log * kernel_logger;
 t_config * kernel_config_file;
+
+void iterator(char*);
 
 #endif /* KERNEL_H_ */

@@ -1,5 +1,5 @@
-#ifndef UTILS_CONFIG_H_
-#define UTILS_CONFIG_H_
+#ifndef UTILS_START_H_
+#define UTILS_START_H_
 
 #include<stdio.h>
 #include<stdlib.h>
@@ -11,4 +11,5 @@
 
 t_config* init_config(char * config_path);
 
-#endif /* UTILS_CONFIG_H_ */
+t_log* init_logger(char *file, char *process_name, bool is_active_console, t_log_level level);
+#endif /* UTILS_START_H_ */

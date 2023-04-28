@@ -10,6 +10,11 @@
         "stdlib.h": "c",
         "list.h": "c",
         "assert.h": "c",
-        "stdio.h": "c"
+        "stdio.h": "c",
+        "utils_config.h": "c",
+        "log.h": "c",
+        "kernel.h": "c",
+        "socket.h": "c",
+        "errno.h": "c"
     }
 }
