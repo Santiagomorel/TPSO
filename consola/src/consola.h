@@ -1,17 +1,7 @@
 #ifndef CONSOLA_H_
 #define CONSOLA_H_
 
-#include<stdio.h>
-#include<stdlib.h>
-#include<commons/log.h>
-#include<commons/string.h>
-#include<commons/config.h>
-#include<readline/readline.h>
-#include<utils/utils_client.h>
-#include<utils/utils_start.h>
-#include <valgrind/valgrind.h>
-#include <sys/types.h>
-#include <sys/stat.h>
+#include<utils/utils.h>
 
 char* readFile(char*,FILE*);
 void leer_consola(void);

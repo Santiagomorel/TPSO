@@ -1,5 +1,116 @@
-#include "utils_client.h"
-#include <errno.h>
+#include "utils.h"
+
+/*      -------------------  Funciones Servidor  -------------------      */
+
+int iniciar_servidor(char* port, t_log* logger)
+{
+	int socket_servidor;
+
+	struct addrinfo hints, *servinfo;
+
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_INET;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_PASSIVE;
+
+	getaddrinfo(IP, port, &hints, &servinfo);
+	// Creamos el socket de escucha del servidor
+	socket_servidor = socket(servinfo->ai_family,
+                         servinfo->ai_socktype,
+                         servinfo->ai_protocol);
+
+	log_trace(logger,"Se inicio el server");
+	// Asociamos el socket a un puerto
+	bind(socket_servidor, servinfo->ai_addr, servinfo->ai_addrlen);
+	// Escuchamos las conexiones entrantes
+	listen(socket_servidor, SOMAXCONN);
+	log_trace(logger, "Listo para escuchar a mi cliente");
+	
+
+
+	freeaddrinfo(servinfo);
+	return socket_servidor;			
+}
+
+int esperar_cliente(int socket_servidor,t_log* logger)
+{
+	// Quitar esta línea cuando hayamos terminado de implementar la funcion
+
+	// Aceptamos un nuevo cliente
+	int socket_cliente = accept(socket_servidor, NULL, NULL);
+	 log_info(logger, "Se conecto un cliente!");
+
+	return socket_cliente;
+}
+
+int recibir_operacion(int socket_cliente)
+{
+	int cod_op;
+	if(recv(socket_cliente, &cod_op, sizeof(int), MSG_WAITALL) > 0){
+		return cod_op;
+	}
+	else
+	{
+		close(socket_cliente);
+		return -1;
+	}
+}
+
+void* recibir_buffer(int* size, int socket_cliente)
+{
+	void * buffer;
+
+	recv(socket_cliente, size, sizeof(int), MSG_WAITALL);
+	buffer = malloc(*size);
+	recv(socket_cliente, buffer, *size, MSG_WAITALL);
+
+	return buffer;
+}
+
+void recibir_mensaje(int socket_cliente, t_log* logger)
+{
+	int size;
+	char* buffer = recibir_buffer(&size, socket_cliente);
+	log_info(logger, "Me llego el mensaje %s", buffer);
+	free(buffer);
+}
+
+void recieve_handshake(int socket_cliente){
+uint32_t handshake;
+uint32_t resultOk = 0;
+uint32_t resultError = -1;
+
+
+recv(socket_cliente, &handshake, sizeof(uint32_t), MSG_WAITALL);
+if(handshake == 1)
+   send(socket_cliente, &resultOk, sizeof(uint32_t), NULL);
+else
+   send(socket_cliente, &resultError, sizeof(uint32_t), NULL);
+   }
+
+t_list* recibir_paquete(int socket_cliente)
+{
+	int size;
+	int desplazamiento = 0;
+	void * buffer;
+	t_list* valores = list_create();
+	int tamanio;
+
+	buffer = recibir_buffer(&size, socket_cliente);
+	while(desplazamiento < size)
+	{
+		memcpy(&tamanio, buffer + desplazamiento, sizeof(int));
+		desplazamiento+=sizeof(int);
+		char* valor = malloc(tamanio);
+		memcpy(valor, buffer+desplazamiento, tamanio);
+		desplazamiento+=tamanio;
+		list_add(valores, valor);
+	}
+	free(buffer);
+	return valores;
+}
+
+/*      -------------------  Funciones Cliente  -------------------      */
 
 void* serializar_paquete(t_paquete* paquete, int bytes)
 {
@@ -127,4 +238,26 @@ uint32_t result;
 send(socket_cliente, &handshake, sizeof(uint32_t), NULL);
 recv(socket_cliente, &result, sizeof(uint32_t), MSG_WAITALL);
 printf("El valor de retorno del handshake es: %d", result);
+}
+
+/*      -------------------  Funciones Configuracion Inicial  -------------------      */
+
+t_config* init_config(char * config_path)
+{
+	t_config* new_config;
+	if((new_config = config_create(config_path)) == NULL){
+		printf("No se pudo cargar la configuracion");
+		exit(1);	
+    }
+	return new_config;
+}
+
+t_log* init_logger(char *file, char *process_name, bool is_active_console, t_log_level level)
+{
+	t_log* new_logger;
+	 if((new_logger = log_create(file, process_name, is_active_console, level)) == NULL){
+		printf("No se puede iniciar el logger\n");
+		exit(1);
+	 }
+	return new_logger;
 }

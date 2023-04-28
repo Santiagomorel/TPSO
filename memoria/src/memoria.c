@@ -1,9 +1,3 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <commons/config.h>
-#include <utils/utils.h>
-#include <commons/log.h>
-#include <valgrind/valgrind.h>
 #include "memoria.h"
 
 
