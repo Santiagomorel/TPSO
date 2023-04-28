@@ -16,5 +16,6 @@
         "kernel.h": "c",
         "socket.h": "c",
         "errno.h": "c"
+        "config.h": "c"
     }
 }
