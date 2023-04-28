@@ -58,7 +58,7 @@ int main(int argc, char ** argv)
        log_info(consola_logger, "No se pudo conectar al servidor");
         exit(2);
     }
-	send_handshake(conexion);
+	// send_handshake(conexion);
 	
     log_info(consola_logger, "Pudimos realizar la conexion con kernel");
 	enviar_mensaje(consola_config.ip_kernel,conexion);

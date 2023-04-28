@@ -40,6 +40,11 @@ int socket_kernel;
 t_log * kernel_logger;
 t_config * kernel_config_file;
 
+int socket_cliente;
+int socket_servidor_kernel;
+
+void recibir_consola(int );
+
 void iterator(char*);
 
 #endif /* KERNEL_H_ */

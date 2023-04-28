@@ -19,6 +19,7 @@
 #include <sys/stat.h>
 #include <valgrind/valgrind.h>
 #include <readline/readline.h>
+#include <pthread.h>
 
 /*    Definiciones de Funcionalidad para Servidor    */
 
@@ -38,7 +39,42 @@ void recieve_handshake(int);
 typedef enum
 {
 	MENSAJE,
-	PAQUETE
+	PAQUETE,
+	INICIAR_PCB,
+	//RECIBIR_PCB,
+	// -------  CPU->kernel --------
+	EJECUTAR_PCB, 			//  dispatch
+	EJECUTAR_INTERRUPCION,	// 	interrupt
+	// ------- enviadas por DIspatch: (CPU->kernel) --------
+	FIN_PROCESO,
+	DESALOJO_PCB,  			// TODO RUSO
+	BLOCK_IO,
+	// -------KERNEL->MEMORIA --------
+	ACCEDER_TP,
+	ACCEDER_EU,
+	INICIAR_PROCESO,
+	SUSPENDER_PROCESO,
+	//  CPU->MEMORIA
+	ENVIAR_CONFIG, 			//siendo el cpu le pido a la mem que me pase la configuracion para traducir las direcciones
+	//MMU
+	PEDIDO_INDICE_DOS, // 1er acceso
+	PEDIDO_MARCO,	// 2do acceso
+	PEDIDO_VALOR,
+	WRITE,
+	// -------MEMORIA --------
+	INICIAR_ESTRUCTURAS,
+	TABLA_PAGS,
+	FINALIZAR_ESTRUCTURAS,
+	INDICE_2, 	// 1er acceso mmu
+	MARCO,		// 2do acceso mmu
+	//PAGE_FAULT,
+	DIR_FISICA,
+	VALOR_A_RECIBIR,	
+
+	CONFIG_MEMORIA,
+	FIN_CONSOLA,		
+	OK,
+    FAIL = -1,
 }op_code;
 
 typedef struct
