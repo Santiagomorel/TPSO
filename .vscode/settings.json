@@ -15,6 +15,7 @@
         "log.h": "c",
         "kernel.h": "c",
         "socket.h": "c",
-        "errno.h": "c"
+        "errno.h": "c",
+        "utils_start.h": "c"
     }
 }
