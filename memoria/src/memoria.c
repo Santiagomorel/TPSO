@@ -13,7 +13,10 @@ void funcion(char *str, int i) {
 
 int main(int argc, char ** argv){
 
-    t_log* log_memoria = log_create("./runlogs/memoria.log", "Memoria", 1, LOG_LEVEL_INFO);
+    log_memoria = log_create("./runlogs/memoria.log", "Memoria", 1, LOG_LEVEL_INFO);
+
+
+    // ----------------------- levanto la configuracion de Memoria ----------------------- //
 
     if (argc < 2) {
         fprintf(stderr, "Se esperaba: %s [CONFIG_PATH]\n", argv[0]);
@@ -27,11 +30,14 @@ int main(int argc, char ** argv){
         exit(1);
     }
 
+    log_info(log_memoria, "cargo la configuracion de Memoria");
+    
+    load_config();
                             ///////SERVIDOR MEMORIA//////
 
-    int server_memoria_fd = iniciar_servidor();
+    socket_memoria = iniciar_servidor();
     log_info(log_memoria, "Servidor Memoria listo para recibir al cliente");
-    int cliente_memoria_fd = esperar_cliente(server_memoria_fd);
+    int cliente_memoria_fd = esperar_cliente(socket_memoria);
 
     t_list* lista_Memoria;
     while (1)
@@ -56,9 +62,11 @@ int main(int argc, char ** argv){
     end_program(0/*cambiar por conexion*/, log_memoria, memoria_config);
     return EXIT_SUCCESS;
 }
+
 void iterator(char* value) {
 	log_info(logger,"%s", value);
 }
+
 void load_config(void){
     memoria_config.puerto_escucha           = config_get_string_value(memoria_config_file, "PUERTO_ESCUCHA");
     memoria_config.tam_memoria              = config_get_string_value(memoria_config_file, "TAM_MEMORIA");
@@ -74,28 +82,3 @@ void end_program(int socket, t_log* log, t_config* config){
     config_destroy(config);
     liberar_conexion(socket);
 }
-/*int main(void) {
-  hello_world();
-  return 0;
-}*/
-
-/*int main(int argc, char *argv[]) {
-    if (argc < 2) {
-        fprintf(stderr, "Se esperaba: %s [CONFIG_PATH]\n", argv[0]);
-        exit(1);
-    }
-
-    t_config *config = config_create(argv[1]);
-    if (config == NULL) {
-        perror("Ocurrió un error al intentar abrir el archivo config");
-        exit(1);
-    }
-
-    void print_key_and_value(char *key, void *value) {
-        printf("%s => %s\n", key, (char *)value);
-    }
-    dictionary_iterator(config->properties, print_key_and_value);
-
-    config_destroy(config);
-    return 0;
-}*/

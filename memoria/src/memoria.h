@@ -1,7 +1,8 @@
 #ifndef MEMORIA_H_
 #define MEMORIA_H_
 
-#include <utils/utils.h>
+#include <utils/utils_server.h>
+#include <utils/utils_start.h>
 typedef struct{
 
     char* puerto_escucha;
@@ -15,8 +16,14 @@ typedef struct{
 } Memoria_config;
 
 Memoria_config memoria_config;
-t_config* memoria_config_file;
 
+int socket_memoria;
+
+t_config* memoria_config_file;
+t_log* log_memoria;
+
+void load_config(void);
+void end_program(int, t_log*, t_config*);
 
 #endif /*MEMORIA_H_*/
 
