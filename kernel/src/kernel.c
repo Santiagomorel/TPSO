@@ -6,7 +6,7 @@ int main(int argc, char ** argv)
 
     kernel_logger = init_logger("./runlogs/kernel.log", "KERNEL", 1, LOG_LEVEL_TRACE);
 
-    // ----------------------- levanto la configuracion del kernel ----------------------- //
+    // ----------------------- levanto y cargo la configuracion del kernel ----------------------- //
 
     log_trace(kernel_logger, "levanto la configuracion del kernel");
     if (argc < 2) {
@@ -21,11 +21,12 @@ int main(int argc, char ** argv)
         exit(1);
     }
 
-    // ----------------------- cargo la configuracion del kernel ----------------------- //
-
     log_trace(kernel_logger, "cargo la configuracion del kernel");
     
     load_config();
+
+    inicializarListasGlobales();
+
     // ----------------------- contecto el kernel con los servidores de MEMORIA - CPU (dispatch) - FILESYSTEM ----------------------- //
 
     // if((memory_connection = crear_conexion(kernel_config.ip_memoria , kernel_config.puerto_memoria)) == -1) {
@@ -48,23 +49,174 @@ int main(int argc, char ** argv)
     socket_servidor_kernel = iniciar_servidor(kernel_config.puerto_escucha, kernel_logger);
     log_trace(kernel_logger, "kernel inicia el servidor");
 
+    // ----------------------- espero conexiones de consola ----------------------- //
+
     while (1) {
 
-        log_trace(kernel_logger, "esperando cliente consola ");
+        log_trace(kernel_logger, "esperando cliente consola");
 	    socket_cliente = esperar_cliente(socket_servidor_kernel, kernel_logger);
-            log_trace(kernel_logger, "me entro una consolas con este socket: %d", socket_cliente); 
+            log_trace(kernel_logger, "entro una consola con el socket: %d", socket_cliente); 
 
     
         pthread_t atiende_consola;
-            pthread_create(&atiende_consola, NULL, (void*) recibir_consola, (void*)socket_cliente);
+            pthread_create(&atiende_consola, NULL, (void*)recibir_consola, (void*)socket_cliente);
             pthread_detach(atiende_consola);
 
     }
 
-    // int socket_cliente = esperar_cliente(socket_kernel,kernel_logger);
-    // log_trace(kernel_logger, "El socket del cliente tiene el numero %d", socket_cliente);
+    // end_program(0/*cambiar por conexion*/, kernel_logger, kernel_config_file);
+    return EXIT_SUCCESS;
+}
 
-    // recieve_handshake(socket_cliente);
+// ----------------------- Funciones Globales de Kernel ----------------------- //
+
+// void iterator(char* value) {
+// 	log_trace(kernel_logger,"%s", value);
+// }
+
+void load_config(void){
+
+    kernel_config.ip_memoria                   = config_get_string_value(kernel_config_file, "IP_MEMORIA");
+    kernel_config.puerto_memoria               = config_get_string_value(kernel_config_file, "PUERTO_MEMORIA");
+    kernel_config.ip_file_system               = config_get_string_value(kernel_config_file, "IP_FILESYSTEM");
+    kernel_config.puerto_file_system           = config_get_string_value(kernel_config_file, "PUERTO_FILESYSTEM");
+    kernel_config.ip_cpu                       = config_get_string_value(kernel_config_file, "IP_CPU");
+    kernel_config.puerto_cpu                   = config_get_string_value(kernel_config_file, "PUERTO_CP");
+    kernel_config.puerto_escucha               = config_get_string_value(kernel_config_file, "PUERTO_ESCUCHA");
+    kernel_config.algoritmo_planificacion      = config_get_string_value(kernel_config_file, "ALGORITMO_CLASIFICACION");
+
+    kernel_config.estimacion_inicial           = config_get_int_value(kernel_config_file, "ESTIMACION_INICIAL");
+
+    kernel_config.hrrn_alfa                    = config_get_long_value(kernel_config_file, "HRRN_ALFA");
+    
+    kernel_config.grado_max_multiprogramacion  = config_get_int_value(kernel_config_file, "GRADO_MAX_MULTIPROGRAMACION");
+    
+    kernel_config.recursos                     = config_get_string_value(kernel_config_file, "RECURSOS");
+    kernel_config.instancias_recursos          = config_get_string_value(kernel_config_file, "INSTANCIAS_RECURSOS");
+    
+    // kernel_config.ip_kernel                    = config_get_string_value(kernel_config_file, "IP_KERNEL");
+    // kernel_config.puerto_kernel                = config_get_string_value(kernel_config_file, "PUERTO_KERNEL");
+    
+    log_trace(kernel_logger, "config cargada en 'kernel_cofig_file'");
+}
+
+// void end_program(int socket, t_log* log, t_config* config){
+//     log_destroy(log);
+//     config_destroy(config);
+//     liberar_conexion(socket);
+// }
+
+void recibir_consola(int SOCKET_CLIENTE) {
+    int codigoOperacion = recibir_operacion(SOCKET_CLIENTE);
+
+        switch(codigoOperacion)
+        {
+            case MENSAJE:
+                log_trace(kernel_logger, "recibi el op_cod %d MENSAJE , codigoOperacion", codigoOperacion);
+            
+                break;
+            // ---------LP entrante----------
+            case INICIAR_PCB: 
+            log_trace(kernel_logger, "consola envia pseudocodigo, inicio PCB");
+            t_pcb* pcb_a_iniciar = iniciar_pcb(SOCKET_CLIENTE);
+            log_trace(kernel_logger, "pcb iniciado PID : %d", pcb_a_iniciar->id);
+                pthread_mutex_lock(&m_listaNuevos);
+                    list_add(listaNuevos, pcb_a_iniciar);
+                pthread_mutex_unlock(&m_listaNuevos);
+            log_info(kernel_logger, "Se crea el proceso %d en NEW", pcb_a_iniciar->id);
+            //     planificar_sig_to_ready();// usar esta funcion cada vez q se agregue un proceso a NEW o SUSPENDED-BLOCKED 
+            break;
+
+            default:
+                log_trace(kernel_logger, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
+                break;
+        }
+}
+
+t_pcb* iniciar_pcb(int socket) {
+    int size = 0;
+
+    char* buffer;
+    int desp = 0;
+    
+    buffer = recibir_buffer(&size, socket);
+    
+    char* instrucciones = leer_string(buffer, &desp);
+    int tamanio_proceso = leer_entero(buffer, &desp);        //TODO aca tengo que leer la cantidad de lineas de pseudocodigo
+    
+    t_pcb* nuevo_pcb = pcb_create(instrucciones, tamanio_proceso, socket); 
+    free(instrucciones);
+    free(buffer);
+    
+    loggear_pcb(nuevo_pcb, kernel_logger);
+    
+    return nuevo_pcb;
+}
+
+t_pcb* pcb_create(char* instrucciones, int tamanio, int socket_consola) {
+    log_trace(kernel_logger, "instrucciones en pcb create %s", instrucciones);
+    t_pcb* new_pcb = malloc(sizeof(t_pcb));
+
+    generar_id(new_pcb);
+    new_pcb->estado_actual = NEW;
+    new_pcb->tamanio = tamanio;
+    //list_add_all(new_pcb->instrucciones, instrucciones); // La lista del PCB se la tendre que pasar como & ?
+    //printf("%s" ,string_duplicate(instrucciones));
+    new_pcb->instrucciones = separar_inst_en_lineas(instrucciones);
+    new_pcb->program_counter = 0;
+    // new_pcb->tabla_paginas = -1; // TODO de la conexion con memoria
+    new_pcb->estimacion_rafaga = kernel_config.estimacion_inicial; //ms 
+    new_pcb->estimacion_fija = kernel_config.estimacion_inicial; // ms
+    new_pcb->rafaga_anterior = 0.0; 
+    new_pcb->socket_consola = socket_consola;
+    // new_pcb->sumatoria_rafaga = 0.0;
+    
+    return new_pcb;
+}
+
+void generar_id(t_pcb* pcb) { // Con esta funcion le asignamos a un pcb su id, cuidando de no repetir el numero
+        pthread_mutex_lock(&m_contador_id);
+    pcb->id = contador_id;
+    contador_id++;
+        pthread_mutex_unlock(&m_contador_id);
+}
+
+char** separar_inst_en_lineas(char* instrucciones) {
+    char** lineas = parsearPorSaltosDeLinea(instrucciones);
+
+    char** lineas_mejorado = string_array_new();
+    int i; 
+
+    for(i = 0; i < string_array_size(lineas); i++){
+        
+        char** instruccion = string_split(lineas[i], " "); // separo por espacios 
+        log_trace(kernel_logger, "Agrego la linea '%s' a las intrucciones del pcb", lineas[i]);
+        //log_info(logger_kernel, "instruccion[0] es: %s y la instruccion[1] es:%s", instruccion[0], instruccion[1]);
+        string_array_push(&lineas_mejorado, string_duplicate(lineas[i]));
+    }
+    string_array_destroy(lineas);
+    return lineas_mejorado;
+}
+
+char** parsearPorSaltosDeLinea(char* buffer) {
+    
+    char** lineas = string_split(buffer, "\n");
+    
+    return lineas;
+}
+
+void inicializarListasGlobales(void ) { 
+
+
+    listaNuevos =               list_create();
+	listaReady =                list_create();
+	listaBloqueados =           list_create();
+	listaEjecutando =           list_create();
+	listaFinalizados =          list_create();
+
+    listaIO = list_create();
+}
+// recieve_handshake(socket_cliente);
 
     // t_list * lista;
     // while(1) {
@@ -91,73 +243,6 @@ int main(int argc, char ** argv)
     //     }
     // }
     //recibir_mensaje(socket_cliente,kernel_logger);
-
-    // end_program(0/*cambiar por conexion*/, kernel_logger, kernel_config_file);
-    return 0;
-}
-
-void iterator(char* value) {
-	log_trace(kernel_logger,"%s", value);
-}
-
-void load_config(void){
-
-    kernel_config.ip_memoria                   = config_get_string_value(kernel_config_file, "IP_MEMORIA");
-    kernel_config.puerto_memoria               = config_get_string_value(kernel_config_file, "PUERTO_MEMORIA");
-    kernel_config.ip_file_system               = config_get_string_value(kernel_config_file, "IP_FILESYSTEM");
-    kernel_config.puerto_file_system           = config_get_string_value(kernel_config_file, "PUERTO_FILESYSTEM");
-    kernel_config.ip_cpu                       = config_get_string_value(kernel_config_file, "IP_CPU");
-    kernel_config.puerto_cpu                   = config_get_string_value(kernel_config_file, "PUERTO_CP");
-    kernel_config.puerto_escucha               = config_get_string_value(kernel_config_file, "PUERTO_ESCUCHA");
-    kernel_config.algoritmo_planificacion      = config_get_string_value(kernel_config_file, "ALGORITMO_CLASIFICACION");
-
-    kernel_config.estimacion_inicial           = config_get_int_value(kernel_config_file, "ESTIMACION_INICIAL");
-
-    kernel_config.hrrn_alfa                    = config_get_long_value(kernel_config_file, "HRRN_ALFA");
-    
-    kernel_config.grado_max_multiprogramacion  = config_get_int_value(kernel_config_file, "GRADO_MAX_MULTIPROGRAMACION");
-    
-    kernel_config.recursos                     = config_get_string_value(kernel_config_file, "RECURSOS");
-    kernel_config.instancias_recursos          = config_get_string_value(kernel_config_file, "INSTANCIAS_RECURSOS");
-    
-    kernel_config.ip_kernel                    = config_get_string_value(kernel_config_file, "IP_KERNEL");
-    kernel_config.puerto_kernel                = config_get_string_value(kernel_config_file, "PUERTO_KERNEL");
-    
-    log_trace(kernel_logger, "config cargada en 'kernel_cofig_file'");
-}
-void end_program(int socket, t_log* log, t_config* config){
-    log_destroy(log);
-    config_destroy(config);
-    liberar_conexion(socket);
-}
-
-void recibir_consola(int SOCKET_CLIENTE) {
-    int codigoOperacion = recibir_operacion(SOCKET_CLIENTE);
-
-        switch(codigoOperacion)
-        {
-            case MENSAJE:
-                log_trace(kernel_logger, "recibi el op_cod %d MENSAJE , codigoOperacion", codigoOperacion);
-            
-                break;
-            // ---------LP entrante----------
-            // case INICIAR_PCB: 
-            // log_trace(kernel_logger, "entro una consola y envio paquete a inciar PCB");                         //particularidad de c : "a label can only be part of a statement"
-            //     t_pcb* pcb_a_iniciar = iniciar_pcb(SOCKET_CLIENTE);
-            // log_trace(kernel_logger, "pcb iniciado PID : %d", pcb_a_iniciar->id);
-            //         pthread_mutex_lock(&m_listaNuevos);
-            //     list_add(listaNuevos, pcb_a_iniciar);
-            //         pthread_mutex_unlock(&m_listaNuevos);
-            // log_trace(kernel_logger, "log enlistado: %d", pcb_a_iniciar->id);
-
-            //     planificar_sig_to_ready();// usar esta funcion cada vez q se agregue un proceso a NEW o SUSPENDED-BLOCKED 
-            //     break;
-
-            default:
-                log_trace(kernel_logger, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
-                break;
-        }
-}
 
 /*
 Logs minimos obligatorios
@@ -189,4 +274,12 @@ recibir un mensaje de llegada de pseudocodigo -> esperar a otro mensaje como SUC
 kernel va a: levantar su configuracion inicial -> levantar el servidor -> conectarse con los servidores de CPU - Memoria - FileSystem ->
 recibir Multiplexando clientes consola -> hacer el hanshake -> recibir el archivo de pseudocodigo y enviar mensaje de buena llegada -> ejecutar el proceso ->
 enviar a consola el mensaje de finalizacion ya sea SUCCES - SEG_FAULT - OUT_OF_MEMORY
+
+Checkpoint 2
+Levanta el archivo de configuración - DONE
+Se conecta a CPU, Memoria y File System - ALMOST DONE
+Espera conexiones de las consolas - DONE
+Recibe de las consolas las instrucciones y arma el PCB - ALMOST DONE
+Planificación de procesos con FIFO - REMAINS
+
 */

@@ -75,7 +75,32 @@ typedef enum
 	FIN_CONSOLA,		
 	OK,
     FAIL = -1,
-}op_code;
+} op_code;
+
+typedef enum { // Los estados que puede tener un PCB
+    NEW,
+    READY,
+    BLOCKED,
+	// BLOCKED_READY,
+    RUNNING,
+    EXIT,
+} estados;
+typedef struct {
+    int id;
+	char** instrucciones;
+    int program_counter;
+	// <tipoDato> registros_cpu;					Tenemos que poner
+    // <tipoDato> tiempo_llegada_ready;				Tenemos que poner
+	// <tipoDato> tabla_archivos_abiertos;			Tenemos que poner
+    float estimacion_rafaga; // EST(n) variable
+	float estimacion_fija; // EST(n) fija
+	float rafaga_anterior; // T(n)
+	// float sumatoria_rafaga; // PRUEBA DE TITO
+	int socket_consola;
+	estados estado_actual;
+    int tamanio;
+	//int suspendido; // 0 o 1
+} t_pcb;
 
 typedef struct
 {
@@ -92,6 +117,7 @@ typedef struct
 int crear_conexion(char* ip, char* puerto);
 void enviar_mensaje(char* mensaje, int socket_cliente);
 t_paquete* crear_paquete(void);
+t_paquete* crear_paquete_op_code(op_code codigo_op);
 t_paquete* crear_super_paquete(void);
 void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio);
 void enviar_paquete(t_paquete* paquete, int socket_cliente);
@@ -104,4 +130,14 @@ void send_handshake(int socket_cliente);
 t_config* init_config(char * config_path);
 
 t_log* init_logger(char *file, char *process_name, bool is_active_console, t_log_level level);
+
+/*    Definiciones de Funcionalidad para Serializacion/Deserializacion    */
+
+int leer_entero(char* , int* );
+float leer_float(char* , int* );
+char* leer_string(char* , int* );
+
+
+void loggear_pcb(t_pcb* , t_log* );
+void loggear_estado(t_log* , int );
 #endif /* UTILS_H_ */

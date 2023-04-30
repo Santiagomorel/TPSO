@@ -5,7 +5,8 @@
 
 char* readFile(char*,FILE*);
 void leer_consola(void);
-void paquete(int,char*);
+void paquete(int , char * );
+void enviar_pseudocodigo(int ,int ,char* );
 void terminar_programa(int, t_log*, t_config*,FILE*,char * buffer);
 
 t_log* consola_logger;
