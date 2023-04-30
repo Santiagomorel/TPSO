@@ -49,6 +49,26 @@ int main(int argc, char ** argv){
         pthread_t atiende_cliente;
             pthread_create(&atiende_cliente, NULL, (void*) recibir_kernel, (void*)socket_cliente_memoria);
             pthread_detach(atiende_cliente);
+
+        //int cod_mod;
+        //switch (cod_mod)
+        //{
+        //case KERNEL:
+        //    pthread_create(&atiende_cliente, NULL, (void*) recibir_kernel, (void*)socket_cliente_memoria);
+        //    pthread_detach(atiende_cliente);
+        //    break;
+        //case CPU:
+        //    pthread_create(&atiende_cliente, NULL, (void*) recibir_cpu, (void*)socket_cliente_memoria);
+        //    pthread_detach(atiende_cliente);
+        //    break;
+        //case FILESYSTEM:
+        //    pthread_create(&atiende_cliente, NULL, (void*) recibir_fileSystem, (void*)socket_cliente_memoria);
+        //    pthread_detach(atiende_cliente);
+        //    break;
+        //default:
+        //    log_error(log_memoria, "Operacion desconocida.");
+        //    break;
+        //}
     }
     
 
