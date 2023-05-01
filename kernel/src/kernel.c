@@ -116,7 +116,8 @@ void recibir_consola(int SOCKET_CLIENTE) {
             
                 break;
             // ---------LP entrante----------
-            case INICIAR_PCB: 
+            case INICIAR_PCB:
+
             log_trace(kernel_logger, "consola envia pseudocodigo, inicio PCB");
             t_pcb* pcb_a_iniciar = iniciar_pcb(SOCKET_CLIENTE);
             log_trace(kernel_logger, "pcb iniciado PID : %d", pcb_a_iniciar->id);
@@ -142,7 +143,7 @@ t_pcb* iniciar_pcb(int socket) {
     buffer = recibir_buffer(&size, socket);
     
     char* instrucciones = leer_string(buffer, &desp);
-    int tamanio_proceso = leer_entero(buffer, &desp);        //TODO aca tengo que leer la cantidad de lineas de pseudocodigo
+    // int tamanio_proceso = leer_entero(buffer, &desp);        //TODO aca tengo que leer la cantidad de lineas de pseudocodigo
     
     t_pcb* nuevo_pcb = pcb_create(instrucciones, tamanio_proceso, socket); 
     free(instrucciones);
@@ -279,7 +280,7 @@ Checkpoint 2
 Levanta el archivo de configuración - DONE
 Se conecta a CPU, Memoria y File System - ALMOST DONE
 Espera conexiones de las consolas - DONE
-Recibe de las consolas las instrucciones y arma el PCB - ALMOST DONE
+Recibe de las consolas las instrucciones y arma el PCB - ALMOST ALMOST DONE
 Planificación de procesos con FIFO - REMAINS
 
 */

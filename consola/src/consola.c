@@ -44,8 +44,6 @@ int main(int argc, char ** argv)
         return EXIT_FAILURE; 
     }
 	log_info(consola_logger, "Lectura del buffer: \n%s ", buffer);
-	int cantLineasBuffer = contarLineas(buffer);
-	log_info(consola_logger, "El archivo de pseudocodigo tiene %d lineas de codigo", cantLineasBuffer);
 /*-------------------------------------Inicio Config--------------------------------------*/
 
 	log_info(consola_logger,"IP: %s // port:%s\n", consola_config.ip_kernel,consola_config.puerto_kernel);
@@ -67,7 +65,9 @@ int main(int argc, char ** argv)
 	/*-------------------------------------Paquete--------------------------------------*/
 	// log_info(logger,"Estas por mandar un paquete");
 	paquete(conexion, buffer);
-	// enviar_pseudocodigo(conexion, cantLineasBuffer, buffer);
+	
+	// recibir mensaje buena llegada de pseudo <- kernel (antes de armar el pcb)
+	// recibir cod finalizacion
 
 /*-------------------------------------Fin ejecucion--------------------------------------*/
 	terminar_programa(conexion, consola_logger, consola_config_file, file, buffer);

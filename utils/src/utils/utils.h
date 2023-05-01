@@ -89,7 +89,7 @@ typedef struct {
     int id;
 	char** instrucciones;
     int program_counter;
-	// <tipoDato> registros_cpu;					Tenemos que poner
+	char** registros_cpu;					// Tenemos que poner
     // <tipoDato> tiempo_llegada_ready;				Tenemos que poner
 	// <tipoDato> tabla_archivos_abiertos;			Tenemos que poner
     float estimacion_rafaga; // EST(n) variable
