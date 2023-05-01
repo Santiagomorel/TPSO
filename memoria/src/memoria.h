@@ -2,6 +2,11 @@
 #define MEMORIA_H_
 
 #include <utils/utils.h>
+typedef enum{
+    KERNEL,
+    CPU,
+    FILESYSTEM
+}cod_mod;
 typedef struct{
 
     char* puerto_escucha;
