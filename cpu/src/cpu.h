@@ -37,22 +37,22 @@ void terminar_programa(int, t_log*, t_config*);
 void establecer_conexion(char* , char* , t_config*, t_log*);
 
 /*-------------- REGISTROS ------------*/
-char registers[4];
-char registers[4];
-char registers[4];
+char registers[12];
 
-#define AX 0
-#define BX 1
-#define CX 2
-#define DX 3
-#define EAX 4
-#define EBX 5
-#define ECX 6
-#define EDX 7
-#define RAX 8
-#define RBX 9
-#define RCX 10
-#define RDX 11
+typedef enum{
+    AX,
+    BX,
+    CX,
+    DX,
+    EAX,
+    EBX,
+    ECX,
+    EDX,
+    RAX,
+    RBX,
+    RCX,
+    RDX
+}registros;
 
 void init_registers();
 void add_value_to_register(char* registerToModify, char* valueToAdd);
@@ -72,17 +72,24 @@ typedef enum { // Los estados que puede tener un PCB
     RUNNING,
     EXIT,
 } pcb_status;
+
 typedef struct {
     int process_id; //process id identificador del proceso.
-    int size;
     int program_counter; // número de la próxima instrucción a ejecutar.
+    char** cpu_registers[12]; //Estructura que contendrá los valores de los registros de uso general de la CPU. mas adelante hay que pensarla   
+    int size;
 	int client_socket;
-    uint32_t cpu_registers[12]; //Estructura que contendrá los valores de los registros de uso general de la CPU. mas adelante hay que pensarla
     char** instructions; // lista de instrucciones a ejecutar. char**
 	pcb_status status;
+    t_list* segment_table;
 } t_pcb;
 
-
+typedef struct {
+	int index_page; // Indice de la tabla de paginas que esta en memoria!!
+	int number; // Numero de segmento
+	int size; // Tamaño de segmento
+	 
+} t_segment_table; 
 
 t_pcb* pcb_create(char** instructions, int client_socket, int pid);
 char** generate_instructions_list(char* instructions);

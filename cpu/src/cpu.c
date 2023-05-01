@@ -173,32 +173,25 @@ void set_registers(t_pcb* pcb) {
 }
 
 void init_registers() {
-    registers[AX] = 0;
-    registers[BX] = 0;
-    registers[CX] = 0;
-    registers[DX] = 0;
-	registers[EAX] = 0;
-    registers[EBX] = 0;
-    registers[ECX] = 0;
-    registers[EDX] = 0;
-	registers[RAX] = 0;
-    registers[RBX] = 0;
-    registers[RCX] = 0;
-    registers[RDX] = 0;
+    registers[AX] = "";
+    registers[BX] = "";
+    registers[CX] = "";
+    registers[DX] = "";
+	registers[EAX] = "";
+    registers[EBX] = "";
+    registers[ECX] = "";
+    registers[EDX] = "";
+	registers[RAX] = "";
+    registers[RBX] = "";
+    registers[RCX] = "";
+    registers[RDX] = "";
 }
 
-/*------------------- BUFFER --------------------*/
-void* receive_buffer(int* size, int client_socket){
-	void* buffer;
-	recv(client_socket, size, sizeof(int), MSG_WAITALL);
-	buffer = malloc(*size);
-	recv(client_socket, buffer, *size, MSG_WAITALL);
-	return buffer;
-}
+
 
 /* ---------------- PCB ----------------*/
-
-t_pcb* pcb_create(char** instructions, int client_socket, int pid) { // Para crear el PCB
+/*
+t_pcb* pcb_create(char** instructions, int client_socket, int pid, char** segments) { // Para crear el PCB
     t_pcb* new_pcb = malloc(sizeof(t_pcb));
 
     new_pcb->process_id = pid;
@@ -213,17 +206,29 @@ t_pcb* pcb_create(char** instructions, int client_socket, int pid) { // Para cre
 	new_pcb->cpu_registers[CX] = 0;
 	new_pcb->cpu_registers[DX] = 0;
 	new_pcb->cpu_registers[EAX] = 0;
-	new_pcb->cpu_registers[EBX] = 0;
-	new_pcb->cpu_registers[ECX] = 0;
-	new_pcb->cpu_registers[EDX] = 0;
-	new_pcb->cpu_registers[RAX] = 0;
-	new_pcb->cpu_registers[RBX] = 0;
-	new_pcb->cpu_registers[RCX] = 0;
-	new_pcb->cpu_registers[RDX] = 0;
+	new_pcb->cpu_registers[EBX] = "";
+	new_pcb->cpu_registers[ECX] = "";
+	new_pcb->cpu_registers[EDX] = "";
+	new_pcb->cpu_registers[RAX] = "";
+	new_pcb->cpu_registers[RBX] = "";
+	new_pcb->cpu_registers[RCX] = "";
+	new_pcb->cpu_registers[RDX] = "";
+
+	 int size = string_array_size(segments);
+	
+    for(int i = 0; i < size; i++) {
+		t_segment_table* segment_table = malloc(sizeof(t_segment_table));
+		segment_table->number = i;
+		segment_table->size = atoi(segments[i]);
+		segment_table->index_page = -1; // queda en 0 porque lo inicializa memoria. pero si lo recibimos asi va a sobreescribir lo q setee memoria
+		
+		list_add(new_pcb->segment_table, segment_table);
+	}
  
 
     return new_pcb;
 }
+*/
 void save_context_pcb(t_pcb* pcb){
     pcb->cpu_registers[AX] = registers[AX];
     pcb->cpu_registers[BX] = registers[BX];
@@ -241,83 +246,46 @@ void save_context_pcb(t_pcb* pcb){
 }
 
 
-char* get_state_name(int state){
-	char* string_state;
-	switch(state){
-		case NEW :
-			string_state = string_duplicate("NEW");
-			break;
-		case READY:
-			string_state = string_duplicate("READY");
-			break;
-		case BLOCKED:
-			string_state = string_duplicate("BLOCKED");
-			break;
-		case RUNNING:
-			string_state = string_duplicate("RUNNING");
-			break;
-		case EXIT:
-			string_state = string_duplicate("EXIT");
-			break;
-		default:
-			string_state = string_duplicate("ESTADO NO REGISTRADO");
-			break;
-	}
-	return string_state;
-}
 
-void logguar_state(t_log* logger, int state) {
-	char* string_state = get_state_name(state);
-	log_info(logger, "Estado %d (%s)", state, string_state);
-	free(string_state);
-}
-
-
-int read_int(char* buffer, int* desp) {
-	int ret;
-	memcpy(&ret, buffer + (*desp), sizeof(int));
-	(*desp)+=sizeof(int);
-	return ret;
-}
 
 /*---------------------- PARA INSTRUCCION SET -------------------*/
 
 void add_value_to_register(char* registerToModify, char* valueToAdd){ 
     //convertir el valor a agregar a un tipo de dato int
-    uint32_t value = atoi(valueToAdd);
+ 
     
-    log_info(cpu_logger, "valor a sumarle al registro %d",value);
+    log_info(cpu_logger, "Caracteres a sumarle al registro %d",valueToAdd);
     if (strcmp(registerToModify, "AX") == 0) {
-        registers[AX] += value;
+        registers[AX] += valueToAdd;
     }
     else if (strcmp(registerToModify, "BX") == 0) {
-        registers[BX] += value;
+        registers[BX] += valueToAdd;
     }
     else if (strcmp(registerToModify, "CX") == 0) {
-        registers[CX] += value;
+        registers[CX] += valueToAdd;
     }
     else if (strcmp(registerToModify, "DX") == 0) {
-        registers[DX] += value;
+        registers[DX] += valueToAdd;
     }else if (strcmp(registerToModify, "EAX") == 0) {
-        registers[EAX] += value;
+        registers[EAX] += valueToAdd;
     }else if (strcmp(registerToModify, "EBX") == 0) {
-        registers[EBX] += value;
+        registers[EBX] += valueToAdd;
     }
     else if (strcmp(registerToModify, "ECX") == 0) {
-        registers[ECX] += value;
+        registers[ECX] += valueToAdd;
     }
     else if (strcmp(registerToModify, "EDX") == 0) {
-        registers[EDX] += value;
+        registers[EDX] += valueToAdd;
     }else if (strcmp(registerToModify, "RAX") == 0) {
-        registers[RAX] += value;
+        registers[RAX] += valueToAdd;
     }else if (strcmp(registerToModify, "RBX") == 0) {
-        registers[RBX] += value;
+        registers[RBX] += valueToAdd;
     }
     else if (strcmp(registerToModify, "RCX") == 0) {
-        registers[RCX] += value;
+        registers[RCX] += valueToAdd;
     }
     else if (strcmp(registerToModify, "RDX") == 0) {
-        registers[RDX] += value;
+        registers[RDX] += valueToAdd;
     }
 }
 
