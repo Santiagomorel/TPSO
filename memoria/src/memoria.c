@@ -148,7 +148,57 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL) {
                 break;
         }
 }
-void recibir_cpu(int SOCKET_CLIENTE_CPU) {}
-void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM) {}
+void recibir_cpu(int SOCKET_CLIENTE_CPU) {
+    int codigoOperacion = recibir_operacion(SOCKET_CLIENTE_CPU);
+    switch(codigoOperacion)
+        {
+            case MENSAJE:
+                log_trace(log_memoria, "recibi el op_cod %d MENSAJE , codigoOperacion", codigoOperacion);
+            
+                break;
+            // ---------LP entrante----------
+            // case INICIAR_PCB: 
+            // log_trace(log_memoria, "entro una consola y envio paquete a inciar PCB");                         //particularidad de c : "a label can only be part of a statement"
+            //     t_pcb* pcb_a_iniciar = iniciar_pcb(SOCKET_CLIENTE);
+            // log_trace(log_memoria, "pcb iniciado PID : %d", pcb_a_iniciar->id);
+            //         pthread_mutex_lock(&m_listaNuevos);
+            //     list_add(listaNuevos, pcb_a_iniciar);
+            //         pthread_mutex_unlock(&m_listaNuevos);
+            // log_trace(log_memoria, "log enlistado: %d", pcb_a_iniciar->id);
+
+            //     planificar_sig_to_ready();// usar esta funcion cada vez q se agregue un proceso a NEW o SUSPENDED-BLOCKED 
+            //     break;
+
+            default:
+                log_trace(log_memoria, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
+                break;
+        }
+}
+void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM) {
+    int codigoOperacion = recibir_operacion(SOCKET_CLIENTE_FILESYSTEM);
+    switch(codigoOperacion)
+        {
+            case MENSAJE:
+                log_trace(log_memoria, "recibi el op_cod %d MENSAJE , codigoOperacion", codigoOperacion);
+            
+                break;
+            // ---------LP entrante----------
+            // case INICIAR_PCB: 
+            // log_trace(log_memoria, "entro una consola y envio paquete a inciar PCB");                         //particularidad de c : "a label can only be part of a statement"
+            //     t_pcb* pcb_a_iniciar = iniciar_pcb(SOCKET_CLIENTE);
+            // log_trace(log_memoria, "pcb iniciado PID : %d", pcb_a_iniciar->id);
+            //         pthread_mutex_lock(&m_listaNuevos);
+            //     list_add(listaNuevos, pcb_a_iniciar);
+            //         pthread_mutex_unlock(&m_listaNuevos);
+            // log_trace(log_memoria, "log enlistado: %d", pcb_a_iniciar->id);
+
+            //     planificar_sig_to_ready();// usar esta funcion cada vez q se agregue un proceso a NEW o SUSPENDED-BLOCKED 
+            //     break;
+
+            default:
+                log_trace(log_memoria, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
+                break;
+        }
+}
 
 
