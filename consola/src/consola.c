@@ -44,8 +44,6 @@ int main(int argc, char ** argv)
         return EXIT_FAILURE; 
     }
 	log_info(consola_logger, "Lectura del buffer: \n%s ", buffer);
-	int cantLineasBuffer = contarLineas(buffer);
-	log_info(consola_logger, "El archivo de pseudocodigo tiene %d lineas de codigo", cantLineasBuffer);
 /*-------------------------------------Inicio Config--------------------------------------*/
 
 	log_info(consola_logger,"IP: %s // port:%s\n", consola_config.ip_kernel,consola_config.puerto_kernel);
@@ -60,7 +58,9 @@ int main(int argc, char ** argv)
        log_info(consola_logger, "No se pudo conectar al servidor");
         exit(2);
     }
-	// send_handshake(conexion);
+
+	
+	//send_handshake(conexion);
 	
     log_info(consola_logger, "Pudimos realizar la conexion con kernel");
 	
@@ -68,6 +68,23 @@ int main(int argc, char ** argv)
 	// log_info(logger,"Estas por mandar un paquete");
 	paquete(conexion, buffer);
 	// enviar_pseudocodigo(conexion, cantLineasBuffer, buffer);
+
+	//recibir mensaje llegada de datos desde kernel
+	int codOperacion = recibir_operacion(conexion);
+	if(codOperacion == MENSAJE){
+	recibir_mensaje(conexion,consola_logger);
+	}
+	else{
+		log_info(consola_logger, "Hubo un problema al enviar el paquete");
+	}
+	// recibir hacer finalizacion
+
+	codOperacion = recibir_operacion(conexion);
+	if(codOperacion == FIN_CONSOLA){
+        log_info(consola_logger, "se recibio la orden de finalizar consola enviada por el kernel!\n me voy a autodestruir ;(" );
+    }else{
+        log_info(consola_logger, "no se recibio ninguna orden o la orden %d, aun asi me autodestruire ;( " , codOperacion);
+    }
 
 /*-------------------------------------Fin ejecucion--------------------------------------*/
 	terminar_programa(conexion, consola_logger, consola_config_file, file, buffer);

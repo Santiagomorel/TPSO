@@ -52,6 +52,7 @@ t_pcb* pcb_create(char* , int , int );
 void generar_id(t_pcb* );
 char** separar_inst_en_lineas(char* );
 char** parsearPorSaltosDeLinea(char* );
+void enviar_Fin_consola(int);
 
 int contador_id = 60;
 

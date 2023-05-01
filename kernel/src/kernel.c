@@ -124,6 +124,9 @@ void recibir_consola(int SOCKET_CLIENTE) {
                     list_add(listaNuevos, pcb_a_iniciar);
                 pthread_mutex_unlock(&m_listaNuevos);
             log_info(kernel_logger, "Se crea el proceso %d en NEW", pcb_a_iniciar->id);
+
+            enviar_mensaje("Llego el paquete",SOCKET_CLIENTE);
+            enviar_Fin_consola(SOCKET_CLIENTE);
             //     planificar_sig_to_ready();// usar esta funcion cada vez q se agregue un proceso a NEW o SUSPENDED-BLOCKED 
             break;
 
@@ -216,6 +219,22 @@ void inicializarListasGlobales(void ) {
 
     listaIO = list_create();
 }
+
+void enviar_Fin_consola(int socket){
+    
+    //pthread_mutex_lock(&mutexOk);
+    
+    t_paquete* paquete;
+                        
+    paquete = crear_paquete_op_code(FIN_CONSOLA);
+            
+    enviar_paquete(paquete, socket);
+    
+    eliminar_paquete(paquete);
+
+    liberar_conexion(socket);
+}
+
 // recieve_handshake(socket_cliente);
 
     // t_list * lista;
