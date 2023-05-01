@@ -1,8 +1,3 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <commons/config.h>
-#include <valgrind/valgrind.h>
-#include <commons/log.h>
 #include "cpu.h"
 
 void funcion(char *str, int i) {

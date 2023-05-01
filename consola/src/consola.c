@@ -3,6 +3,8 @@
 
 int main(int argc, char ** argv)
 {
+	
+
 	// ----------------------- creo el log de la consola ----------------------- //
 
 	consola_logger = init_logger("./runlogs/consola.log", "Consola", 1, LOG_LEVEL_INFO);
@@ -35,49 +37,46 @@ int main(int argc, char ** argv)
 
 /*-------------------------------------Leo pseudocodigo--------------------------------------*/
 
-	/*buffer = readFile(path,file,logger);
+	buffer = readFile(path,file);
 
-	  if(buffer == NULL){
-        log_error(logger, "No se encontraron instrucciones.");
+	if(buffer == NULL){
+        log_error(consola_logger, "No se encontraron instrucciones.");
         return EXIT_FAILURE; 
     }
-	log_info(logger, "Lectura del buffer: \n%s ", buffer);*/
-	log_info(consola_logger, "Hola! Soy un log");
+	log_info(consola_logger, "Lectura del buffer: \n%s ", buffer);
 /*-------------------------------------Inicio Config--------------------------------------*/
 
 	log_info(consola_logger,"IP: %s // port:%s\n", consola_config.ip_kernel,consola_config.puerto_kernel);
 
-	// log_info(logger,"Ahora estas en la consola (guardando en consola.log) ");
-	//leer_consola(logger);
+	//  log_info(consola_logger,"Ahora estas en la consola (guardando en consola.log) ");
+	//  leer_consola();
 
-	// log_info(logger,"Ahora saliste de la consola");
+	//  log_info(consola_logger,"Ahora saliste de la consola");
 
 	/*-------------------------------------Inicio Conexion con Kernel--------------------------------------*/
-	// conexion = crear_conexion(ip, puerto); 
+	if((conexion = crear_conexion(consola_config.ip_kernel, consola_config.puerto_kernel)) == -1) {
+       log_info(consola_logger, "No se pudo conectar al servidor");
+        exit(2);
+    }
+	// send_handshake(conexion);
 	
-	// if(conexion == -1) {
-    //     log_info(logger, "No se pudo conectar al servidor");
-    //     exit(2);
-    // }
+    log_info(consola_logger, "Pudimos realizar la conexion con kernel");
 	
-    // log_info(logger, "Pudimos realizar la conexion");
-
-	// enviar_mensaje(ip,conexion);
-	// enviar_mensaje(puerto,conexion);
-
-	// log_info(logger,"Mensaje enviado");
 	/*-------------------------------------Paquete--------------------------------------*/
 	// log_info(logger,"Estas por mandar un paquete");
-	//paquete(conexion,buffer);
+	paquete(conexion, buffer);
+	
+	// recibir mensaje buena llegada de pseudo <- kernel (antes de armar el pcb)
+	// recibir cod finalizacion
 
 /*-------------------------------------Fin ejecucion--------------------------------------*/
-	// terminar_programa(conexion, logger, config, file, buffer);
-
+	terminar_programa(conexion, consola_logger, consola_config_file, file, buffer);
+	return 0;
 }
 
-char* readFile(char* path, FILE* file, t_log* logger){
+char* readFile(char* path, FILE* file){
     if(file == NULL){
-        log_error(logger, "No se encontro el archivo: %s", path);
+        log_error(consola_logger, "No se encontro el archivo: %s", path);
         exit(1);
     }
 
@@ -96,33 +95,39 @@ void load_config(void){
 	log_info(consola_logger, "config cargada en 'consola_cofig_file'");
 }
 
-void leer_consola(void)
-{
-	char* leido;
+// void leer_consola(void)
+// {
+// 	char* leido;
 
 
-	leido = readline("> ");
+// 	leido = readline("> ");
 	
-	while(strcmp(leido, "")) {
-		log_info(consola_logger, leido);
-		leido = readline("> ");
+// 	while(strcmp(leido, "")) {
+// 		log_info(consola_logger, leido);
+// 		leido = readline("> ");
 		
-	}
+// 	}
 
-	free(leido);
+// 	free(leido);
+// }
+
+void enviar_pseudocodigo(int conexion ,int cantLineas ,char* buffer) {
+	t_paquete* paquete = crear_paquete_op_code(INICIAR_PCB);
+	agregar_a_paquete(paquete, buffer, cantLineas);
 }
 
-void paquete(int conexion,char * buffer)
-{
 
-	t_paquete* paquete = crear_paquete();
-	agregar_a_paquete(paquete,buffer, strlen(buffer) + 1);
+void paquete(int conexion, char * buffer)
+{
+	t_paquete* paquete = crear_paquete_op_code(INICIAR_PCB);
+	agregar_a_paquete(paquete, buffer, strlen(buffer) + 1);
 
 	enviar_paquete(paquete, conexion);
+
 	eliminar_paquete(paquete);
 	}
 
-
+// procesID payload
 
 
 

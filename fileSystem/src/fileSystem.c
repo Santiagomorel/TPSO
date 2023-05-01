@@ -1,41 +1,54 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <commons/config.h>
-#include <utils/hello.h>
-#include <valgrind/valgrind.h>
+#include "fileSystem.h"
 
-void funcion(char *str, int i) {
-    VALGRIND_PRINTF_BACKTRACE("%s: %d\n", str, i);
-}
+int main(int argc, char ** argv)
+{
+    // ----------------------- creo el log del fileSystem ----------------------- //
+    fileSystem_logger = log_create("./runlogs/fileSystem.log", "KERNEL", 1, LOG_LEVEL_INFO);
 
-int main() {
-    funcion("Hola Mundo", 42);
-    return 0;
-}
+    // ----------------------- levanto la configuracion del fileSystem ----------------------- //
 
-
-/*int main(void) {
-  hello_world();
-  return 0;
-}*/
-
-/*int main(int argc, char *argv[]) {
+    log_info(fileSystem_logger, "levanto la configuracion del fileSystem");
     if (argc < 2) {
         fprintf(stderr, "Se esperaba: %s [CONFIG_PATH]\n", argv[0]);
         exit(1);
     }
 
-    t_config *config = config_create(argv[1]);
-    if (config == NULL) {
+    fileSystem_config_file = init_config(argv[1]);
+
+    if (fileSystem_config_file == NULL) {
         perror("Ocurrió un error al intentar abrir el archivo config");
         exit(1);
     }
 
-    void print_key_and_value(char *key, void *value) {
-        printf("%s => %s\n", key, (char *)value);
-    }
-    dictionary_iterator(config->properties, print_key_and_value);
+    log_info(fileSystem_logger, "cargo la configuracion del fileSystem");
+    
+    load_config();
+    log_info(fileSystem_logger, "aca no llego si esta la funcion load config puesta");
+    log_info(fileSystem_logger, "%s", fileSystem_config.ip_kernel);
+    log_info(fileSystem_logger, "%s", fileSystem_config.puerto_kernel);
 
-    config_destroy(config);
+
+    end_program(0/*cambiar por conexion*/, fileSystem_logger, fileSystem_config)
     return 0;
-}*/
+}
+
+
+void load_config(void){
+
+    fileSystem_config.ip_memoria = config_get_string_value(fileSystem_config_file, "IP_MEMORIA");
+	fileSystem_config.path_superbloque = config_get_string_value(fileSystem_config_file, "PATH_SUPERBLOQUE");
+	fileSystem_config.path_bitmap = config_get_string_value(fileSystem_config_file, "PATH_BITMAP");
+    fileSystem_config.path_bloques = config_get_string_value(fileSystem_config_file, "PATH_BLOQUES");
+    fileSystem_config.path_FCB = config_get_string_value(fileSystem_config_file, "PATH_FCB");
+	
+	fileSystem_config.puerto_memoria = config_get_int_value(fileSystem_config_file, "PUERTO_MEMORIA");
+    fileSystem_config.puerto_escucha = config_get_int_value(fileSystem_config_file, "PUERTO_ESCUCHA");
+	fileSystem_config.retardo_acceso_bloque = config_get_int_value(fileSystem_config_file, "RETARDO_ACCESSO_BLOQUE");
+
+    log_info(fileSystem_logger, "config cargada en 'fileSystem_cofig_file'");
+}
+void end_program(int socket, t_log* log, t_config* config){
+    log_destroy(log);
+    config_destroy(fileSystem_config_file);
+    liberar_conexion(socket);
+}

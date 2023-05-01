@@ -1,8 +1,7 @@
 #ifndef MEMORIA_H_
 #define MEMORIA_H_
 
-#include <utils/utils_server.h>
-#include <utils/utils_config.h>
+#include <utils/utils.h>
 typedef struct{
 
     char* puerto_escucha;

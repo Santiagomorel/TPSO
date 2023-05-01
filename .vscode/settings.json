@@ -18,6 +18,10 @@
         "functional": "c",
         "tuple": "c",
         "type_traits": "c",
-        "utility": "c"
+        "utility": "c",
+        "kernel.h": "c",
+        "socket.h": "c",
+        "errno.h": "c",
+        "config.h": "c"
     }
 }
