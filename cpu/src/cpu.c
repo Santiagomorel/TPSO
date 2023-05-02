@@ -39,7 +39,7 @@ int main(int argc, char ** argv) {
 /*---------------------- CONEXION CON KERNEL ---------------------*/
 
 	socket_cpu = iniciar_servidor(cpu_config.puerto_escucha, cpu_logger);
-	esperar_cliente(socket_cpu);
+	esperar_cliente(socket_cpu, cpu_logger);
 	handshake_servidor(socket_cpu);
 
 /*---------------------- TERMINO CPU ---------------------*/
@@ -151,18 +151,18 @@ void terminar_programa(int conexion, t_log* logger, t_config* config)
 
 /*-------------------- REGISTROS -------------------*/
 void set_registers(t_pcb* pcb) {
-    registers[AX] = pcb->cpu_registers[AX];
-    registers[BX] = pcb->cpu_registers[BX];
-    registers[CX] = pcb->cpu_registers[CX];
-    registers[DX] = pcb->cpu_registers[DX];
-	registers[EAX] = pcb->cpu_registers[EAX];
-	registers[EBX] = pcb->cpu_registers[EBX];
-	registers[ECX] = pcb->cpu_registers[ECX];
-	registers[EDX] = pcb->cpu_registers[EDX];
-	registers[RAX] = pcb->cpu_registers[RAX];
-	registers[RBX] = pcb->cpu_registers[RBX];
-	registers[RCX] = pcb->cpu_registers[RCX];
-	registers[RDX] = pcb->cpu_registers[RDX];
+    registers[AX] = pcb->registros_cpu[AX];
+    registers[BX] = pcb->registros_cpu[BX];
+    registers[CX] = pcb->registros_cpu[CX];
+    registers[DX] = pcb->registros_cpu[DX];
+	registers[EAX] = pcb->registros_cpu[EAX];
+	registers[EBX] = pcb->registros_cpu[EBX];
+	registers[ECX] = pcb->registros_cpu[ECX];
+	registers[EDX] = pcb->registros_cpu[EDX];
+	registers[RAX] = pcb->registros_cpu[RAX];
+	registers[RBX] = pcb->registros_cpu[RBX];
+	registers[RCX] = pcb->registros_cpu[RCX];
+	registers[RDX] = pcb->registros_cpu[RDX];
 
 
 }
@@ -225,18 +225,18 @@ t_pcb* pcb_create(char** instructions, int client_socket, int pid, char** segmen
 }
 */
 void save_context_pcb(t_pcb* pcb){
-    pcb->cpu_registers[AX] = registers[AX];
-    pcb->cpu_registers[BX] = registers[BX];
-    pcb->cpu_registers[CX] = registers[CX];
-    pcb->cpu_registers[DX] = registers[DX];
-	pcb->cpu_registers[EAX] = registers[EAX];
-	pcb->cpu_registers[EBX] = registers[EBX];
-	pcb->cpu_registers[ECX] = registers[ECX];
-	pcb->cpu_registers[EDX] = registers[EDX];
-	pcb->cpu_registers[RAX] = registers[RAX];
-	pcb->cpu_registers[RBX] = registers[RBX];
-	pcb->cpu_registers[RCX] = registers[RCX];
-	pcb->cpu_registers[RDX] = registers[RDX];
+    pcb->registros_cpu[AX] = registers[AX];
+    pcb->registros_cpu[BX] = registers[BX];
+    pcb->registros_cpu[CX] = registers[CX];
+    pcb->registros_cpu[DX] = registers[DX];
+	pcb->registros_cpu[EAX] = registers[EAX];
+	pcb->registros_cpu[EBX] = registers[EBX];
+	pcb->registros_cpu[ECX] = registers[ECX];
+	pcb->registros_cpu[EDX] = registers[EDX];
+	pcb->registros_cpu[RAX] = registers[RAX];
+	pcb->registros_cpu[RBX] = registers[RBX];
+	pcb->registros_cpu[RCX] = registers[RCX];
+	pcb->registros_cpu[RDX] = registers[RDX];
 
 }
 
@@ -286,29 +286,58 @@ void add_value_to_register(char* registerToModify, char* valueToAdd){
 
 /*-------------------- FETCH ---------------------- */
 char* fetch_next_instruction_to_execute(t_pcb* pcb){
-    return pcb->instructions[pcb->program_counter];
+    return pcb->instrucciones[pcb->program_counter];
+}
+
+/*-------------------- DECODE ---------------------- */
+
+char** decode(char* linea){ // separarSegunEspacios
+    char** instruction = string_split(linea, " "); 
+
+    if(instruction[0] == NULL){
+        log_info(cpu_logger, "linea vacia!");
+    }
+    // no va el free aca, linea se libera en el scope donde se declara
+    return instruction; 
+}
+
+/*-------------------- EXECUTE ---------------------- */
+
+void execute_instruction(char** instruction, t_pcb* pcb){
+
+     switch(keyfromstring(instruction[0])){
+        case I_SET: 
+            // SET (Registro, Valor)
+            log_info(cpu_logger, "Por ejecutar instruccion SET");
+            log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s", pcb->id, instruction[0], instruction[1], instruction[2]);
+
+            add_value_to_register(instruction[1], instruction[2]);
+            break;
+            default:
+            log_info(cpu_logger, "No ejecute nada");
+            break;
+}
+}
+
+/*---------------------------------- INSTRUCTIONS ----------------------------------*/
+
+typedef struct { 
+    char *key; 
+    int val; 
+    } t_symstruct;
+
+static t_symstruct lookuptable[] = {
+    { "SET", I_SET }	
+};
+
+int keyfromstring(char *key) {
+    int i;
+    for (i=0; i < 6; i++) {
+        t_symstruct sym = lookuptable[i];
+        if (strcmp(sym.key, key) == 0)
+            return sym.val;
+    }
+    return BADKEY;
 }
 
 
-
-
-/*int main(int argc, char *argv[]) {
-    if (argc < 2) {
-        fprintf(stderr, "Se esperaba: %s [CONFIG_PATH]\n", argv[0]);
-        exit(1);
-    }
-
-    t_config *config = config_create(argv[1]);
-    if (config == NULL) {
-        perror("Ocurrió un error al intentar abrir el archivo config");
-        exit(1);
-    }
-
-    void print_key_and_value(char *key, void *value) {
-        printf("%s => %s\n", key, (char *)value);
-    }
-    dictionary_iterator(config->properties, print_key_and_value);
-
-    config_destroy(config);
-    return 0;
-}*/

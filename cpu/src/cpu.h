@@ -21,11 +21,15 @@ int conexion_cpu;
 int socket_cpu;
 
 
-
+void load_config(void);
 void leer_consola(t_log*);
 void paquete(int);
 void terminar_programa(int, t_log*, t_config*);
+
+/*-------------- CONEXIONES ------------*/
 void establecer_conexion(char* , char* , t_config*, t_log*);
+void handshake_cliente(int socket_cliente);
+void handshake_servidor(int socket_cliente);
 
 /*-------------- REGISTROS ------------*/
 char registers[12];
@@ -50,38 +54,22 @@ void add_value_to_register(char* registerToModify, char* valueToAdd);
 void add_two_registers(char* registerToModify, char* registroParaSumarleAlOtroRegistro);
 
 
-/*------------------- BUFFER --------------------*/
-void* receive_buffer(int*, int);
+/*------------------- INSTRUCCIONES --------------------*/
 
+#define BADKEY -1
+#define I_SET 1
+#define I_ADD 2
+#define I_IO 3
+#define I_MOV_IN 4
+#define I_MOV_OUT 5
+#define I_EXIT 6
+
+int keyfromstring(char *key);
 
 /*-------------- PCB -------------------*/
 
-typedef enum { // Los estados que puede tener un PCB
-    NEW,
-    READY,
-    BLOCKED,
-    RUNNING,
-    EXIT,
-} pcb_status;
 
-typedef struct {
-    int process_id; //process id identificador del proceso.
-    int program_counter; // número de la próxima instrucción a ejecutar.
-    char** cpu_registers[12]; //Estructura que contendrá los valores de los registros de uso general de la CPU. mas adelante hay que pensarla   
-    int size;
-	int client_socket;
-    char** instructions; // lista de instrucciones a ejecutar. char**
-	pcb_status status;
-    t_list* segment_table;
-} t_pcb;
-
-typedef struct {
-	int index_page; // Indice de la tabla de paginas que esta en memoria!!
-	int number; // Numero de segmento
-	int size; // Tamaño de segmento
-	 
-} t_segment_table; 
-
+/*
 t_pcb* pcb_create(char** instructions, int client_socket, int pid);
 char** generate_instructions_list(char* instructions);
 
@@ -90,13 +78,16 @@ void logguar_state(t_log* logger, int state);
 
 t_pcb* receive_pcb(int socket, t_log* logger);
 
-void change_pcb_state_to(t_pcb* pcb, pcb_status newState);
+void change_pcb_state_to(t_pcb* pcb, estados newState);
 void loggear_pcb(t_pcb* pcb, t_log* logger);
 void loggear_registers(t_log* logger, uint32_t* registers);
 
-int read_int(char* buffer, int* desp);
+int read_int(char* buffer, int* desp);*/
 
-/*-------------- PROCESOS --------------------*/
+/*-------------- CICLO DE INSTRUCCION --------------------*/
+
 char* fetch_next_instruction_to_execute(t_pcb* pcb);
+char** decode(char* linea);
+void execute_instruction(char** instruccion_a_ejecutar, t_pcb* pcb);
 
 #endif
