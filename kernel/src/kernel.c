@@ -27,6 +27,10 @@ int main(int argc, char ** argv)
 
     inicializarListasGlobales();
 
+    iniciarSemaforos();
+
+    iniciar_planificadores();
+
     // ----------------------- contecto el kernel con los servidores de MEMORIA - CPU (dispatch) - FILESYSTEM ----------------------- //
 
     // if((memory_connection = crear_conexion(kernel_config.ip_memoria , kernel_config.puerto_memoria)) == -1) {
@@ -127,7 +131,7 @@ void recibir_consola(int SOCKET_CLIENTE) {
 
             enviar_mensaje("Llego el paquete",SOCKET_CLIENTE);
             enviar_Fin_consola(SOCKET_CLIENTE);
-            //     planificar_sig_to_ready();// usar esta funcion cada vez q se agregue un proceso a NEW o SUSPENDED-BLOCKED 
+            //planificar_sig_to_ready(); // usar esta funcion cada vez q se agregue un proceso a NEW o SUSPENDED-BLOCKED 
             break;
 
             default:
@@ -219,6 +223,44 @@ void inicializarListasGlobales(void ) {
 
     listaIO = list_create();
 }
+
+void iniciar_planificadores(){
+        pthread_create(&planificadorCP, NULL, (void*) planificar_sig_to_running, (void*)SOCKET_CLIENTE);
+        pthread_detach(planificadorCP);
+
+}
+
+void iniciarSemaforos(){
+    sem_init(&proceso_en_ready,0, 0);
+    }
+
+void destruirSemaforos(){
+	sem_destroy(&proceso_en_ready);
+
+}
+
+void planificar_sig_to_running(){ 
+
+    while(1){
+        sem_wait(&proceso_en_ready);
+
+        if(!tieneDesalojo) { // FIFO
+
+                pthread_mutex_lock(&listaReady);
+            t_pcb* pcb_a_ejecutar = list_remove(listaReady, 0);
+                pthread_mutex_unlock(&listaReady);
+
+            log_info(kernel_logger, "agrego a RUNING y se lo paso a cpu para q ejecute!");
+
+            cambiar_estado_a(pcb_a_ejecutar, RUNNING);
+            agregar_a_lista_con_sems( pcb_a_ejecutar, listaEjecutando, listaEjecutando);
+
+            paquete_pcb(cpu_dispatch_connection, pcb_a_ejecutar, EJECUTAR_PCB); // falta sacar comments a la conexion
+            //eliminar_pcb(pcb_a_ejecutar)??
+        }
+        //logica hrrn?
+        
+    }
 
 void enviar_Fin_consola(int socket){
     

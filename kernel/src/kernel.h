@@ -55,13 +55,20 @@ char** parsearPorSaltosDeLinea(char* );
 void enviar_Fin_consola(int);
 
 int contador_id = 60;
+int tieneDesalojo = 0;
 
 // Semaforos
 pthread_mutex_t m_contador_id;
 pthread_mutex_t m_listaNuevos;
+pthread_t planificadorCP;
+sem_t proceso_en_ready;
 // void iterator(char*);
 
 void inicializarListasGlobales(void );
+void iniciarSemaforos();
+void destruirSemaforos();
+void planificar_sig_to_running();
+void iniciar_planificadores();
 
 // Listas de estados de tipo de planificacion
 t_list* listaNuevos;        // NEW
