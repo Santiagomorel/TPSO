@@ -50,7 +50,6 @@ int main(int argc, char ** argv){
             pthread_create(&atiende_cliente, NULL, (void*) recibir_kernel, (void*)socket_cliente_memoria);
             pthread_detach(atiende_cliente);
 
-// PREGUNTAR EL MARTES
         switch (cod_mod)
         {
         case KERNEL:
