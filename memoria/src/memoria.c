@@ -50,32 +50,6 @@ int main(int argc, char ** argv){
             pthread_create(&atiende_cliente, NULL, (void*) recibir_kernel, (void*)socket_cliente_memoria);
             pthread_detach(atiende_cliente);
     }
-    
-
-
-
-    //t_list* lista_Memoria;
-    //while (1)
-    //{
-    //    int cod_op_mem = recibir_operacion(cliente_memoria_fd);
-    //    switch (cod_op_mem){
-    //    case MENSAJE:
-    //        recibir_mensaje(cliente_memoria_fd);
-    //        break;
-    //    case PAQUETE:
-    //        lista_Memoria = recibir_paquete(cliente_memoria_fd);
-    //        log_info(log_memoria, "Me llegaron los siguientes valores:\n");
-    //        list_iterate(lista_Memoria, (void*) iterator);
-    //        break;
-    //    case -1:
-    //        log_warning(logger, "el cliente se desconecto. Terminando servidor");
-    //        return EXIT_FAILURE;
-    //    default:
-    //        log_error(log_memoria, "Operacion desconocida.")
-    //    }
-    //}
-    //
-    // return EXIT_SUCCESS;
 
     end_program(0/*cambiar por conexion*/, log_memoria, memoria_config);
     
