@@ -49,7 +49,11 @@ typedef enum{
     RDX
 }registros;
 
+#define REQUEST 0
+#define RESPONSE 1
+
 void init_registers();
+void set_registers(t_pcb* pcb);
 void add_value_to_register(char* registerToModify, char* valueToAdd);
 void add_two_registers(char* registerToModify, char* registroParaSumarleAlOtroRegistro);
 
@@ -66,28 +70,23 @@ void add_two_registers(char* registerToModify, char* registroParaSumarleAlOtroRe
 
 int keyfromstring(char *key);
 
-/*-------------- PCB -------------------*/
+/*-------------- PROCESOS -------------------*/
+
+int check_interruption;
+int page_fault;
+int sigsegv;
+int numeroSegmentoGlobalPageFault;
+int numeroPaginaGlobalPageFault;
+pthread_mutex_t m_execute_instruct;
 
 
-/*
-t_pcb* pcb_create(char** instructions, int client_socket, int pid);
-char** generate_instructions_list(char* instructions);
-
-char* get_state_name(int state);
-void logguar_state(t_log* logger, int state);
-
-t_pcb* receive_pcb(int socket, t_log* logger);
-
-void change_pcb_state_to(t_pcb* pcb, estados newState);
-void loggear_pcb(t_pcb* pcb, t_log* logger);
-void loggear_registers(t_log* logger, uint32_t* registers);
-
-int read_int(char* buffer, int* desp);*/
 
 /*-------------- CICLO DE INSTRUCCION --------------------*/
 
 char* fetch_next_instruction_to_execute(t_pcb* pcb);
 char** decode(char* linea);
 void execute_instruction(char** instruccion_a_ejecutar, t_pcb* pcb);
+void update_program_counter(t_pcb* pcb);
+void execute_process(t_pcb* pcb);
 
 #endif

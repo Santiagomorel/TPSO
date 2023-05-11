@@ -297,7 +297,7 @@ char** decode(char* linea){ // separarSegunEspacios
     if(instruction[0] == NULL){
         log_info(cpu_logger, "linea vacia!");
     }
-    // no va el free aca, linea se libera en el scope donde se declara
+    
     return instruction; 
 }
 
@@ -319,6 +319,85 @@ void execute_instruction(char** instruction, t_pcb* pcb){
 }
 }
 
+int end_process = 0;
+int input_ouput = 0;
+int check_interruption = 0;
+
+char* device = "NONE";
+char* parameter = "NONE";
+
+/*
+void execute_process(t_pcb* pcb){
+    //char* value_to_copy = string_new(); // ?????
+
+    set_registers(pcb);
+
+    char* instruction = malloc(sizeof(char*));
+    char** decoded_instruction = malloc(sizeof(char*));
+
+    log_info(cpu_logger, "Por empezar check_interruption != 1 && end_process != 1 && input_ouput != 1 && page_fault != 1"); 
+    while(check_interruption != 1 && end_process != 1 && input_ouput != 1 && page_fault != 1 && sigsegv != 1){
+        //Llega el pcb y con el program counter buscas la instruccion que necesita
+        instruction = string_duplicate(fetch_next_instruction_to_execute(pcb));
+        decoded_instruction = decode(instruction);
+
+        log_info(cpu_logger, "Por ejecutar la instruccion decodificada %s", decoded_instruction[0]);
+        execute_instruction(decoded_instruction, pcb);
+
+        if(page_fault != 1) {   // en caso de tener page fault no se actualiza program counter
+            update_program_counter(pcb);
+        }
+         
+        
+        log_info(cpu_logger, "PROGRAM COUNTER: %d", pcb->program_counter);
+
+
+    } //si salis del while es porque te llego una interrupcion o termino el proceso o entrada y salida
+    
+    log_info(cpu_logger, "SALI DEL WHILE DE EJECUCION");
+
+
+    save_context_pcb(pcb); // ACA GUARDAMOS EL CONTEXTO
+
+    if(end_process) {
+        end_process = 0; // IMPORTANTE: Apagar el flag para que no rompa el proximo proceso que llegue
+        check_interruption = 0;
+        send_pcb_package(socket_cpu, pcb, FIN_PROCESO);
+        log_info(cpu_logger, "Enviamos paquete a dispatch: FIN PROCESO");
+    } 
+    else if(input_ouput) {
+        input_ouput = 0;
+        check_interruption = 0;
+        log_info(cpu_logger, "Device: %s, Parameter: %s", device, parameter);
+        send_pcb_io_package(socket_cpu, pcb, device, parameter, REQUEST); // Ver bien tema REQUEST
+    }
+    else if(page_fault) {
+        page_fault = 0;
+        check_interruption = 0;
+        log_info(cpu_logger, "OCURRIO UN PAGE FAULT, ENVIANDO A KERNEL PARA QUE SOLUCIONE");
+        
+        // subirle pcb , 
+        t_paquete* package = create_package(PAGE_FAULT); // FALTA PAGE_FAULT
+        add_pcb_to_package(package, pcb);
+        add_int_to_package(package, numeroSegmentoGlobalPageFault);
+        add_int_to_package(package, numeroPaginaGlobalPageFault);
+        send_package(package, socket_cpu);
+        delete_package(package);
+        //send_pcb_package(socket_kernel, pcb, REQUEST_PAGE_FAULT); //Este codigo de operacion?
+    }
+    else if(sigsegv == 1){
+        sigsegv = 0;
+        check_interruption = 0;
+        log_info(cpu_logger, "Error: Segmentation Fault (SEG_FAULT), enviando para terminar proceso");
+        send_pcb_package(socket_cpu, pcb, SEG_FAULT); //FALTA SEG_FAULT EN UTILS.H
+    }
+    else if(check_interruption) {
+        check_interruption = 0;
+        log_info(cpu_logger, "Entro por check interrupt");
+        send_pcb_package(socket_cpu, pcb, EJECUTAR_INTERRUPCION); //Este codigo de operacion?
+    }
+}
+*/
 /*---------------------------------- INSTRUCTIONS ----------------------------------*/
 
 typedef struct { 
