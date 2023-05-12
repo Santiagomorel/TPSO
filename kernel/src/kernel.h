@@ -60,6 +60,7 @@ int tieneDesalojo = 0;
 // Semaforos
 pthread_mutex_t m_contador_id;
 pthread_mutex_t m_listaNuevos;
+pthread_mutex_t m_listaReady;
 pthread_t planificadorCP;
 sem_t proceso_en_ready;
 // void iterator(char*);
