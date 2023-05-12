@@ -1,10 +1,12 @@
 #ifndef KERNEL_H_
 #define KERNEL_H_
 
-#include <utils/utils_client.h>
-#include <utils/utils_server.h>
-#include <utils/utils_config.h>
+#include <utils/utils.h>
 
+#define IP_KERNEL "127.0.0.1"
+#define PUERTO_KERNEL ""
+
+void start_kernel(void);
 void load_config(void);
 void end_program(int, t_log*, t_config*);
 typedef struct{
@@ -33,7 +35,16 @@ typedef struct{
 
 Kernel_config kernel_config;
 
+int socket_kernel;
+
 t_log * kernel_logger;
 t_config * kernel_config_file;
+
+int socket_cliente;
+int socket_servidor_kernel;
+
+void recibir_consola(int );
+
+void iterator(char*);
 
 #endif /* KERNEL_H_ */
