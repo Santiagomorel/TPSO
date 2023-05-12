@@ -67,7 +67,9 @@ int main(int argc, char ** argv)
 	/*-------------------------------------Paquete--------------------------------------*/
 	// log_info(logger,"Estas por mandar un paquete");
 	paquete(conexion, buffer);
-	// enviar_pseudocodigo(conexion, cantLineasBuffer, buffer);
+	
+	// recibir mensaje buena llegada de pseudo <- kernel (antes de armar el pcb)
+	// recibir cod finalizacion
 
 	//recibir mensaje llegada de datos desde kernel
 	int codOperacion = recibir_operacion(conexion);

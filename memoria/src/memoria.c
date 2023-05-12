@@ -1,16 +1,5 @@
 #include "memoria.h"
 
-
- typedef enum
- {
- 	MENSAJE,
- 	PAQUETE
- }op_code_memoria;
-
-void funcion(char *str, int i) {
-    VALGRIND_PRINTF_BACKTRACE("%s: %d\n", str, i);
-}
-
 int main(int argc, char ** argv){
 
     log_memoria = log_create("./runlogs/memoria.log", "Memoria", 1, LOG_LEVEL_TRACE);
@@ -46,12 +35,31 @@ int main(int argc, char ** argv){
         socket_cliente_memoria = esperar_cliente(socket_servidor_memoria, log_memoria);
         log_trace(log_memoria, "me entro un cliente con este socket: %d", socket_cliente_memoria);
 
+        
+
         pthread_t atiende_cliente;
+
+        switch (cod_mod)
+        {
+        case KERNEL:
             pthread_create(&atiende_cliente, NULL, (void*) recibir_kernel, (void*)socket_cliente_memoria);
             pthread_detach(atiende_cliente);
+            break;
+        case CPU:
+            pthread_create(&atiende_cliente, NULL, (void*) recibir_cpu, (void*)socket_cliente_memoria);
+            pthread_detach(atiende_cliente);
+            break;
+        case FILESYSTEM:
+            pthread_create(&atiende_cliente, NULL, (void*) recibir_fileSystem, (void*)socket_cliente_memoria);
+            pthread_detach(atiende_cliente);
+            break;
+        default:
+            log_error(log_memoria, "Modulo desconocido.");
+            break;
+        }
     }
 
-    end_program(0/*cambiar por conexion*/, log_memoria, memoria_config);
+    end_program(socket_servidor_memoria, log_memoria, memoria_config_file);
     
     return 0;
 }
@@ -102,7 +110,57 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL) {
                 break;
         }
 }
-void recibir_cpu(int SOCKET_CLIENTE_CPU) {}
-void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM) {}
+void recibir_cpu(int SOCKET_CLIENTE_CPU) {
+    int codigoOperacion = recibir_operacion(SOCKET_CLIENTE_CPU);
+    switch(codigoOperacion)
+        {
+            case MENSAJE:
+                log_trace(log_memoria, "recibi el op_cod %d MENSAJE , codigoOperacion", codigoOperacion);
+            
+                break;
+            // ---------LP entrante----------
+            // case INICIAR_PCB: 
+            // log_trace(log_memoria, "entro una consola y envio paquete a inciar PCB");                         //particularidad de c : "a label can only be part of a statement"
+            //     t_pcb* pcb_a_iniciar = iniciar_pcb(SOCKET_CLIENTE);
+            // log_trace(log_memoria, "pcb iniciado PID : %d", pcb_a_iniciar->id);
+            //         pthread_mutex_lock(&m_listaNuevos);
+            //     list_add(listaNuevos, pcb_a_iniciar);
+            //         pthread_mutex_unlock(&m_listaNuevos);
+            // log_trace(log_memoria, "log enlistado: %d", pcb_a_iniciar->id);
+
+            //     planificar_sig_to_ready();// usar esta funcion cada vez q se agregue un proceso a NEW o SUSPENDED-BLOCKED 
+            //     break;
+
+            default:
+                log_trace(log_memoria, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
+                break;
+        }
+}
+void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM) {
+    int codigoOperacion = recibir_operacion(SOCKET_CLIENTE_FILESYSTEM);
+    switch(codigoOperacion)
+        {
+            case MENSAJE:
+                log_trace(log_memoria, "recibi el op_cod %d MENSAJE , codigoOperacion", codigoOperacion);
+            
+                break;
+            // ---------LP entrante----------
+            // case INICIAR_PCB: 
+            // log_trace(log_memoria, "entro una consola y envio paquete a inciar PCB");                         //particularidad de c : "a label can only be part of a statement"
+            //     t_pcb* pcb_a_iniciar = iniciar_pcb(SOCKET_CLIENTE);
+            // log_trace(log_memoria, "pcb iniciado PID : %d", pcb_a_iniciar->id);
+            //         pthread_mutex_lock(&m_listaNuevos);
+            //     list_add(listaNuevos, pcb_a_iniciar);
+            //         pthread_mutex_unlock(&m_listaNuevos);
+            // log_trace(log_memoria, "log enlistado: %d", pcb_a_iniciar->id);
+
+            //     planificar_sig_to_ready();// usar esta funcion cada vez q se agregue un proceso a NEW o SUSPENDED-BLOCKED 
+            //     break;
+
+            default:
+                log_trace(log_memoria, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
+                break;
+        }
+}
 
 

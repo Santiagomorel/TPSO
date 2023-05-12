@@ -10,6 +10,7 @@
 #include <commons/log.h>
 #include <commons/string.h>
 #include <commons/config.h>
+#include <commons/temporal.h>
 #include <commons/collections/list.h>
 #include <string.h>
 #include <assert.h>
@@ -89,8 +90,8 @@ typedef struct {
     int id;
 	char** instrucciones;
     int program_counter;
-	// <tipoDato> registros_cpu;					Tenemos que poner
-    // <tipoDato> tiempo_llegada_ready;				Tenemos que poner
+	char** registros_cpu;					// Tenemos que poner
+    t_temporal tiempo_llegada_ready;				Tenemos que poner
 	// <tipoDato> tabla_archivos_abiertos;			Tenemos que poner
     float estimacion_rafaga; // EST(n) variable
 	float estimacion_fija; // EST(n) fija
@@ -113,6 +114,10 @@ typedef struct
 	op_code codigo_operacion;
 	t_buffer* buffer;
 } t_paquete;
+
+typedef struct {
+	
+} archivos_abiertos
 
 int crear_conexion(char* ip, char* puerto);
 void enviar_mensaje(char* mensaje, int socket_cliente);

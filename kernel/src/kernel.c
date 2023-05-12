@@ -120,17 +120,23 @@ void recibir_consola(int SOCKET_CLIENTE) {
             
                 break;
             // ---------LP entrante----------
-            case INICIAR_PCB: 
+            case INICIAR_PCB:
+
             log_trace(kernel_logger, "consola envia pseudocodigo, inicio PCB");
             t_pcb* pcb_a_iniciar = iniciar_pcb(SOCKET_CLIENTE);
             log_trace(kernel_logger, "pcb iniciado PID : %d", pcb_a_iniciar->id);
-                pthread_mutex_lock(&m_listaNuevos);
-                    list_add(listaNuevos, pcb_a_iniciar);
-                pthread_mutex_unlock(&m_listaNuevos);
+            pthread_mutex_lock(&m_listaNuevos);
+                list_add(listaNuevos, pcb_a_iniciar);
+            pthread_mutex_unlock(&m_listaNuevos);
             log_info(kernel_logger, "Se crea el proceso %d en NEW", pcb_a_iniciar->id);
 
             enviar_mensaje("Llego el paquete",SOCKET_CLIENTE);
-            enviar_Fin_consola(SOCKET_CLIENTE);
+
+            // si multprog permite -> pido tabla segmentos memoria
+            // me interesa comprobar la multiprogramacion, de momento
+            
+
+            //enviar_Fin_consola(SOCKET_CLIENTE);
             //planificar_sig_to_ready(); // usar esta funcion cada vez q se agregue un proceso a NEW o SUSPENDED-BLOCKED 
             break;
 
@@ -149,7 +155,7 @@ t_pcb* iniciar_pcb(int socket) {
     buffer = recibir_buffer(&size, socket);
     
     char* instrucciones = leer_string(buffer, &desp);
-    int tamanio_proceso = leer_entero(buffer, &desp);        //TODO aca tengo que leer la cantidad de lineas de pseudocodigo
+    // int tamanio_proceso = leer_entero(buffer, &desp);        //TODO aca tengo que leer la cantidad de lineas de pseudocodigo
     
     t_pcb* nuevo_pcb = pcb_create(instrucciones, tamanio_proceso, socket); 
     free(instrucciones);
@@ -231,7 +237,10 @@ void iniciar_planificadores(){
 }
 
 void iniciarSemaforos(){
+    pthread_mutex_init(&m_listaNuevos, NULL);
+    pthread_mutex_init(&m_listaReady, NULL);
     sem_init(&proceso_en_ready,0, 0);
+
     }
 
 void destruirSemaforos(){
@@ -245,10 +254,9 @@ void planificar_sig_to_running(){
         sem_wait(&proceso_en_ready);
 
         if(!tieneDesalojo) { // FIFO
-
-                pthread_mutex_lock(&listaReady);
+            pthread_mutex_lock(&m_listaReady);
             t_pcb* pcb_a_ejecutar = list_remove(listaReady, 0);
-                pthread_mutex_unlock(&listaReady);
+                pthread_mutex_unlock(&m_listaReady);
 
             log_info(kernel_logger, "agrego a RUNING y se lo paso a cpu para q ejecute!");
 
@@ -340,7 +348,7 @@ Checkpoint 2
 Levanta el archivo de configuración - DONE
 Se conecta a CPU, Memoria y File System - ALMOST DONE
 Espera conexiones de las consolas - DONE
-Recibe de las consolas las instrucciones y arma el PCB - ALMOST DONE
+Recibe de las consolas las instrucciones y arma el PCB - ALMOST ALMOST DONE
 Planificación de procesos con FIFO - REMAINS
 
 */
