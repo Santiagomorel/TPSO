@@ -1,14 +1,7 @@
 #ifndef FILESYSTEM
 #define FILESYSTEM _H_
 
-#include<stdio.h>
-#include<stdlib.h>
-#include<commons/log.h>
-#include<commons/string.h>
-#include<commons/config.h>
-#include<readline/readline.h>
-#include<utils/utils_client.h>
-#include <valgrind/valgrind.h>
+#include <utils/utils.h>
 
 
 void load_config(void);

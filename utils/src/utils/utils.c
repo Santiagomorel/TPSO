@@ -199,6 +199,14 @@ t_paquete* crear_paquete(void)
 	return paquete;
 }
 
+t_paquete* crear_paquete_op_code(op_code codigo_op)
+{
+	t_paquete* paquete = malloc(sizeof(t_paquete));
+	paquete->codigo_operacion = codigo_op;
+	crear_buffer(paquete);
+	return paquete;
+}
+
 void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio)
 {
 	paquete->buffer->stream = realloc(paquete->buffer->stream, paquete->buffer->size + tamanio + sizeof(int));
@@ -260,4 +268,83 @@ t_log* init_logger(char *file, char *process_name, bool is_active_console, t_log
 		exit(1);
 	 }
 	return new_logger;
+}
+
+/*      -------------------  Funciones de Serializacion/Deserializacion -------------------      */
+
+int leer_entero(char* buffer, int* desplazamiento)	// Lee un entero en base a un buffer y un desplazamiento, ambos se pasan por referencia
+{
+	int ret;
+	memcpy(&ret, buffer + (*desplazamiento), sizeof(int));
+	(*desplazamiento)+=sizeof(int);
+	return ret;
+
+}
+
+float leer_float(char* buffer, int* desplazamiento)	// Lee un float en base a un buffer y un desplazamiento, ambos se pasan por referencia
+{
+	float ret;
+	memcpy(&ret, buffer + (*desplazamiento), sizeof(float));
+	(*desplazamiento)+=sizeof(float);
+	return ret;
+
+}
+
+char* leer_string(char* buffer, int* desplazamiento)	// Lee un string en base a un buffer y un desplazamiento, ambos se pasan por referencia
+{
+	int tamanio = leer_entero(buffer, desplazamiento);
+	printf("allocating / copying %d \n", tamanio);
+
+	char* valor = malloc(tamanio);
+	memcpy(valor, buffer+(*desplazamiento), tamanio);
+	(*desplazamiento)+=tamanio;
+
+	return valor;
+}
+
+void loggear_pcb(t_pcb* pcb, t_log* logger){
+	int i = 0;
+
+	log_trace(logger, "id %d", pcb->id);
+	loggear_estado(logger, pcb->estado_actual);
+	log_trace(logger, "tamanio %d", pcb->tamanio);
+	for(i=0; i < string_array_size(pcb->instrucciones); i++)
+	{
+		log_trace(logger, "instruccion Linea %d: %s", i, pcb->instrucciones[i]);
+	}
+	log_trace(logger, "program counter %d", pcb->program_counter);
+	// log_trace(logger, "tabla de pags %d", pcb->tabla_paginas);
+	log_trace(logger, "estimacion rafaga actual %f", pcb->estimacion_rafaga);	
+	log_trace(logger, "estimacion fija %f", pcb->estimacion_fija);
+	log_trace(logger, "rafaga anterior %f", pcb->rafaga_anterior);
+	log_trace(logger, "socket_cliente_consola %d", pcb->socket_consola);
+
+}
+
+void loggear_estado(t_log* logger, int estado) {
+	char* string_estado;
+
+	switch(estado){
+		case NEW :
+			string_estado = string_duplicate("NEW");
+			break;
+		case READY:
+			string_estado = string_duplicate("REDY");
+			break;
+		case BLOCKED:
+			string_estado = string_duplicate("BLOCKED");
+			break;
+		// case BLOCKED_READY:
+		// 	string_estado = string_duplicate("BLOCKED_READY");
+		// 	break;
+		case RUNNING:
+			string_estado = string_duplicate("RUNNING");
+			break;
+		case EXIT:
+			string_estado = string_duplicate("EXIT");
+			break;
+		}
+
+	log_trace(logger, "estado %d (%s)", estado, string_estado);
+	free(string_estado);
 }

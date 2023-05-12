@@ -1,14 +1,9 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <commons/config.h>
-#include <valgrind/valgrind.h>
-#include <commons/log.h>
 #include "fileSystem.h"
 
 int main(int argc, char ** argv)
 {
     // ----------------------- creo el log del fileSystem ----------------------- //
-    t_log * fileSystem_logger = log_create("./runlogs/fileSystem.log", "FILESYSTEM", 1, LOG_LEVEL_INFO);
+    fileSystem_logger = log_create("./runlogs/fileSystem.log", "KERNEL", 1, LOG_LEVEL_INFO);
 
     // ----------------------- levanto la configuracion del fileSystem ----------------------- //
 
@@ -38,24 +33,44 @@ int main(int argc, char ** argv)
 
 }
 
-	void load_config(void){
+if((kernel_connection = crear_conexion(fileSystem_config.ip_kernel , fileSystem_config.puerto_kernel)) == -1) {
+    log_trace(fileSystem_logger, "No se pudo conectar al servidor de KERNEL");
+    exit(2);
 
-    fileSystem_config.ip_memoria = config_get_string_value(config, "IP_MEMORIA");
-	fileSystem_config.path_superbloque = config_get_string_value(config, "PATH_SUPERBLOQUE");
-	fileSystem_config.path_bitmap = config_get_string_value(config, "PATH_BITMAP");
-    fileSystem_config.path_bloques = config_get_string_value(config, "PATH_BLOQUES");
-    fileSystem_config.path_FCB = config_get_string_value(config, "PATH_FCB");
+
+socket_servidor_fileSystem = iniciar_servidor(fileSystem_config.puerto_escucha, fileSystem_logger);
+    log_trace(fileSystem_logger, "fileSystem inicia el servidor");
+
+    while (1) {
+
+        log_trace(fileSystem_logger, "esperando cliente kernel ");
+	    socket_cliente = esperar_cliente(socket_servidor_fileSystem, fileSystem_logger);
+            log_trace(fileSystem_logger, "me entro un kernel con este socket: %d", socket_cliente); 
+
+    
+        pthread_t atiende_kernel;
+            pthread_create(&atiende_kernel, NULL, (void*) recibir_kernel, (void*)socket_cliente);
+            pthread_detach(atiende_kernel);
+
+    }
+
+
+void load_config(void){
+
+    fileSystem_config.ip_memoria = config_get_string_value(fileSystem_config_file, "IP_MEMORIA");
+	fileSystem_config.path_superbloque = config_get_string_value(fileSystem_config_file, "PATH_SUPERBLOQUE");
+	fileSystem_config.path_bitmap = config_get_string_value(fileSystem_config_file, "PATH_BITMAP");
+    fileSystem_config.path_bloques = config_get_string_value(fileSystem_config_file, "PATH_BLOQUES");
+    fileSystem_config.path_FCB = config_get_string_value(fileSystem_config_file, "PATH_FCB");
 	
-	fileSystem_config.puerto_memoria = config_get_int_value(config, "PUERTO_MEMORIA");
-    fileSystem_config.puerto_escucha = config_get_int_value(config, "PUERTO_ESCUCHA");
-	fileSystem_config.retardo_acceso_bloque = config_get_int_value(config, "RETARDO_ACCESSO_BLOQUE");
+	fileSystem_config.puerto_memoria = config_get_int_value(fileSystem_config_file, "PUERTO_MEMORIA");
+    fileSystem_config.puerto_escucha = config_get_int_value(fileSystem_config_file, "PUERTO_ESCUCHA");
+	fileSystem_config.retardo_acceso_bloque = config_get_int_value(fileSystem_config_file, "RETARDO_ACCESSO_BLOQUE");
 
-    
-    
-    // log_info(kernel_logger, "config cargada en 'kernel_cofig_data'");
+    log_info(fileSystem_logger, "config cargada en 'fileSystem_cofig_file'");
 }
 void end_program(int socket, t_log* log, t_config* config){
     log_destroy(log);
-    config_destroy(config);
+    config_destroy(fileSystem_config_file);
     liberar_conexion(socket);
 }
