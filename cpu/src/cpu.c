@@ -39,7 +39,7 @@ int main(int argc, char ** argv) {
 /*---------------------- CONEXION CON KERNEL ---------------------*/
 
 	socket_cpu = iniciar_servidor(cpu_config.puerto_escucha, cpu_logger);
-	esperar_cliente(socket_cpu);
+	esperar_cliente(socket_cpu, cpu_logger);
 	handshake_servidor(socket_cpu);
 
 /*---------------------- TERMINO CPU ---------------------*/
@@ -151,196 +151,239 @@ void terminar_programa(int conexion, t_log* logger, t_config* config)
 
 /*-------------------- REGISTROS -------------------*/
 void set_registers(t_pcb* pcb) {
-    registers[AX] = pcb->cpu_registers[AX];
-    registers[BX] = pcb->cpu_registers[BX];
-    registers[CX] = pcb->cpu_registers[CX];
-    registers[DX] = pcb->cpu_registers[DX];
-	registers[EAX] = pcb->cpu_registers[EAX];
-	registers[EBX] = pcb->cpu_registers[EBX];
-	registers[ECX] = pcb->cpu_registers[ECX];
-	registers[EDX] = pcb->cpu_registers[EDX];
-	registers[RAX] = pcb->cpu_registers[RAX];
-	registers[RBX] = pcb->cpu_registers[RBX];
-	registers[RCX] = pcb->cpu_registers[RCX];
-	registers[RDX] = pcb->cpu_registers[RDX];
+    registers[AX] = pcb->registros_cpu[AX];
+    registers[BX] = pcb->registros_cpu[BX];
+    registers[CX] = pcb->registros_cpu[CX];
+    registers[DX] = pcb->registros_cpu[DX];
+	registers[EAX] = pcb->registros_cpu[EAX];
+	registers[EBX] = pcb->registros_cpu[EBX];
+	registers[ECX] = pcb->registros_cpu[ECX];
+	registers[EDX] = pcb->registros_cpu[EDX];
+	registers[RAX] = pcb->registros_cpu[RAX];
+	registers[RBX] = pcb->registros_cpu[RBX];
+	registers[RCX] = pcb->registros_cpu[RCX];
+	registers[RDX] = pcb->registros_cpu[RDX];
 
 
 }
 
 void init_registers() {
-    registers[AX] = 0;
-    registers[BX] = 0;
-    registers[CX] = 0;
-    registers[DX] = 0;
-	registers[EAX] = 0;
-    registers[EBX] = 0;
-    registers[ECX] = 0;
-    registers[EDX] = 0;
-	registers[RAX] = 0;
-    registers[RBX] = 0;
-    registers[RCX] = 0;
-    registers[RDX] = 0;
+    registers[AX] = "";
+    registers[BX] = "";
+    registers[CX] = "";
+    registers[DX] = "";
+	registers[EAX] = "";
+    registers[EBX] = "";
+    registers[ECX] = "";
+    registers[EDX] = "";
+	registers[RAX] = "";
+    registers[RBX] = "";
+    registers[RCX] = "";
+    registers[RDX] = "";
 }
 
-/*------------------- BUFFER --------------------*/
-void* receive_buffer(int* size, int client_socket){
-	void* buffer;
-	recv(client_socket, size, sizeof(int), MSG_WAITALL);
-	buffer = malloc(*size);
-	recv(client_socket, buffer, *size, MSG_WAITALL);
-	return buffer;
-}
+
 
 /* ---------------- PCB ----------------*/
 
-t_pcb* pcb_create(char** instructions, int client_socket, int pid) { // Para crear el PCB
-    t_pcb* new_pcb = malloc(sizeof(t_pcb));
-
-    new_pcb->process_id = pid;
-    new_pcb->size = 0; // TODO: Ver en que basarse para ponele un size
-    new_pcb->status = NEW;
-	new_pcb->instructions = instructions;
-    new_pcb->program_counter = 0;
-    new_pcb->client_socket = client_socket;
-
-    new_pcb->cpu_registers[AX] = 0;
-	new_pcb->cpu_registers[BX] = 0;
-	new_pcb->cpu_registers[CX] = 0;
-	new_pcb->cpu_registers[DX] = 0;
-	new_pcb->cpu_registers[EAX] = 0;
-	new_pcb->cpu_registers[EBX] = 0;
-	new_pcb->cpu_registers[ECX] = 0;
-	new_pcb->cpu_registers[EDX] = 0;
-	new_pcb->cpu_registers[RAX] = 0;
-	new_pcb->cpu_registers[RBX] = 0;
-	new_pcb->cpu_registers[RCX] = 0;
-	new_pcb->cpu_registers[RDX] = 0;
- 
-
-    return new_pcb;
-}
 void save_context_pcb(t_pcb* pcb){
-    pcb->cpu_registers[AX] = registers[AX];
-    pcb->cpu_registers[BX] = registers[BX];
-    pcb->cpu_registers[CX] = registers[CX];
-    pcb->cpu_registers[DX] = registers[DX];
-	pcb->cpu_registers[EAX] = registers[EAX];
-	pcb->cpu_registers[EBX] = registers[EBX];
-	pcb->cpu_registers[ECX] = registers[ECX];
-	pcb->cpu_registers[EDX] = registers[EDX];
-	pcb->cpu_registers[RAX] = registers[RAX];
-	pcb->cpu_registers[RBX] = registers[RBX];
-	pcb->cpu_registers[RCX] = registers[RCX];
-	pcb->cpu_registers[RDX] = registers[RDX];
+    pcb->registros_cpu[AX] = registers[AX];
+    pcb->registros_cpu[BX] = registers[BX];
+    pcb->registros_cpu[CX] = registers[CX];
+    pcb->registros_cpu[DX] = registers[DX];
+	pcb->registros_cpu[EAX] = registers[EAX];
+	pcb->registros_cpu[EBX] = registers[EBX];
+	pcb->registros_cpu[ECX] = registers[ECX];
+	pcb->registros_cpu[EDX] = registers[EDX];
+	pcb->registros_cpu[RAX] = registers[RAX];
+	pcb->registros_cpu[RBX] = registers[RBX];
+	pcb->registros_cpu[RCX] = registers[RCX];
+	pcb->registros_cpu[RDX] = registers[RDX];
 
 }
 
 
-char* get_state_name(int state){
-	char* string_state;
-	switch(state){
-		case NEW :
-			string_state = string_duplicate("NEW");
-			break;
-		case READY:
-			string_state = string_duplicate("READY");
-			break;
-		case BLOCKED:
-			string_state = string_duplicate("BLOCKED");
-			break;
-		case RUNNING:
-			string_state = string_duplicate("RUNNING");
-			break;
-		case EXIT:
-			string_state = string_duplicate("EXIT");
-			break;
-		default:
-			string_state = string_duplicate("ESTADO NO REGISTRADO");
-			break;
-	}
-	return string_state;
-}
 
-void logguar_state(t_log* logger, int state) {
-	char* string_state = get_state_name(state);
-	log_info(logger, "Estado %d (%s)", state, string_state);
-	free(string_state);
-}
-
-
-int read_int(char* buffer, int* desp) {
-	int ret;
-	memcpy(&ret, buffer + (*desp), sizeof(int));
-	(*desp)+=sizeof(int);
-	return ret;
-}
 
 /*---------------------- PARA INSTRUCCION SET -------------------*/
 
 void add_value_to_register(char* registerToModify, char* valueToAdd){ 
     //convertir el valor a agregar a un tipo de dato int
-    uint32_t value = atoi(valueToAdd);
+ 
     
-    log_info(cpu_logger, "valor a sumarle al registro %d",value);
+    log_info(cpu_logger, "Caracteres a sumarle al registro %d",valueToAdd);
     if (strcmp(registerToModify, "AX") == 0) {
-        registers[AX] += value;
+        registers[AX] = valueToAdd;
     }
     else if (strcmp(registerToModify, "BX") == 0) {
-        registers[BX] += value;
+        registers[BX] = valueToAdd;
     }
     else if (strcmp(registerToModify, "CX") == 0) {
-        registers[CX] += value;
+        registers[CX] = valueToAdd;
     }
     else if (strcmp(registerToModify, "DX") == 0) {
-        registers[DX] += value;
+        registers[DX] = valueToAdd;
     }else if (strcmp(registerToModify, "EAX") == 0) {
-        registers[EAX] += value;
+        registers[EAX] = valueToAdd;
     }else if (strcmp(registerToModify, "EBX") == 0) {
-        registers[EBX] += value;
+        registers[EBX] = valueToAdd;
     }
     else if (strcmp(registerToModify, "ECX") == 0) {
-        registers[ECX] += value;
+        registers[ECX] = valueToAdd;
     }
     else if (strcmp(registerToModify, "EDX") == 0) {
-        registers[EDX] += value;
+        registers[EDX] = valueToAdd;
     }else if (strcmp(registerToModify, "RAX") == 0) {
-        registers[RAX] += value;
+        registers[RAX] = valueToAdd;
     }else if (strcmp(registerToModify, "RBX") == 0) {
-        registers[RBX] += value;
+        registers[RBX] = valueToAdd;
     }
     else if (strcmp(registerToModify, "RCX") == 0) {
-        registers[RCX] += value;
+        registers[RCX] = valueToAdd;
     }
     else if (strcmp(registerToModify, "RDX") == 0) {
-        registers[RDX] += value;
+        registers[RDX] = valueToAdd;
     }
 }
 
 /*-------------------- FETCH ---------------------- */
 char* fetch_next_instruction_to_execute(t_pcb* pcb){
-    return pcb->instructions[pcb->program_counter];
+    return pcb->instrucciones[pcb->program_counter];
+}
+
+/*-------------------- DECODE ---------------------- */
+
+char** decode(char* linea){ // separarSegunEspacios
+    char** instruction = string_split(linea, " "); 
+
+    if(instruction[0] == NULL){
+        log_info(cpu_logger, "linea vacia!");
+    }
+    
+    return instruction; 
+}
+
+/*-------------------- EXECUTE ---------------------- */
+
+void execute_instruction(char** instruction, t_pcb* pcb){
+
+     switch(keyfromstring(instruction[0])){
+        case I_SET: 
+            // SET (Registro, Valor)
+            log_info(cpu_logger, "Por ejecutar instruccion SET");
+            log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s", pcb->id, instruction[0], instruction[1], instruction[2]);
+
+            usleep(atoi(cpu_config.retardo_instruccion));
+
+            add_value_to_register(instruction[1], instruction[2]);
+            break;
+            default:
+            log_info(cpu_logger, "No ejecute nada");
+            break;
+}
+}
+
+int end_process = 0;
+int input_ouput = 0;
+int check_interruption = 0;
+
+char* device = "NONE";
+char* parameter = "NONE";
+
+
+void execute_process(t_pcb* pcb){
+    //char* value_to_copy = string_new(); // ?????
+
+    set_registers(pcb);
+
+    char* instruction = malloc(sizeof(char*));
+    char** decoded_instruction = malloc(sizeof(char*));
+
+    log_info(cpu_logger, "Por empezar check_interruption != 1 && end_process != 1 && input_ouput != 1 && page_fault != 1"); 
+    while(check_interruption != 1 && end_process != 1 && input_ouput != 1 && page_fault != 1 && sigsegv != 1){
+        //Llega el pcb y con el program counter buscas la instruccion que necesita
+        instruction = string_duplicate(fetch_next_instruction_to_execute(pcb));
+        decoded_instruction = decode(instruction);
+
+        log_info(cpu_logger, "Por ejecutar la instruccion decodificada %s", decoded_instruction[0]);
+        execute_instruction(decoded_instruction, pcb);
+
+        if(page_fault != 1) {   // en caso de tener page fault no se actualiza program counter
+            update_program_counter(pcb);
+        }
+        
+        
+        log_info(cpu_logger, "PROGRAM COUNTER: %d", pcb->program_counter);
+
+
+    } //si salis del while es porque te llego una interrupcion o termino el proceso o entrada y salida
+    
+    log_info(cpu_logger, "SALI DEL WHILE DE EJECUCION");
+
+
+    save_context_pcb(pcb); // ACA GUARDAMOS EL CONTEXTO
+
+   /* if(end_process) {
+        end_process = 0; // IMPORTANTE: Apagar el flag para que no rompa el proximo proceso que llegue
+        check_interruption = 0;
+        send_pcb_package(socket_cpu, pcb, FIN_PROCESO);
+        log_info(cpu_logger, "Enviamos paquete a dispatch: FIN PROCESO");
+    } 
+    else if(input_ouput) {
+        input_ouput = 0;
+        check_interruption = 0;
+        log_info(cpu_logger, "Device: %s, Parameter: %s", device, parameter);
+        send_pcb_io_package(socket_cpu, pcb, device, parameter, REQUEST); // Ver bien tema REQUEST
+    }
+    else if(page_fault) {
+        page_fault = 0;
+        check_interruption = 0;
+        log_info(cpu_logger, "OCURRIO UN PAGE FAULT, ENVIANDO A KERNEL PARA QUE SOLUCIONE");
+        
+        // subirle pcb , 
+        t_paquete* package = create_package(PAGE_FAULT); // FALTA PAGE_FAULT
+        add_pcb_to_package(package, pcb);
+        add_int_to_package(package, numeroSegmentoGlobalPageFault);
+        add_int_to_package(package, numeroPaginaGlobalPageFault);
+        send_package(package, socket_cpu);
+        delete_package(package);
+        //send_pcb_package(socket_kernel, pcb, REQUEST_PAGE_FAULT); //Este codigo de operacion?
+    }
+    else if(sigsegv == 1){
+        sigsegv = 0;
+        check_interruption = 0;
+        log_info(cpu_logger, "Error: Segmentation Fault (SEG_FAULT), enviando para terminar proceso");
+        send_pcb_package(socket_cpu, pcb, SEG_FAULT); //FALTA SEG_FAULT EN UTILS.H
+    }
+    else if(check_interruption) {
+        check_interruption = 0;
+        log_info(cpu_logger, "Entro por check interrupt");
+        send_pcb_package(socket_cpu, pcb, EJECUTAR_INTERRUPCION); //Este codigo de operacion?
+    }*/
+}
+
+/*---------------------------------- INSTRUCTIONS ----------------------------------*/
+
+typedef struct { 
+    char *key; 
+    int val; 
+    } t_symstruct;
+
+static t_symstruct lookuptable[] = {
+    { "SET", I_SET }	
+};
+
+int keyfromstring(char *key) {
+    int i;
+    for (i=0; i < 6; i++) {
+        t_symstruct sym = lookuptable[i];
+        if (strcmp(sym.key, key) == 0)
+            return sym.val;
+    }
+    return BADKEY;
 }
 
 
-
-
-/*int main(int argc, char *argv[]) {
-    if (argc < 2) {
-        fprintf(stderr, "Se esperaba: %s [CONFIG_PATH]\n", argv[0]);
-        exit(1);
-    }
-
-    t_config *config = config_create(argv[1]);
-    if (config == NULL) {
-        perror("Ocurrió un error al intentar abrir el archivo config");
-        exit(1);
-    }
-
-    void print_key_and_value(char *key, void *value) {
-        printf("%s => %s\n", key, (char *)value);
-    }
-    dictionary_iterator(config->properties, print_key_and_value);
-
-    config_destroy(config);
-    return 0;
-}*/
+void update_program_counter(t_pcb* pcb){
+    pcb->program_counter += 1;
+}
