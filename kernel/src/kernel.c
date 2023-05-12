@@ -248,27 +248,94 @@ void destruirSemaforos(){
 
 }
 
-void planificar_sig_to_running(){ 
+// void planificar_sig_to_running(){ 
 
-    while(1){
-        sem_wait(&proceso_en_ready);
+//     while(1){
+//         sem_wait(&proceso_en_ready);
 
-        if(!tieneDesalojo) { // FIFO
-            pthread_mutex_lock(&m_listaReady);
-            t_pcb* pcb_a_ejecutar = list_remove(listaReady, 0);
-                pthread_mutex_unlock(&m_listaReady);
+//         if(!tieneDesalojo) { // FIFO
+//             pthread_mutex_lock(&m_listaReady);
+//             t_pcb* pcb_a_ejecutar = list_remove(listaReady, 0);
+//                 pthread_mutex_unlock(&m_listaReady);
 
-            log_info(kernel_logger, "agrego a RUNING y se lo paso a cpu para q ejecute!");
+//             log_info(kernel_logger, "agrego a RUNING y se lo paso a cpu para q ejecute!");
 
-            cambiar_estado_a(pcb_a_ejecutar, RUNNING);
-            agregar_a_lista_con_sems( pcb_a_ejecutar, listaEjecutando, listaEjecutando);
+//             cambiar_estado_a(pcb_a_ejecutar, RUNNING);
+//             agregar_a_lista_con_sems( pcb_a_ejecutar, listaEjecutando, listaEjecutando);
 
-            paquete_pcb(cpu_dispatch_connection, pcb_a_ejecutar, EJECUTAR_PCB); // falta sacar comments a la conexion
-            //eliminar_pcb(pcb_a_ejecutar)??
-        }
-        //logica hrrn?
+//             paquete_pcb(cpu_dispatch_connection, pcb_a_ejecutar, EJECUTAR_PCB); // falta sacar comments a la conexion
+//             //eliminar_pcb(pcb_a_ejecutar)??
+//         }
+//         //logica hrrn?
         
+//     }
+
+void  planificar_sig_to_ready() {
+
+    sem_wait(&grado_multiprog);
+
+
+
+    if(!list_is_empty(listaBloqueados) && list_any_satisfy(listaBloqueados, bloqueado_termino_io)){ // BLOCKED -> READY
+         
+            pthread_mutex_lock(&m_listaBloqueados);
+        t_pcb* pcb_a_ready = list_remove_by_condition(listaBloqueados, bloqueado_termino_io);
+            pthread_mutex_unlock(&m_listaBloqueados);
+        //PRESCENCIA=1
+        //pcb_a_ready->tabla_paginas = pedir_tabla_pags(pcb_a_ready, conexion_memoria); // TODO pedir_tabla_pags
+        cambiar_estado_a(pcb_a_ready, READY);
+        agregar_a_lista_con_sems(pcb_a_ready, listaReady, m_listaReady);
+
+
+        if(tiene_desalojo && !list_is_empty(listaEjecutando)){
+            encargar_interrupcion();
+        }
+
+        sem_post(&proceso_en_ready);
+        
+    }else if(!list_is_empty(listaBloqueados) && list_any_satisfy(listaBloqueados, bloqueado_suspend_termino_io)){ // SUSPENDED-READY->RUNNING
+        
+            pthread_mutex_lock(&m_listaBloqueados);
+        t_pcb* pcb_a_ready = list_remove_by_condition(listaBloqueados, bloqueado_suspend_termino_io);
+            pthread_mutex_unlock(&m_listaBloqueados);
+        //PRESCENCIA=0    
+        //generar_estructura_pagina
+        //pcb_a_ready->tabla_paginas = pedir_tabla_pags(pcb_a_ready, conexion_memoria); // TODO pedir_tabla_pags
+        //PRESCENCIA=1  
+        cambiar_estado_a(pcb_a_ready, READY);
+        agregar_a_lista_con_sems(pcb_a_ready, listaReady, m_listaReady);
+
+        if(tiene_desalojo && !list_is_empty(listaEjecutando)){
+            encargar_interrupcion();
+        }
+
+        sem_post(&proceso_en_ready);
     }
+    else if(!list_is_empty(listaNuevos)) // NEW -> READY
+    {
+            pthread_mutex_lock(&m_listaNuevos);
+        t_pcb* pcb_a_ready= list_remove(listaNuevos, 0);
+            pthread_mutex_unlock(&m_listaNuevos);
+
+        log_info(logger_kernel, "Inicializamos estructuras del pcb en memoria");
+        inicializar_estructuras(pcb_a_ready);
+        
+        int nro_tabla = pedir_tabla_pags(conexion_memoria); // TODO pedir_tabla_pags
+        pcb_a_ready->tabla_paginas = nro_tabla;
+
+        log_info(logger_kernel, "Memoria nos dio el valor de la tabla de paginas %d", pcb_a_ready->tabla_paginas);
+
+        cambiar_estado_a(pcb_a_ready, READY); // NO ESTABA
+        agregar_a_lista_con_sems(pcb_a_ready, listaReady, m_listaReady); // NO ESTABA
+
+        if(tiene_desalojo && !list_is_empty(listaEjecutando)){
+            encargar_interrupcion();
+        }
+
+        sem_post(&proceso_en_ready);
+        log_info(logger_kernel, "entro el primer pcb a READY!");
+    }
+}
 
 void enviar_Fin_consola(int socket){
     

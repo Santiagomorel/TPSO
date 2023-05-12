@@ -90,17 +90,14 @@ typedef struct {
     int id;
 	char** instrucciones;
     int program_counter;
-	char** registros_cpu;					// Tenemos que poner
-    t_temporal tiempo_llegada_ready;				Tenemos que poner
-	// <tipoDato> tabla_archivos_abiertos;			Tenemos que poner
-    float estimacion_rafaga; // EST(n) variable
-	float estimacion_fija; // EST(n) fija
-	float rafaga_anterior; // T(n)
-	// float sumatoria_rafaga; // PRUEBA DE TITO
+	char** registros_cpu;
+	segmento* tabla_segmentos;
+	float estimacion_rafaga;
+    t_temporal tiempo_llegada_ready;
+	archivo_abierto* tabla_archivos_abiertos;
+
 	int socket_consola;
 	estados estado_actual;
-    int tamanio;
-	//int suspendido; // 0 o 1
 } t_pcb;
 
 typedef struct
@@ -116,8 +113,23 @@ typedef struct
 } t_paquete;
 
 typedef struct {
-	
-} archivos_abiertos
+	int id_segmento;
+	// direccion_base;		//falta definir tipo
+	int tamanio_segmento;
+} segmento;
+
+typedef struct {
+	char* archivo;
+	int puntero;
+} archivo_abierto;
+
+typedef struct {
+	int id;
+	char** instrucciones;
+	int program_counter;
+	char** registros_cpu;
+	segmento* tabla_segmentos;
+} contexto_ejecucion;
 
 int crear_conexion(char* ip, char* puerto);
 void enviar_mensaje(char* mensaje, int socket_cliente);
