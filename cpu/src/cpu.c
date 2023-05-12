@@ -185,45 +185,7 @@ void init_registers() {
 
 
 /* ---------------- PCB ----------------*/
-/*
-t_pcb* pcb_create(char** instructions, int client_socket, int pid, char** segments) { // Para crear el PCB
-    t_pcb* new_pcb = malloc(sizeof(t_pcb));
 
-    new_pcb->process_id = pid;
-    new_pcb->size = 0; // TODO: Ver en que basarse para ponele un size
-    new_pcb->status = NEW;
-	new_pcb->instructions = instructions;
-    new_pcb->program_counter = 0;
-    new_pcb->client_socket = client_socket;
-
-    new_pcb->cpu_registers[AX] = 0;
-	new_pcb->cpu_registers[BX] = 0;
-	new_pcb->cpu_registers[CX] = 0;
-	new_pcb->cpu_registers[DX] = 0;
-	new_pcb->cpu_registers[EAX] = 0;
-	new_pcb->cpu_registers[EBX] = "";
-	new_pcb->cpu_registers[ECX] = "";
-	new_pcb->cpu_registers[EDX] = "";
-	new_pcb->cpu_registers[RAX] = "";
-	new_pcb->cpu_registers[RBX] = "";
-	new_pcb->cpu_registers[RCX] = "";
-	new_pcb->cpu_registers[RDX] = "";
-
-	 int size = string_array_size(segments);
-	
-    for(int i = 0; i < size; i++) {
-		t_segment_table* segment_table = malloc(sizeof(t_segment_table));
-		segment_table->number = i;
-		segment_table->size = atoi(segments[i]);
-		segment_table->index_page = -1; // queda en 0 porque lo inicializa memoria. pero si lo recibimos asi va a sobreescribir lo q setee memoria
-		
-		list_add(new_pcb->segment_table, segment_table);
-	}
- 
-
-    return new_pcb;
-}
-*/
 void save_context_pcb(t_pcb* pcb){
     pcb->registros_cpu[AX] = registers[AX];
     pcb->registros_cpu[BX] = registers[BX];
@@ -251,36 +213,36 @@ void add_value_to_register(char* registerToModify, char* valueToAdd){
     
     log_info(cpu_logger, "Caracteres a sumarle al registro %d",valueToAdd);
     if (strcmp(registerToModify, "AX") == 0) {
-        registers[AX] += valueToAdd;
+        registers[AX] = valueToAdd;
     }
     else if (strcmp(registerToModify, "BX") == 0) {
-        registers[BX] += valueToAdd;
+        registers[BX] = valueToAdd;
     }
     else if (strcmp(registerToModify, "CX") == 0) {
-        registers[CX] += valueToAdd;
+        registers[CX] = valueToAdd;
     }
     else if (strcmp(registerToModify, "DX") == 0) {
-        registers[DX] += valueToAdd;
+        registers[DX] = valueToAdd;
     }else if (strcmp(registerToModify, "EAX") == 0) {
-        registers[EAX] += valueToAdd;
+        registers[EAX] = valueToAdd;
     }else if (strcmp(registerToModify, "EBX") == 0) {
-        registers[EBX] += valueToAdd;
+        registers[EBX] = valueToAdd;
     }
     else if (strcmp(registerToModify, "ECX") == 0) {
-        registers[ECX] += valueToAdd;
+        registers[ECX] = valueToAdd;
     }
     else if (strcmp(registerToModify, "EDX") == 0) {
-        registers[EDX] += valueToAdd;
+        registers[EDX] = valueToAdd;
     }else if (strcmp(registerToModify, "RAX") == 0) {
-        registers[RAX] += valueToAdd;
+        registers[RAX] = valueToAdd;
     }else if (strcmp(registerToModify, "RBX") == 0) {
-        registers[RBX] += valueToAdd;
+        registers[RBX] = valueToAdd;
     }
     else if (strcmp(registerToModify, "RCX") == 0) {
-        registers[RCX] += valueToAdd;
+        registers[RCX] = valueToAdd;
     }
     else if (strcmp(registerToModify, "RDX") == 0) {
-        registers[RDX] += valueToAdd;
+        registers[RDX] = valueToAdd;
     }
 }
 
@@ -311,6 +273,8 @@ void execute_instruction(char** instruction, t_pcb* pcb){
             log_info(cpu_logger, "Por ejecutar instruccion SET");
             log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s", pcb->id, instruction[0], instruction[1], instruction[2]);
 
+            usleep(atoi(cpu_config.retardo_instruccion));
+
             add_value_to_register(instruction[1], instruction[2]);
             break;
             default:
@@ -326,7 +290,7 @@ int check_interruption = 0;
 char* device = "NONE";
 char* parameter = "NONE";
 
-/*
+
 void execute_process(t_pcb* pcb){
     //char* value_to_copy = string_new(); // ?????
 
@@ -347,7 +311,7 @@ void execute_process(t_pcb* pcb){
         if(page_fault != 1) {   // en caso de tener page fault no se actualiza program counter
             update_program_counter(pcb);
         }
-         
+        
         
         log_info(cpu_logger, "PROGRAM COUNTER: %d", pcb->program_counter);
 
@@ -359,7 +323,7 @@ void execute_process(t_pcb* pcb){
 
     save_context_pcb(pcb); // ACA GUARDAMOS EL CONTEXTO
 
-    if(end_process) {
+   /* if(end_process) {
         end_process = 0; // IMPORTANTE: Apagar el flag para que no rompa el proximo proceso que llegue
         check_interruption = 0;
         send_pcb_package(socket_cpu, pcb, FIN_PROCESO);
@@ -395,9 +359,9 @@ void execute_process(t_pcb* pcb){
         check_interruption = 0;
         log_info(cpu_logger, "Entro por check interrupt");
         send_pcb_package(socket_cpu, pcb, EJECUTAR_INTERRUPCION); //Este codigo de operacion?
-    }
+    }*/
 }
-*/
+
 /*---------------------------------- INSTRUCTIONS ----------------------------------*/
 
 typedef struct { 
@@ -420,3 +384,6 @@ int keyfromstring(char *key) {
 }
 
 
+void update_program_counter(t_pcb* pcb){
+    pcb->program_counter += 1;
+}
