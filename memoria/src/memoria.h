@@ -30,6 +30,10 @@ t_log* log_memoria;
 void load_config(void);
 void end_program(int, t_log*, t_config*);
 
+void recibir_kernel(int);
+void recibir_cpu(int);
+void recibir_fileSystem(int);
+
 #endif /*MEMORIA_H_*/
 
 

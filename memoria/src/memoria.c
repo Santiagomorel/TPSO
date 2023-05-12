@@ -1,16 +1,5 @@
 #include "memoria.h"
 
-
- typedef enum
- {
- 	MENSAJE,
- 	PAQUETE
- }op_code_memoria;
-
-void funcion(char *str, int i) {
-    VALGRIND_PRINTF_BACKTRACE("%s: %d\n", str, i);
-}
-
 int main(int argc, char ** argv){
 
     log_memoria = log_create("./runlogs/memoria.log", "Memoria", 1, LOG_LEVEL_TRACE);
@@ -46,9 +35,9 @@ int main(int argc, char ** argv){
         socket_cliente_memoria = esperar_cliente(socket_servidor_memoria, log_memoria);
         log_trace(log_memoria, "me entro un cliente con este socket: %d", socket_cliente_memoria);
 
+        
+
         pthread_t atiende_cliente;
-            pthread_create(&atiende_cliente, NULL, (void*) recibir_kernel, (void*)socket_cliente_memoria);
-            pthread_detach(atiende_cliente);
 
         switch (cod_mod)
         {
@@ -70,7 +59,7 @@ int main(int argc, char ** argv){
         }
     }
 
-    end_program(0/*cambiar por conexion*/, log_memoria, memoria_config);
+    end_program(socket_servidor_memoria, log_memoria, memoria_config_file);
     
     return 0;
 }
