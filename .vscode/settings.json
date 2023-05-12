@@ -22,6 +22,10 @@
         "kernel.h": "c",
         "socket.h": "c",
         "errno.h": "c",
+<<<<<<< HEAD
         "config.h": "c"
+=======
+        "utils_start.h": "c"
+>>>>>>> kalo
     }
 }
