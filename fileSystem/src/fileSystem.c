@@ -7,10 +7,10 @@
 
 int main(int argc, char ** argv)
 {
-    // ----------------------- creo el log del kernel ----------------------- //
-    t_log * fileSystem_logger = log_create("./runlogs/kernel.log", "KERNEL", 1, LOG_LEVEL_INFO);
+    // ----------------------- creo el log del fileSystem ----------------------- //
+    t_log * fileSystem_logger = log_create("./runlogs/fileSystem.log", "FILESYSTEM", 1, LOG_LEVEL_INFO);
 
-    // ----------------------- levanto la configuracion del kernel ----------------------- //
+    // ----------------------- levanto la configuracion del fileSystem ----------------------- //
 
     log_info(fileSystem_logger, "levanto la configuracion del fileSystem");
     if (argc < 2) {
@@ -35,7 +35,29 @@ int main(int argc, char ** argv)
 
     end_program(0/*cambiar por conexion*/, fileSystem_logger, fileSystem_config)
     return 0;
+
 }
+
+if((kernel_connection = crear_conexion(fileSystem_config.ip_kernel , fileSystem_config.puerto_kernel)) == -1) {
+    log_trace(fileSystem_logger, "No se pudo conectar al servidor de KERNEL");
+    exit(2);
+
+
+socket_servidor_fileSystem = iniciar_servidor(fileSystem_config.puerto_escucha, fileSystem_logger);
+    log_trace(fileSystem_logger, "fileSystem inicia el servidor");
+
+    while (1) {
+
+        log_trace(fileSystem_logger, "esperando cliente kernel ");
+	    socket_cliente = esperar_cliente(socket_servidor_fileSystem, fileSystem_logger);
+            log_trace(fileSystem_logger, "me entro un kernel con este socket: %d", socket_cliente); 
+
+    
+        pthread_t atiende_kernel;
+            pthread_create(&atiende_kernel, NULL, (void*) recibir_kernel, (void*)socket_cliente);
+            pthread_detach(atiende_kernel);
+
+    }
 
 
 	void load_config(void){
