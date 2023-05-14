@@ -7,6 +7,9 @@ typedef enum{
     CPU,
     FILESYSTEM
 }cod_mod;
+
+cod_mod recibir_handshake(int);
+
 typedef struct{
 
     char* puerto_escucha;

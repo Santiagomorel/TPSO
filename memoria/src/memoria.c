@@ -35,11 +35,11 @@ int main(int argc, char ** argv){
         socket_cliente_memoria = esperar_cliente(socket_servidor_memoria, log_memoria);
         log_trace(log_memoria, "me entro un cliente con este socket: %d", socket_cliente_memoria);
 
-        
-
+        cod_mod handshake = recibir_handshake(socket_cliente_memoria);      
+    
         pthread_t atiende_cliente;
 
-        switch (cod_mod)
+        switch (handshake)
         {
         case KERNEL:
             pthread_create(&atiende_cliente, NULL, (void*) recibir_kernel, (void*)socket_cliente_memoria);
@@ -84,6 +84,12 @@ void end_program(int socket, t_log* log, t_config* config){
     liberar_conexion(socket);
 }
 
+cod_mod recibir_handshake(int socket_cliente){
+    cod_mod rta_handshake;
+
+    recv(socket_cliente, &rta_handshake, sizeof(cod_mod), MSG_WAITALL);
+    return rta_handshake;
+}
 void recibir_kernel(int SOCKET_CLIENTE_KERNEL) {
     int codigoOperacion = recibir_operacion(SOCKET_CLIENTE_KERNEL);
     switch(codigoOperacion)
@@ -163,4 +169,15 @@ void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM) {
         }
 }
 
+
+/* LOGS NECESAIROS Y OBLIGATORIOS
+- Creación de Proceso: “Creación de Proceso PID: <PID>”
+- Eliminación de Proceso: “Eliminación de Proceso PID: <PID>”
+- Creación de Segmento: “PID: <PID> - Crear Segmento: <ID SEGMENTO> - Base: <DIRECCIÓN BASE> - TAMAÑO: <TAMAÑO>”
+- Eliminación de Segmento: “PID: <PID> - Eliminar Segmento: <ID SEGMENTO> - Base: <DIRECCIÓN BASE> - TAMAÑO: <TAMAÑO>”
+- Inicio Compactación: “Solicitud de Compactación”
+- Resultado Compactación: Por cada segmento de cada proceso se deberá imprimir una línea con el siguiente formato:
+- “PID: <PID> - Segmento: <ID SEGMENTO> - Base: <BASE> - Tamaño <TAMAÑO>”
+- Acceso a espacio de usuario: “PID: <PID> - Acción: <LEER / ESCRIBIR> - Dirección física: <DIRECCIÓN_FÍSICA> - Tamaño: <TAMAÑO> - Origen: <CPU / FS>”
+*/
 
