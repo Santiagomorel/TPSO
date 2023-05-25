@@ -96,7 +96,7 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL) {
         {
             case MENSAJE:
                 log_trace(log_memoria, "recibi el op_cod %d MENSAJE , codigoOperacion", codigoOperacion);
-            
+                enviar_mensaje("recibido kernel", SOCKET_CLIENTE_KERNEL);
                 break;
             // ---------LP entrante----------
             // case INICIAR_PCB: 

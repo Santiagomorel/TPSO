@@ -5,7 +5,8 @@
 typedef enum{
     KERNEL,
     CPU,
-    FILESYSTEM
+    FILESYSTEM,
+    OTRO
 }cod_mod;
 
 cod_mod recibir_handshake(int);
