@@ -66,7 +66,7 @@ typedef enum
 	WRITE,
 	// -------MEMORIA --------
 	INICIAR_ESTRUCTURAS,
-	TABLA_PAGS,
+	TABLA_SEGMENTOS,
 	FINALIZAR_ESTRUCTURAS,
 	INDICE_2, 	// 1er acceso mmu
 	MARCO,		// 2do acceso mmu
@@ -157,10 +157,13 @@ t_log* init_logger(char *file, char *process_name, bool is_active_console, t_log
 /*    Definiciones de Funcionalidad para Serializacion/Deserializacion    */
 
 int leer_entero(char* , int* );
+t_segmento leer_segmento(char* , int* );
 float leer_float(char* , int* );
 char* leer_string(char* , int* );
 
 
 void loggear_pcb(t_pcb* , t_log* );
 void loggear_estado(t_log* , int );
+
+t_segmento recibir_paquete_segmento(int );
 #endif /* UTILS_H_ */

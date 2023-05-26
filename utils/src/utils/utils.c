@@ -288,6 +288,14 @@ int leer_entero(char* buffer, int* desplazamiento)	// Lee un entero en base a un
 
 }
 
+t_segmento leer_segmento(char* buffer, int* desplazamiento)	// Lee un entero en base a un buffer y un desplazamiento, ambos se pasan por referencia
+{
+	t_segmento ret;
+	memcpy(&ret, buffer + (*desplazamiento), sizeof(t_segmento));
+	(*desplazamiento)+=sizeof(int);
+	return ret;
+} // revisar si se descerializa bien
+
 float leer_float(char* buffer, int* desplazamiento)	// Lee un float en base a un buffer y un desplazamiento, ambos se pasan por referencia
 {
 	float ret;
@@ -351,4 +359,18 @@ void loggear_estado(t_log* logger, int estado) {
 
 	log_trace(logger, "estado %d (%s)", estado, string_estado);
 	free(string_estado);
+}
+
+t_segmento recibir_paquete_segmento(int socket){ // usar desp de recibir el COD_OP
+    
+    int size;
+    char* buffer;
+    int desp = 0;
+    
+    buffer = recibir_buffer(&size, socket);
+    
+    t_segmento segmento = leer_segmento(buffer, &desp);        
+    
+    free(buffer);
+    return segmento;
 }

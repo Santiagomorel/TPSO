@@ -1,12 +1,15 @@
-#include <../src/kernel.h>
 #include <cspecs/cspec.h>
 
 context (test_de_estados) {
-    bool la_verdad = true;
+    char * valor = obtenerEstado(0);
+    char * valor2 = obtenerEstado(1);
 
-    describe("Hello world") {
-        it("la_verdad should be true") {
-            should_bool(la_verdad) be equal to(true);
+    describe("Test de lectura de estados") {
+        it("El valor 0 deberia ser NEW") {
+            should_string(valor) be equal to ("NEW");
+        } end
+        it("El valor 1 deberia ser READY") {
+            should_string(valor2) be equal to ("READY");
         } end
     } end
 

@@ -237,15 +237,20 @@ void inicializarListasGlobales(void)
 
 void iniciar_planificadores()
 {
-    pthread_create(&planificadorCP, NULL, (void *)planificar_sig_to_running, (void *)socket_cliente);
-    pthread_detach(planificadorCP);
+    //pthread_create(&planificadorCP, NULL, (void *)planificar_sig_to_running, (void *)socket_cliente);
+    //pthread_detach(planificadorCP);
+    // MODIFICAR cuando haga falta hacer el running
+
 }
 
 void iniciarSemaforos()
 {
     pthread_mutex_init(&m_listaNuevos, NULL);
     pthread_mutex_init(&m_listaReady, NULL);
+    pthread_mutex_init(&m_listaBloqueados, NULL);
+    pthread_mutex_init(&m_contador_id, NULL);
     sem_init(&proceso_en_ready, 0, 0);
+    sem_init(&grado_multiprog, 0, kernel_config.grado_max_multiprogramacion);
 }
 
 void destruirSemaforos()
@@ -304,7 +309,7 @@ void planificar_sig_to_ready()
         inicializar_estructuras(pcb_a_ready);
 
         // aca tengo que pedir las estructuras de los segmentos TODO
-        segmento nuevo_segmento = pedir_tabla_segmentos();
+        t_segmento nuevo_segmento = pedir_tabla_segmentos();
         pcb_a_ready->tabla_segmentos = nuevo_segmento;
         // int nro_tabla = pedir_tabla_pags(conexion_memoria); // TODO pedir_tabla_pags
         // pcb_a_ready->tabla_paginas = nro_tabla;
@@ -334,14 +339,14 @@ void enviar_Fin_consola(int socket)
     liberar_conexion(socket);
 }
 
-estados estadoActual(t_pcb * pcb)
+int estadoActual(t_pcb * pcb) //VER
 {
-    return pcb_a_ready->estado_actual;
+    return pcb->estado_actual;
 }
 
 bool bloqueado_termino_io(t_pcb *pcb)
 {
-    return (pcb->estado_actual == BLOCKED_READY);
+    return (pcb->estado_actual == BLOCKED); //VER aca antes era BLOCKED_READY
 }
 
 void cambiar_estado_a(t_pcb *a_pcb, estados nuevo_estado, estados estado_anterior)
@@ -375,7 +380,7 @@ char * obtenerEstado(estados estado)
         return "EXIT";
         break;
         default:
-        return "Error de estado"
+        return "Error de estado";
     }
 }
 
@@ -401,12 +406,12 @@ t_segmento pedir_tabla_segmentos() //TODO
 
     int codigoOperacion = recibir_operacion(memory_connection);
 
-    if (codigoOperacion != TABLA_PAGS)
+    if (codigoOperacion != TABLA_SEGMENTOS)
     {
-        log_info(logger_kernel, "llego otra cosa q no era un tabla pags :c");
+        log_trace(kernel_logger, "llego otra cosa q no era un tabla pags :c");
     }
 
-    return recibir_paquete_de_solo_un_entero(conexion_memoria);
+    return recibir_paquete_segmento(memory_connection);
 }
 
 // recieve_handshake(socket_cliente);

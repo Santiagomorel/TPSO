@@ -48,11 +48,13 @@ int file_system_connection;
 
 void recibir_consola(int);
 t_pcb* iniciar_pcb(int );
-t_pcb* pcb_create(char* , int , int );
+t_pcb* pcb_create(char* , int );
 void generar_id(t_pcb* );
 char** separar_inst_en_lineas(char* );
 char** parsearPorSaltosDeLinea(char* );
 void enviar_Fin_consola(int);
+bool bloqueado_termino_io(t_pcb *);
+char * obtenerEstado(estados);
 
 void agregar_a_lista_con_sems(t_pcb *pcb_a_agregar, t_list *lista, pthread_mutex_t m_sem);
 
@@ -66,6 +68,7 @@ sem_t proceso_en_ready;
 sem_t grado_multiprog;
 pthread_mutex_t m_contador_id;
 pthread_mutex_t m_listaNuevos;
+pthread_mutex_t m_listaBloqueados;
 pthread_mutex_t m_listaReady;
 pthread_t planificadorCP;
 // void iterator(char*);
