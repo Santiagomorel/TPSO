@@ -217,6 +217,13 @@ void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio)
 	paquete->buffer->size += tamanio + sizeof(int);
 }
 
+void agregar_entero_a_paquete(t_paquete* paquete, int x)
+{
+	paquete->buffer->stream = realloc(paquete->buffer->stream, paquete->buffer->size + sizeof(int));
+	memcpy(paquete->buffer->stream + paquete->buffer->size, &x, sizeof(int));
+	paquete->buffer->size += sizeof(int);
+}
+
 void enviar_paquete(t_paquete* paquete, int socket_cliente)
 {
 	int bytes = paquete->buffer->size + 2*sizeof(int);
@@ -307,7 +314,6 @@ void loggear_pcb(t_pcb* pcb, t_log* logger){
 
 	log_trace(logger, "id %d", pcb->id);
 	loggear_estado(logger, pcb->estado_actual);
-	log_trace(logger, "tamanio %d", pcb->tamanio);
 	for(i=0; i < string_array_size(pcb->instrucciones); i++)
 	{
 		log_trace(logger, "instruccion Linea %d: %s", i, pcb->instrucciones[i]);
@@ -315,8 +321,6 @@ void loggear_pcb(t_pcb* pcb, t_log* logger){
 	log_trace(logger, "program counter %d", pcb->program_counter);
 	// log_trace(logger, "tabla de pags %d", pcb->tabla_paginas);
 	log_trace(logger, "estimacion rafaga actual %f", pcb->estimacion_rafaga);	
-	log_trace(logger, "estimacion fija %f", pcb->estimacion_fija);
-	log_trace(logger, "rafaga anterior %f", pcb->rafaga_anterior);
 	log_trace(logger, "socket_cliente_consola %d", pcb->socket_consola);
 
 }

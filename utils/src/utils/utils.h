@@ -4,6 +4,7 @@
 /*    Includes generales    */
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #include <netdb.h>
@@ -21,6 +22,7 @@
 #include <valgrind/valgrind.h>
 #include <readline/readline.h>
 #include <pthread.h>
+#include <semaphore.h>
 
 /*    Definiciones de Funcionalidad para Servidor    */
 
@@ -86,15 +88,28 @@ typedef enum { // Los estados que puede tener un PCB
     RUNNING,
     EXIT,
 } estados;
+
+typedef struct segmento{
+	int id_segmento;
+	// direccion_base;		//falta definir tipo
+	int tamanio_segmento;
+	struct segmento * sigSegmento;
+} t_segmento;
+
+typedef struct archivo_abierto{
+	char* archivo;
+	int puntero;
+	struct archivo_abierto * sigArchivo;
+} t_archivo_abierto;
 typedef struct {
     int id;
 	char** instrucciones;
     int program_counter;
 	char** registros_cpu;
-	segmento* tabla_segmentos;
+	t_segmento tabla_segmentos;
 	float estimacion_rafaga;
     t_temporal tiempo_llegada_ready;
-	archivo_abierto* tabla_archivos_abiertos;
+	t_archivo_abierto tabla_archivos_abiertos;
 
 	int socket_consola;
 	estados estado_actual;
@@ -112,23 +127,14 @@ typedef struct
 	t_buffer* buffer;
 } t_paquete;
 
-typedef struct {
-	int id_segmento;
-	// direccion_base;		//falta definir tipo
-	int tamanio_segmento;
-} segmento;
 
-typedef struct {
-	char* archivo;
-	int puntero;
-} archivo_abierto;
 
 typedef struct {
 	int id;
 	char** instrucciones;
 	int program_counter;
 	char** registros_cpu;
-	segmento* tabla_segmentos;
+	t_segmento tabla_segmentos;
 } contexto_ejecucion;
 
 int crear_conexion(char* ip, char* puerto);

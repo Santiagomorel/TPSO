@@ -1,8 +1,7 @@
-#include <stdio.h>
-#include <stdbool.h>
+#include <../src/kernel.h>
 #include <cspecs/cspec.h>
 
-context (example) {
+context (test_de_estados) {
     bool la_verdad = true;
 
     describe("Hello world") {
