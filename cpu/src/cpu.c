@@ -4,15 +4,29 @@ void funcion(char *str, int i) {
     VALGRIND_PRINTF_BACKTRACE("%s: %d\n", str, i);
 }
 
-
+void end_cpu_module(sig_t s){
+    close(socket_cpu);
+    close(conexion_cpu);
+    exit(1); 
+}
 
 int main(int argc, char ** argv) {
 
-
+    signal(SIGINT, end_cpu_module);
 
     /* ---------------- LOGGING ---------------- */
+        /* 
+        IMPORTANTE: Tenemos que cambiar el flag del 3er parametro de los loggers. 
+        logger:
+            - Testeando nosotros -> true
+            - En el lab -> false
+         mandatory_logger:
+            - Testeando nosotros -> false
+            - En el lab -> true
 
+*/
 	cpu_logger = init_logger("./runlogs/cpu.log", "CPU", 1, LOG_LEVEL_TRACE);
+    mandatory_logger = log_create("./runlogs/cpu.log", "CPU", 0, LOG_LEVEL_TRACE);
 
 	    log_info(cpu_logger, "Levanto la configuracion del cpu");
     if (argc < 2) {
@@ -37,10 +51,18 @@ int main(int argc, char ** argv) {
 	establecer_conexion(cpu_config.ip_memoria, cpu_config.puerto_memoria, cpu_config_file, cpu_logger);
 
 /*---------------------- CONEXION CON KERNEL ---------------------*/
-
+/*
 	socket_cpu = iniciar_servidor(cpu_config.puerto_escucha, cpu_logger);
 	esperar_cliente(socket_cpu, cpu_logger);
 	handshake_servidor(socket_cpu);
+*/
+    pthread_t threadDispatch, threadInterrupt;
+
+    pthread_create(&threadDispatch, NULL, (void *) process_dispatch, NULL);
+    pthread_create(&threadInterrupt, NULL, (void *) process_interrupt, NULL);
+    pthread_join(threadDispatch, NULL);
+    pthread_join(threadInterrupt, NULL);
+    return 0;
 
 /*---------------------- TERMINO CPU ---------------------*/
 	terminar_programa(conexion_cpu, cpu_logger, cpu_config_file);
@@ -148,6 +170,69 @@ void terminar_programa(int conexion, t_log* logger, t_config* config)
 
 	liberar_conexion(conexion);
 }
+
+
+/*-------------------- HILOS -------------------*/
+void process_dispatch() {
+    log_info(cpu_logger, "Soy el proceso Dispatch");
+    int server = iniciar_servidor(cpu_config.puerto_escucha, cpu_logger);
+	log_info(cpu_logger, "Servidor DISPATCH listo para recibir al cliente");
+
+	socket_cpu = esperar_cliente(server, cpu_logger); 
+    
+    log_info(cpu_logger, "Esperando a que envie mensaje/paquete");
+
+	while (1) {
+        //sem_wait(&proceso_a_ejecutar);
+		int op_code = recibir_operacion(socket_cpu);
+        log_warning(cpu_logger, "Codigo de operacion recibido de kernel: %d", op_code);
+        t_pcb* pcb;
+
+		switch (op_code) {
+            case EJECUTAR_PCB: 
+                //pcb = receive_pcb(socket_cpu, cpu_logger);
+                log_info(cpu_logger, "Llego correctamente el PCB con id: %d", pcb->id);
+                execute_process(pcb);
+                break;   
+            case -1:
+                log_warning(cpu_logger, "El kernel se desconecto");
+                end_cpu_module(1);
+                pthread_exit(NULL);
+                break;
+            default:
+                log_error(cpu_logger, "Codigo de operacion desconocido");
+                exit(1);
+                break;     
+	    }
+    }
+}
+/* ------------------HILO para interrupciones ------------------- */
+void process_interrupt() {
+
+    int server = iniciar_servidor(cpu_config.puerto_escucha, cpu_logger);
+	int client = esperar_cliente(server, cpu_logger);
+    log_info(cpu_logger, "Servidor INTERRUPT realizo la conexion con el cliente");
+	while (1) {
+		int cod_op = recibir_operacion(client);
+        log_warning(cpu_logger, "Codigo de operacion recibido en la interrupcion %d",cod_op);
+		switch (cod_op) {
+            case EJECUTAR_INTERRUPCION:
+                log_warning(cpu_logger, "El cliente debe abandonar por fin de Quantum :)");
+                check_interruption = 1;
+                break;
+            case -1:
+                log_warning(cpu_logger, "El kernel se desconecto");
+                end_cpu_module(1);
+                pthread_exit(NULL);
+                break;
+            default:
+                log_warning(cpu_logger, "Operacion desconocida entre por default");
+                break;
+		}
+	}
+}
+
+
 
 /*-------------------- REGISTROS -------------------*/
 void set_registers(t_pcb* pcb) {
@@ -265,17 +350,43 @@ char** decode(char* linea){ // separarSegunEspacios
 
 /*-------------------- EXECUTE ---------------------- */
 
+int end_process = 0;
+int input_ouput = 0;
+int check_interruption = 0;
+
+char* device = "NONE";
+char* parameter = "NONE";
+
 void execute_instruction(char** instruction, t_pcb* pcb){
 
      switch(keyfromstring(instruction[0])){
         case I_SET: 
             // SET (Registro, Valor)
             log_info(cpu_logger, "Por ejecutar instruccion SET");
-            log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s", pcb->id, instruction[0], instruction[1], instruction[2]);
+            log_info(mandatory_logger, "PID: %d - Ejecutando: %s - %s - %s", pcb->id, instruction[0], instruction[1], instruction[2]);
 
             usleep(atoi(cpu_config.retardo_instruccion));
 
             add_value_to_register(instruction[1], instruction[2]);
+            break;
+        case I_IO:
+            // I/O (Dispositivo, Registro / Unidades de trabajo)
+            log_info(cpu_logger, "Por ejecutar instruccion I/O");
+            log_info(mandatory_logger, "PID: %d - Ejecutando: %s - %s - %s", pcb->id, instruction[0], instruction[1], instruction[2]);
+
+            device = instruction[1];
+            parameter = instruction[2];
+            
+            log_info(cpu_logger, "%s",device);
+            input_ouput = 1;
+            break;
+         case I_EXIT:
+            //EXIT: Esta instrucción representa la syscall de finalización del proceso.
+            //Se deberá devolver el PCB actualizado al Kernel para su finalización.
+            log_info(cpu_logger, "Instruccion EXIT ejecutada");
+            log_info(mandatory_logger, "PID: %d - Ejecutando: %s", pcb->id, instruction[0]);
+
+            end_process = 1;
             break;
             default:
             log_info(cpu_logger, "No ejecute nada");
@@ -283,12 +394,7 @@ void execute_instruction(char** instruction, t_pcb* pcb){
 }
 }
 
-int end_process = 0;
-int input_ouput = 0;
-int check_interruption = 0;
 
-char* device = "NONE";
-char* parameter = "NONE";
 
 
 void execute_process(t_pcb* pcb){
@@ -370,7 +476,9 @@ typedef struct {
     } t_symstruct;
 
 static t_symstruct lookuptable[] = {
-    { "SET", I_SET }	
+    { "SET", I_SET },
+    { "I/O", I_IO },
+    { "EXIT", I_EXIT }	
 };
 
 int keyfromstring(char *key) {
