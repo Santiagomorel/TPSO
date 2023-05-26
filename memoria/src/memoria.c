@@ -38,7 +38,7 @@ int main(int argc, char ** argv){
         cod_mod handshake = recibir_handshake(socket_cliente_memoria);      
     
         pthread_t atiende_cliente;
-
+        
         switch (handshake)
         {
         case KERNEL:
@@ -122,7 +122,7 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU) {
         {
             case MENSAJE:
                 log_trace(log_memoria, "recibi el op_cod %d MENSAJE , codigoOperacion", codigoOperacion);
-            
+                enviar_mensaje("recibido cpu", SOCKET_CLIENTE_CPU);
                 break;
             // ---------LP entrante----------
             // case INICIAR_PCB: 
@@ -148,7 +148,7 @@ void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM) {
         {
             case MENSAJE:
                 log_trace(log_memoria, "recibi el op_cod %d MENSAJE , codigoOperacion", codigoOperacion);
-            
+                enviar_mensaje("recibido fileSystem", SOCKET_CLIENTE_FILESYSTEM);
                 break;
             // ---------LP entrante----------
             // case INICIAR_PCB: 
