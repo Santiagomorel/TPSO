@@ -24,6 +24,8 @@ int main(int argc, char ** argv){
     log_trace(log_memoria, "cargo la configuracion de Memoria");
     
     load_config();
+
+    MEMORIA_PRINCIPAL= malloc(memoria_config.tam_memoria);
     // ----------------------- levanto el servidor de memoria ----------------------- //
     
     socket_servidor_memoria = iniciar_servidor(memoria_config.puerto_escucha, log_memoria);
