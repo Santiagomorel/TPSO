@@ -4,6 +4,7 @@
 /*    Includes generales    */
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #include <netdb.h>
@@ -21,6 +22,7 @@
 #include <valgrind/valgrind.h>
 #include <readline/readline.h>
 #include <pthread.h>
+#include <semaphore.h>
 
 /*    Definiciones de Funcionalidad para Servidor    */
 
@@ -64,7 +66,7 @@ typedef enum
 	WRITE,
 	// -------MEMORIA --------
 	INICIAR_ESTRUCTURAS,
-	TABLA_PAGS,
+	TABLA_SEGMENTOS,
 	FINALIZAR_ESTRUCTURAS,
 	INDICE_2, 	// 1er acceso mmu
 	MARCO,		// 2do acceso mmu
@@ -86,21 +88,31 @@ typedef enum { // Los estados que puede tener un PCB
     RUNNING,
     EXIT,
 } estados;
+
+typedef struct segmento{
+	int id_segmento;
+	// direccion_base;		//falta definir tipo
+	int tamanio_segmento;
+	struct segmento * sigSegmento;
+} t_segmento;
+
+typedef struct archivo_abierto{
+	char* archivo;
+	int puntero;
+	struct archivo_abierto * sigArchivo;
+} t_archivo_abierto;
 typedef struct {
     int id;
 	char** instrucciones;
     int program_counter;
-	char** registros_cpu;					// Tenemos que poner
-    t_temporal tiempo_llegada_ready;				Tenemos que poner
-	// <tipoDato> tabla_archivos_abiertos;			Tenemos que poner
-    float estimacion_rafaga; // EST(n) variable
-	float estimacion_fija; // EST(n) fija
-	float rafaga_anterior; // T(n)
-	// float sumatoria_rafaga; // PRUEBA DE TITO
+	char** registros_cpu;
+	t_segmento tabla_segmentos;
+	float estimacion_rafaga;
+    t_temporal tiempo_llegada_ready;
+	t_archivo_abierto tabla_archivos_abiertos;
+
 	int socket_consola;
 	estados estado_actual;
-    int tamanio;
-	//int suspendido; // 0 o 1
 } t_pcb;
 
 typedef struct
@@ -115,9 +127,15 @@ typedef struct
 	t_buffer* buffer;
 } t_paquete;
 
+
+
 typedef struct {
-	
-} archivos_abiertos
+	int id;
+	char** instrucciones;
+	int program_counter;
+	char** registros_cpu;
+	t_segmento tabla_segmentos;
+} contexto_ejecucion;
 
 int crear_conexion(char* ip, char* puerto);
 void enviar_mensaje(char* mensaje, int socket_cliente);
@@ -139,10 +157,13 @@ t_log* init_logger(char *file, char *process_name, bool is_active_console, t_log
 /*    Definiciones de Funcionalidad para Serializacion/Deserializacion    */
 
 int leer_entero(char* , int* );
+t_segmento leer_segmento(char* , int* );
 float leer_float(char* , int* );
 char* leer_string(char* , int* );
 
 
 void loggear_pcb(t_pcb* , t_log* );
 void loggear_estado(t_log* , int );
+
+t_segmento recibir_paquete_segmento(int );
 #endif /* UTILS_H_ */
