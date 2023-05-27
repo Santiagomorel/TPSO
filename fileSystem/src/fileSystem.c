@@ -24,8 +24,8 @@ int main(int argc, char ** argv)
     
     load_config();
     log_info(fileSystem_logger, "aca no llego si esta la funcion load config puesta");
-    log_info(fileSystem_logger, "%s", fileSystem_config.ip_kernel);
-    log_info(fileSystem_logger, "%s", fileSystem_config.puerto_kernel);
+    log_info(fileSystem_logger, "%s", fileSystem_config.ip_memoria);
+    log_info(fileSystem_logger, "%s", fileSystem_config.puerto_memoria);
 
 
     end_program(0/*cambiar por conexion*/, fileSystem_logger, fileSystem_config)
@@ -33,12 +33,12 @@ int main(int argc, char ** argv)
 
 }
 
-if((kernel_connection = crear_conexion(fileSystem_config.ip_kernel , fileSystem_config.puerto_kernel)) == -1) {
-    log_trace(fileSystem_logger, "No se pudo conectar al servidor de KERNEL");
+if((memoria_connection = crear_conexion(fileSystem_config.ip_memoria , fileSystem_config.puerto_memoria)) == -1) {
+    log_trace(fileSystem_logger, "No se pudo conectar al servidor de memoria");
     exit(2);
 
 
-socket_servidor_fileSystem = iniciar_servidor(fileSystem_config.puerto_escucha, fileSystem_logger);
+    socket_servidor_fileSystem = iniciar_servidor(fileSystem_config.puerto_escucha, fileSystem_logger);
     log_trace(fileSystem_logger, "fileSystem inicia el servidor");
 
     while (1) {
