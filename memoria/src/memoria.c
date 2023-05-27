@@ -26,6 +26,7 @@ int main(int argc, char ** argv){
     load_config();
 
     MEMORIA_PRINCIPAL= malloc(memoria_config.tam_memoria);
+    
     // ----------------------- levanto el servidor de memoria ----------------------- //
     
     socket_servidor_memoria = iniciar_servidor(memoria_config.puerto_escucha, log_memoria);
@@ -78,14 +79,10 @@ int main(int argc, char ** argv){
             break;
         }
     }*/
-
+    free(MEMORIA_PRINCIPAL);
     end_program(socket_servidor_memoria, log_memoria, memoria_config_file);
     
     return 0;
-}
-
-void iterator(char* value) {
-	log_trace(log_memoria,"%s", value);
 }
 
 void recibir_kernel(int SOCKET_CLIENTE_KERNEL) {
@@ -98,6 +95,15 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL) {
             case MENSAJE:
                 log_trace(log_memoria, "recibi el op_cod %d MENSAJE , codigoOperacion", codigoOperacion);
                 
+                log_trace(log_memoria, "creando paquete con tabla de segmentos base");
+                t_list* tabla_segmentos = list_create(); 
+                t_segmento* segmento_base = crear_segmento(0,memoria_config.tam_segmento,64); 
+                list_add(tabla_segmentos, segmento_base);
+                t_paquete* segmentos_paquete = crear_paquete_op_code(TABLA_SEGMENTOS);
+                agregar_a_paquete(segmentos_paquete, tabla_segmentos, sizeof(&tabla_segmentos));
+
+
+                enviar_paquete(segmentos_paquete, SOCKET_CLIENTE_KERNEL);
                 break;
             // ---------LP entrante----------
             // case INICIAR_PCB: 
