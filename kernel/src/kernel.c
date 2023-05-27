@@ -291,13 +291,9 @@ void planificar_sig_to_ready()
         log_trace(kernel_logger, "Inicializamos estructuras del pcb en memoria");
         inicializar_estructuras(pcb_a_ready);
 
-        // aca tengo que pedir las estructuras de los segmentos TODO
-        t_segmento nuevo_segmento = pedir_tabla_segmentos();
+        t_list *nuevo_segmento = pedir_tabla_segmentos();
         pcb_a_ready->tabla_segmentos = nuevo_segmento;
-        // int nro_tabla = pedir_tabla_pags(conexion_memoria); // TODO pedir_tabla_pags
-        // pcb_a_ready->tabla_paginas = nro_tabla;
 
-        //TODO log_trace(kernel_logger, "Memoria nos dio el valor de la tabla de paginas %d", pcb_a_ready->tabla_paginas);
         cambiar_estado_a(pcb_a_ready, READY, estadoActual(pcb_a_ready));                            // NO ESTABA
         agregar_a_lista_con_sems(pcb_a_ready, listaReady, m_listaReady); // NO ESTABA
 
@@ -384,7 +380,7 @@ void inicializar_estructuras(t_pcb *pcb)
     eliminar_paquete(paquete);
 }
 
-t_segmento pedir_tabla_segmentos() //TODO
+t_list *pedir_tabla_segmentos() //TODO
 {
 
     int codigoOperacion = recibir_operacion(memory_connection);
