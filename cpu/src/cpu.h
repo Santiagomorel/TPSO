@@ -15,6 +15,7 @@ typedef struct{
 CPU_config cpu_config;
 
 t_log * cpu_logger;
+t_log * mandatory_logger;
 t_config * cpu_config_file;
 
 int conexion_cpu;
@@ -30,6 +31,9 @@ void terminar_programa(int, t_log*, t_config*);
 void establecer_conexion(char* , char* , t_config*, t_log*);
 void handshake_cliente(int socket_cliente);
 void handshake_servidor(int socket_cliente);
+
+void process_dispatch();
+void process_interrupt();
 
 /*-------------- REGISTROS ------------*/
 char registers[12];
@@ -62,15 +66,15 @@ void add_two_registers(char* registerToModify, char* registroParaSumarleAlOtroRe
 
 #define BADKEY -1
 #define I_SET 1
-#define I_ADD 2
-#define I_IO 3
-#define I_MOV_IN 4
-#define I_MOV_OUT 5
-#define I_EXIT 6
+#define I_IO 2
+#define I_EXIT 3
+
+
 
 int keyfromstring(char *key);
 
 /*-------------- PROCESOS -------------------*/
+
 
 int check_interruption;
 int page_fault;
