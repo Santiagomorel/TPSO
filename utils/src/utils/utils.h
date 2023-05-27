@@ -89,27 +89,28 @@ typedef enum { // Los estados que puede tener un PCB
     EXIT,
 } estados;
 
-typedef struct segmento{
+typedef struct{
 	int id_segmento;
-	// direccion_base;		//falta definir tipo
+	int direccion_base;		//falta definir tipo
 	int tamanio_segmento;
-	struct segmento * sigSegmento;
 } t_segmento;
 
-typedef struct archivo_abierto{
+typedef struct{
 	char* archivo;
 	int puntero;
-	struct archivo_abierto * sigArchivo;
 } t_archivo_abierto;
 typedef struct {
     int id;
 	char** instrucciones;
     int program_counter;
 	char** registros_cpu;
-	t_segmento tabla_segmentos;
+	t_list tabla_segmentos;
 	float estimacion_rafaga;
     t_temporal tiempo_llegada_ready;
-	t_archivo_abierto tabla_archivos_abiertos;
+	t_list tabla_archivos_abiertos; // [t_archivo_abierto]
+
+	t_temporal salida_ejecucion;
+	t_temporal llegada_ejecucion;
 
 	int socket_consola;
 	estados estado_actual;
@@ -134,7 +135,7 @@ typedef struct {
 	char** instrucciones;
 	int program_counter;
 	char** registros_cpu;
-	t_segmento tabla_segmentos;
+	t_list tabla_segmentos;
 } contexto_ejecucion;
 
 int crear_conexion(char* ip, char* puerto);
@@ -143,6 +144,7 @@ t_paquete* crear_paquete(void);
 t_paquete* crear_paquete_op_code(op_code codigo_op);
 t_paquete* crear_super_paquete(void);
 void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio);
+void agregar_entero_a_paquete(t_paquete* , int );
 void enviar_paquete(t_paquete* paquete, int socket_cliente);
 void liberar_conexion(int socket_cliente);
 void eliminar_paquete(t_paquete* paquete);

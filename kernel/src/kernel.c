@@ -69,15 +69,11 @@ int main(int argc, char **argv)
         pthread_detach(atiende_consola);
     }
 
-    // end_program(0/*cambiar por conexion*/, kernel_logger, kernel_config_file);
     return EXIT_SUCCESS;
 }
 
 // ----------------------- Funciones Globales de Kernel ----------------------- //
 
-// void iterator(char* value) {
-// 	log_trace(kernel_logger,"%s", value);
-// }
 
 void load_config(void)
 {
@@ -100,17 +96,8 @@ void load_config(void)
     kernel_config.recursos = config_get_string_value(kernel_config_file, "RECURSOS");
     kernel_config.instancias_recursos = config_get_string_value(kernel_config_file, "INSTANCIAS_RECURSOS");
 
-    // kernel_config.ip_kernel                    = config_get_string_value(kernel_config_file, "IP_KERNEL");
-    // kernel_config.puerto_kernel                = config_get_string_value(kernel_config_file, "PUERTO_KERNEL");
-
     log_trace(kernel_logger, "config cargada en 'kernel_cofig_file'");
 }
-
-// void end_program(int socket, t_log* log, t_config* config){
-//     log_destroy(log);
-//     config_destroy(config);
-//     liberar_conexion(socket);
-// }
 
 void recibir_consola(int SOCKET_CLIENTE)
 {
@@ -135,11 +122,7 @@ void recibir_consola(int SOCKET_CLIENTE)
 
         enviar_mensaje("Llego el paquete", SOCKET_CLIENTE);
 
-        // si multprog permite -> pido tabla segmentos memoria
-        // me interesa comprobar la multiprogramacion, de momento
-
-        // enviar_Fin_consola(SOCKET_CLIENTE);
-        // planificar_sig_to_ready(); // usar esta funcion cada vez q se agregue un proceso a NEW o SUSPENDED-BLOCKED
+        planificar_sig_to_ready(); // usar esta funcion cada vez q se agregue un proceso a NEW o BLOCKED
         break;
 
     default:
