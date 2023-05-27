@@ -98,7 +98,7 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL) {
                 log_trace(log_memoria, "creando paquete con tabla de segmentos base");
                 t_list* tabla_segmentos = list_create(); 
                 t_segmento* segmento_base = crear_segmento(0,memoria_config.tam_segmento,64); 
-                list_add(tabla_segmentos, &segmento_base);
+                list_add(tabla_segmentos, segmento_base);
                 t_paquete* segmentos_paquete = crear_paquete_op_code(TABLA_SEGMENTOS);
                 agregar_a_paquete(segmentos_paquete, tabla_segmentos, sizeof(&tabla_segmentos));
 
