@@ -127,7 +127,7 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL) {
 void recibir_cpu(int SOCKET_CLIENTE_CPU) {
 
     enviar_mensaje("recibido cpu", SOCKET_CLIENTE_CPU);
-
+    while(1){
     int codigoOperacion = recibir_operacion(SOCKET_CLIENTE_CPU);
     switch(codigoOperacion)
         {
@@ -151,6 +151,7 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU) {
                 log_trace(log_memoria, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
                 break;
         }
+    }
 }
 void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM) {
 

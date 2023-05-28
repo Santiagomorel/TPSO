@@ -54,7 +54,7 @@ t_log* log_memoria;
 void load_config(void){
     memoria_config.puerto_escucha           = config_get_string_value(memoria_config_file, "PUERTO_ESCUCHA");
     memoria_config.tam_memoria              = config_get_string_value(memoria_config_file, "TAM_MEMORIA");
-    memoria_config.tam_segmento             = config_get_string_value(memoria_config_file, "TAM_SEGMENTO");
+    memoria_config.tam_segmento             = config_get_string_value(memoria_config_file, "TAM_SEGMENTO_0");
     memoria_config.cant_segmentos           = config_get_string_value(memoria_config_file, "CANT_SEGMENTOS");
     memoria_config.retardo_memoria          = config_get_string_value(memoria_config_file, "RETARDO_MEMORIA");
     memoria_config.retardo_compactacion     = config_get_string_value(memoria_config_file, "RETARDO_COMPACTACION");
