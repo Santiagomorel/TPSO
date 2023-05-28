@@ -85,6 +85,30 @@ int main(int argc, char ** argv){
     return 0;
 }
 
+void load_config(void){
+    memoria_config.puerto_escucha           = config_get_string_value(memoria_config_file, "PUERTO_ESCUCHA");
+    memoria_config.tam_memoria              = config_get_string_value(memoria_config_file, "TAM_MEMORIA");
+    memoria_config.tam_segmento             = config_get_int_value(memoria_config_file, "TAM_SEGMENTO_0");
+    memoria_config.cant_segmentos           = config_get_string_value(memoria_config_file, "CANT_SEGMENTOS");
+    memoria_config.retardo_memoria          = config_get_string_value(memoria_config_file, "RETARDO_MEMORIA");
+    memoria_config.retardo_compactacion     = config_get_string_value(memoria_config_file, "RETARDO_COMPACTACION");
+    memoria_config.algoritmo_asignacion     = config_get_string_value(memoria_config_file, "ALGORITMO_ASIGNACION");
+}
+
+void end_program(int socket, t_log* log, t_config* config){
+    log_destroy(log);
+    config_destroy(config);
+    liberar_conexion(socket);
+}
+
+t_segmento* crear_segmento(int id_seg, int base, int tamanio){
+    t_segmento* unSegmento = malloc(sizeof(t_segmento));
+    unSegmento->id_segmento = id_seg;
+    unSegmento->direccion_base = base;
+    unSegmento->tamanio_segmento = tamanio; 
+    return unSegmento;
+}
+
 void recibir_kernel(int SOCKET_CLIENTE_KERNEL) {
 
     enviar_mensaje("recibido kernel", SOCKET_CLIENTE_KERNEL);
@@ -119,7 +143,7 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL) {
             //     break;
 
             default:
-                log_trace(log_memoria, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
+                //log_trace(log_memoria, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
                 break;
         }
     }
