@@ -384,10 +384,7 @@ void inicializar_estructuras(t_pcb *pcb)
 
 t_list *pedir_tabla_segmentos() //TODO
 {
-    log_trace(kernel_logger, "conexion con memoria antes de la operacion en el socket %d", memory_connection);
     int codigoOperacion = recibir_operacion(memory_connection);
-    log_trace(kernel_logger, "conexion con memoria despues de la operacion en el socket %d", memory_connection);
-    log_trace(kernel_logger, "tengo este cod de op = %d",codigoOperacion);
     if (codigoOperacion != TABLA_SEGMENTOS)
     {
         log_trace(kernel_logger, "llego otra cosa q no era un tabla pags :c");

@@ -103,7 +103,7 @@ void end_program(int socket, t_log* log, t_config* config){
 }
 
 t_segmento* crear_segmento(int id_seg, int base, int tamanio){
-    t_segmento* unSegmento;
+    t_segmento* unSegmento = malloc(sizeof(t_segmento));
     unSegmento->id_segmento = id_seg;
     unSegmento->direccion_base = base;
     unSegmento->tamanio_segmento = tamanio; 
@@ -146,7 +146,7 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL) {
             //     break;
 
             default:
-                log_trace(log_memoria, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
+                //log_trace(log_memoria, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
                 break;
         }
     }
