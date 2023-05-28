@@ -88,7 +88,7 @@ int main(int argc, char ** argv){
 void recibir_kernel(int SOCKET_CLIENTE_KERNEL) {
 
     enviar_mensaje("recibido kernel", SOCKET_CLIENTE_KERNEL);
-    
+    while(1){
     int codigoOperacion = recibir_operacion(SOCKET_CLIENTE_KERNEL);
     switch(codigoOperacion)
         {
@@ -122,6 +122,7 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL) {
                 log_trace(log_memoria, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
                 break;
         }
+    }
 }
 void recibir_cpu(int SOCKET_CLIENTE_CPU) {
 
