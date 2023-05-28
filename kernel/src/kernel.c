@@ -35,10 +35,12 @@ int main(int argc, char **argv)
 
     // ----------------------- contecto el kernel con los servidores de MEMORIA - CPU (dispatch) - FILESYSTEM ----------------------- //
 
-    // if((memory_connection = crear_conexion(kernel_config.ip_memoria , kernel_config.puerto_memoria)) == -1) {
-    //     log_trace(kernel_logger, "No se pudo conectar al servidor de MEMORIA");
-    //     exit(2);
-    // }
+    if((memory_connection = crear_conexion(kernel_config.ip_memoria , kernel_config.puerto_memoria)) == -1) {
+        log_trace(kernel_logger, "No se pudo conectar al servidor de MEMORIA");
+        exit(2);
+    }
+    int codop = recibir_operacion(memory_connection);
+    recibir_mensaje(memory_connection, kernel_logger);
 
     // if((cpu_dispatch_connection = crear_conexion(kernel_config.ip_cpu , kernel_config.puerto_cpu)) == -1) {
     //     log_trace(kernel_logger, "No se pudo conectar al servidor de CPU DISPATCH");
@@ -291,13 +293,9 @@ void planificar_sig_to_ready()
         log_trace(kernel_logger, "Inicializamos estructuras del pcb en memoria");
         inicializar_estructuras(pcb_a_ready);
 
-        // aca tengo que pedir las estructuras de los segmentos TODO
-        t_segmento nuevo_segmento = pedir_tabla_segmentos();
+        t_list *nuevo_segmento = pedir_tabla_segmentos();
         pcb_a_ready->tabla_segmentos = nuevo_segmento;
-        // int nro_tabla = pedir_tabla_pags(conexion_memoria); // TODO pedir_tabla_pags
-        // pcb_a_ready->tabla_paginas = nro_tabla;
 
-        //TODO log_trace(kernel_logger, "Memoria nos dio el valor de la tabla de paginas %d", pcb_a_ready->tabla_paginas);
         cambiar_estado_a(pcb_a_ready, READY, estadoActual(pcb_a_ready));                            // NO ESTABA
         agregar_a_lista_con_sems(pcb_a_ready, listaReady, m_listaReady); // NO ESTABA
 
@@ -384,11 +382,12 @@ void inicializar_estructuras(t_pcb *pcb)
     eliminar_paquete(paquete);
 }
 
-t_segmento pedir_tabla_segmentos() //TODO
+t_list *pedir_tabla_segmentos() //TODO
 {
-
+    log_trace(kernel_logger, "conexion con memoria antes de la operacion en el socket %d", memory_connection);
     int codigoOperacion = recibir_operacion(memory_connection);
-
+    log_trace(kernel_logger, "conexion con memoria despues de la operacion en el socket %d", memory_connection);
+    log_trace(kernel_logger, "tengo este cod de op = %d",codigoOperacion);
     if (codigoOperacion != TABLA_SEGMENTOS)
     {
         log_trace(kernel_logger, "llego otra cosa q no era un tabla pags :c");

@@ -55,10 +55,11 @@ char** parsearPorSaltosDeLinea(char* );
 void enviar_Fin_consola(int);
 bool bloqueado_termino_io(t_pcb *);
 char * obtenerEstado(estados);
+int obtenerPid(t_pcb *);
 
 void agregar_a_lista_con_sems(t_pcb *pcb_a_agregar, t_list *lista, pthread_mutex_t m_sem);
 
-t_segmento pedir_tabla_segmentos(void );
+t_list* pedir_tabla_segmentos(void );
 
 int contador_id = 60;
 int tieneDesalojo = 0;
@@ -76,7 +77,7 @@ pthread_t planificadorCP;
 void inicializarListasGlobales(void );
 void iniciarSemaforos();
 void destruirSemaforos();
-void planificar_sig_to_running();
+void planificar_sig_to_ready();
 void iniciar_planificadores();
 
 // Listas de estados de tipo de planificacion
