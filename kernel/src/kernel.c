@@ -390,7 +390,7 @@ t_list *pedir_tabla_segmentos() //TODO
         log_trace(kernel_logger, "llego otra cosa q no era un tabla pags :c");
     }
 
-    return recibir_paquete_segmento(memory_connection);
+    return recibir_paquete(memory_connection);
 }
 
 // recieve_handshake(socket_cliente);

@@ -122,14 +122,9 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL) {
                 log_trace(log_memoria, "creando paquete con tabla de segmentos base");
                 t_list* tabla_segmentos = list_create();
                 t_segmento* segmento_base = crear_segmento(0,0,64); 
-                log_trace(log_memoria, "aca3");
                 int descartar = list_add(tabla_segmentos, segmento_base); // ERROR aca hay un segfault
-                log_trace(log_memoria, "aca4");
                 t_paquete* segmentos_paquete = crear_paquete_op_code(TABLA_SEGMENTOS);
-                log_trace(log_memoria, "el codigo de operacion del tpaquete es %d", segmentos_paquete->codigo_operacion);
                 agregar_a_paquete(segmentos_paquete, tabla_segmentos, sizeof(&tabla_segmentos));
-
-
                 enviar_paquete(segmentos_paquete, SOCKET_CLIENTE_KERNEL);
                 break;
             // ---------LP entrante----------
