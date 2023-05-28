@@ -22,9 +22,7 @@ int main(int argc, char ** argv){
     // ----------------------- cargo la configuracion de memoria ----------------------- //
 
     log_trace(log_memoria, "cargo la configuracion de Memoria");
-    
     load_config();
-
     MEMORIA_PRINCIPAL= malloc(memoria_config.tam_memoria);
     
     // ----------------------- levanto el servidor de memoria ----------------------- //
@@ -34,21 +32,24 @@ int main(int argc, char ** argv){
     
     pthread_t atiende_cliente_CPU, atiende_cliente_FILESYSTEM, atiende_cliente_KERNEL;
 
-    log_trace(log_memoria, "esperando cliente CPU");
-    socket_cliente_memoria_CPU = esperar_cliente(socket_servidor_memoria, log_memoria);
-    pthread_create(&atiende_cliente_CPU, NULL, (void*) recibir_cpu, (void*)socket_cliente_memoria_CPU);
-    pthread_detach(atiende_cliente_CPU);
+    // log_trace(log_memoria, "esperando cliente CPU");
+    // socket_cliente_memoria_CPU = esperar_cliente(socket_servidor_memoria, log_memoria);
+    // pthread_create(&atiende_cliente_CPU, NULL, (void*) recibir_cpu, (void*)socket_cliente_memoria_CPU);
+    // pthread_detach(atiende_cliente_CPU);
 
-    log_trace(log_memoria, "esperando cliente fileSystem");
-    socket_cliente_memoria_FILESYSTEM = esperar_cliente(socket_servidor_memoria, log_memoria);
-    pthread_create(&atiende_cliente_FILESYSTEM, NULL, (void*) recibir_fileSystem, (void*)socket_cliente_memoria_FILESYSTEM);
-    pthread_detach(atiende_cliente_FILESYSTEM);
+    // log_trace(log_memoria, "esperando cliente fileSystem");
+    // socket_cliente_memoria_FILESYSTEM = esperar_cliente(socket_servidor_memoria, log_memoria);
+    // pthread_create(&atiende_cliente_FILESYSTEM, NULL, (void*) recibir_fileSystem, (void*)socket_cliente_memoria_FILESYSTEM);
+    // pthread_detach(atiende_cliente_FILESYSTEM);
 
     log_trace(log_memoria, "esperando cliente kernel");
     socket_cliente_memoria_KERNEL = esperar_cliente(socket_servidor_memoria, log_memoria);
     pthread_create(&atiende_cliente_KERNEL, NULL, (void*) recibir_kernel, (void*)socket_cliente_memoria_KERNEL);
     pthread_detach(atiende_cliente_KERNEL);
 
+    while (1)
+    {
+    }
     
     /*while (1)
     {
@@ -85,6 +86,30 @@ int main(int argc, char ** argv){
     return 0;
 }
 
+void load_config(void){
+    memoria_config.puerto_escucha           = config_get_string_value(memoria_config_file, "PUERTO_ESCUCHA");
+    memoria_config.tam_memoria              = config_get_string_value(memoria_config_file, "TAM_MEMORIA");
+    memoria_config.tam_segmento             = config_get_int_value(memoria_config_file, "TAM_SEGMENTO_0");
+    memoria_config.cant_segmentos           = config_get_string_value(memoria_config_file, "CANT_SEGMENTOS");
+    memoria_config.retardo_memoria          = config_get_string_value(memoria_config_file, "RETARDO_MEMORIA");
+    memoria_config.retardo_compactacion     = config_get_string_value(memoria_config_file, "RETARDO_COMPACTACION");
+    memoria_config.algoritmo_asignacion     = config_get_string_value(memoria_config_file, "ALGORITMO_ASIGNACION");
+}
+
+void end_program(int socket, t_log* log, t_config* config){
+    log_destroy(log);
+    config_destroy(config);
+    liberar_conexion(socket);
+}
+
+t_segmento* crear_segmento(int id_seg, int base, int tamanio){
+    t_segmento* unSegmento;
+    unSegmento->id_segmento = id_seg;
+    unSegmento->direccion_base = base;
+    unSegmento->tamanio_segmento = tamanio; 
+    return unSegmento;
+}
+
 void recibir_kernel(int SOCKET_CLIENTE_KERNEL) {
 
     enviar_mensaje("recibido kernel", SOCKET_CLIENTE_KERNEL);
@@ -92,14 +117,16 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL) {
     int codigoOperacion = recibir_operacion(SOCKET_CLIENTE_KERNEL);
     switch(codigoOperacion)
         {
-            case MENSAJE:
+            case INICIAR_ESTRUCTURAS:
                 log_trace(log_memoria, "recibi el op_cod %d MENSAJE , codigoOperacion", codigoOperacion);
-                
                 log_trace(log_memoria, "creando paquete con tabla de segmentos base");
-                t_list* tabla_segmentos = list_create(); 
-                t_segmento* segmento_base = crear_segmento(0,memoria_config.tam_segmento,64); 
-                list_add(tabla_segmentos, segmento_base);
+                t_list* tabla_segmentos = list_create();
+                t_segmento* segmento_base = crear_segmento(0,0,64); 
+                log_trace(log_memoria, "aca3");
+                int descartar = list_add(tabla_segmentos, segmento_base); // ERROR aca hay un segfault
+                log_trace(log_memoria, "aca4");
                 t_paquete* segmentos_paquete = crear_paquete_op_code(TABLA_SEGMENTOS);
+                log_trace(log_memoria, "el codigo de operacion del tpaquete es %d", segmentos_paquete->codigo_operacion);
                 agregar_a_paquete(segmentos_paquete, tabla_segmentos, sizeof(&tabla_segmentos));
 
 

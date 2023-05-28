@@ -35,10 +35,12 @@ int main(int argc, char **argv)
 
     // ----------------------- contecto el kernel con los servidores de MEMORIA - CPU (dispatch) - FILESYSTEM ----------------------- //
 
-    // if((memory_connection = crear_conexion(kernel_config.ip_memoria , kernel_config.puerto_memoria)) == -1) {
-    //     log_trace(kernel_logger, "No se pudo conectar al servidor de MEMORIA");
-    //     exit(2);
-    // }
+    if((memory_connection = crear_conexion(kernel_config.ip_memoria , kernel_config.puerto_memoria)) == -1) {
+        log_trace(kernel_logger, "No se pudo conectar al servidor de MEMORIA");
+        exit(2);
+    }
+    int codop = recibir_operacion(memory_connection);
+    recibir_mensaje(memory_connection, kernel_logger);
 
     // if((cpu_dispatch_connection = crear_conexion(kernel_config.ip_cpu , kernel_config.puerto_cpu)) == -1) {
     //     log_trace(kernel_logger, "No se pudo conectar al servidor de CPU DISPATCH");
@@ -382,9 +384,10 @@ void inicializar_estructuras(t_pcb *pcb)
 
 t_list *pedir_tabla_segmentos() //TODO
 {
-
+    log_trace(kernel_logger, "conexion con memoria antes de la operacion en el socket %d", memory_connection);
     int codigoOperacion = recibir_operacion(memory_connection);
-
+    log_trace(kernel_logger, "conexion con memoria despues de la operacion en el socket %d", memory_connection);
+    log_trace(kernel_logger, "tengo este cod de op = %d",codigoOperacion);
     if (codigoOperacion != TABLA_SEGMENTOS)
     {
         log_trace(kernel_logger, "llego otra cosa q no era un tabla pags :c");

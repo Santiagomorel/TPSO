@@ -55,6 +55,7 @@ char** parsearPorSaltosDeLinea(char* );
 void enviar_Fin_consola(int);
 bool bloqueado_termino_io(t_pcb *);
 char * obtenerEstado(estados);
+int obtenerPid(t_pcb *);
 
 void agregar_a_lista_con_sems(t_pcb *pcb_a_agregar, t_list *lista, pthread_mutex_t m_sem);
 
