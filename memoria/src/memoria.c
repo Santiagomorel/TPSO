@@ -118,13 +118,13 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL) {
     switch(codigoOperacion)
         {
             case INICIAR_ESTRUCTURAS:
-                log_trace(log_memoria, "recibi el op_cod %d MENSAJE , codigoOperacion", codigoOperacion);
+                log_trace(log_memoria, "recibi el op_cod %d INICIAR_ESTRUCTURAS", codigoOperacion);
                 log_trace(log_memoria, "creando paquete con tabla de segmentos base");
                 t_list* tabla_segmentos = list_create();
-                t_segmento* segmento_base = crear_segmento(0,0,64); 
-                int descartar = list_add(tabla_segmentos, segmento_base); // ERROR aca hay un segfault
+                t_segmento* segmento_base = crear_segmento(1,1,64); 
+                list_add(tabla_segmentos, segmento_base);
                 t_paquete* segmentos_paquete = crear_paquete_op_code(TABLA_SEGMENTOS);
-                agregar_a_paquete(segmentos_paquete, tabla_segmentos, sizeof(&tabla_segmentos));
+                agregar_a_paquete(segmentos_paquete, tabla_segmentos, sizeof(t_list));
                 enviar_paquete(segmentos_paquete, SOCKET_CLIENTE_KERNEL);
                 break;
             // ---------LP entrante----------

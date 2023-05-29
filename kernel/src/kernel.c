@@ -168,6 +168,7 @@ t_pcb *pcb_create(char *instrucciones, int socket_consola)
     // new_pcb->tabla_paginas = -1; // TODO de la conexion con memoria
     new_pcb->estimacion_rafaga = kernel_config.estimacion_inicial; // ms
     new_pcb->socket_consola = socket_consola;
+    new_pcb->tabla_segmentos = list_create();
     // new_pcb->sumatoria_rafaga = 0.0;
 
     return new_pcb;
@@ -294,8 +295,13 @@ void planificar_sig_to_ready()
         inicializar_estructuras(pcb_a_ready);
 
         t_list *nuevo_segmento = pedir_tabla_segmentos();
-        pcb_a_ready->tabla_segmentos = nuevo_segmento;
+        t_segmento * primerSegmentoNuevo = list_get(nuevo_segmento,0);
+        log_error(kernel_logger, "info de la tabla de segmentos pedida: %d, %d, %d", primerSegmentoNuevo->tamanio_segmento,primerSegmentoNuevo->id_segmento, primerSegmentoNuevo->direccion_base);
 
+        list_add_all(pcb_a_ready->tabla_segmentos, nuevo_segmento);
+
+        t_segmento * posibleSegmento = list_get(pcb_a_ready->tabla_segmentos, 0);
+        log_error(kernel_logger, "info (tamanio de segmento) de la tabla de segmentos creada: %d, %d, %d", posibleSegmento->tamanio_segmento,posibleSegmento->id_segmento, posibleSegmento->direccion_base);
         cambiar_estado_a(pcb_a_ready, READY, estadoActual(pcb_a_ready));                            // NO ESTABA
         agregar_a_lista_con_sems(pcb_a_ready, listaReady, m_listaReady); // NO ESTABA
 
