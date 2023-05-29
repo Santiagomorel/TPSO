@@ -68,6 +68,8 @@ void add_two_registers(char* registerToModify, char* registroParaSumarleAlOtroRe
 #define I_SET 1
 #define I_IO 2
 #define I_EXIT 3
+#define I_WAIT 4
+#define I_SIGNAL 5
 
 
 

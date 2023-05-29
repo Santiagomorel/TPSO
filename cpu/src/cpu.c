@@ -354,7 +354,7 @@ int end_process = 0;
 int input_ouput = 0;
 int check_interruption = 0;
 
-char* device = "NONE";
+
 char* parameter = "NONE";
 
 void execute_instruction(char** instruction, t_pcb* pcb){
@@ -370,14 +370,14 @@ void execute_instruction(char** instruction, t_pcb* pcb){
             add_value_to_register(instruction[1], instruction[2]);
             break;
         case I_IO:
-            // I/O (Dispositivo, Registro / Unidades de trabajo)
+            // I/O (Tiempo)
             log_info(cpu_logger, "Por ejecutar instruccion I/O");
-            log_info(mandatory_logger, "PID: %d - Ejecutando: %s - %s - %s", pcb->id, instruction[0], instruction[1], instruction[2]);
+            log_info(mandatory_logger, "PID: %d - Ejecutando: %s - %s - %s", pcb->id, instruction[0], instruction[1]);
 
-            device = instruction[1];
-            parameter = instruction[2];
             
-            log_info(cpu_logger, "%s",device);
+            parameter = instruction[1];
+            
+            log_info(cpu_logger, "%s",parameter);
             input_ouput = 1;
             break;
          case I_EXIT:
@@ -388,6 +388,24 @@ void execute_instruction(char** instruction, t_pcb* pcb){
 
             end_process = 1;
             break;
+        case I_WAIT:
+            // WAIT (Recurso)
+            //Esta instruccion asigna un recurso pasado por parametro
+            log_info(cpu_logger, "Por ejecutar instruccion WAIT");
+            log_info(mandatory_logger, "PID: %d - Ejecutando: %s - %s ", pcb->id, instruction[0], instruction[1]);
+
+            sem_wait(&instruction[1]);
+
+            break;
+        case I_SIGNAL:
+            // SIGNAL (Recurso)
+            //Esta instruccion libera un recurso pasado por parametro
+
+            log_info(cpu_logger, "Por ejecutar instruccion SIGNAL");
+            log_info(mandatory_logger, "PID: %d - Ejecutando: %s - %s", pcb->id, instruction[0], instruction[1]);
+
+            sem_post(&instruction[1]);
+
             default:
             log_info(cpu_logger, "No ejecute nada");
             break;
@@ -438,8 +456,8 @@ void execute_process(t_pcb* pcb){
     else if(input_ouput) {
         input_ouput = 0;
         check_interruption = 0;
-        log_info(cpu_logger, "Device: %s, Parameter: %s", device, parameter);
-        send_pcb_io_package(socket_cpu, pcb, device, parameter, REQUEST); // Ver bien tema REQUEST
+        log_info(cpu_logger, "Parameter: %s" parameter);
+        send_pcb_io_package(socket_cpu, pcb,  parameter, REQUEST); // Ver bien tema REQUEST
     }
     else if(page_fault) {
         page_fault = 0;
@@ -478,7 +496,9 @@ typedef struct {
 static t_symstruct lookuptable[] = {
     { "SET", I_SET },
     { "I/O", I_IO },
-    { "EXIT", I_EXIT }	
+    { "EXIT", I_EXIT },
+    { "WAIT", I_WAIT },
+    { "SIGNAL", I_SIGNAL }
 };
 
 int keyfromstring(char *key) {
