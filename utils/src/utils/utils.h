@@ -128,15 +128,30 @@ typedef struct
 	t_buffer* buffer;
 } t_paquete;
 
-
+typedef struct{
+    char AX[4];
+    char BX[4];
+    char CX[4];
+    char DX[4];
+    char EAX[8];
+    char EBX[8];
+    char ECX[8];
+    char EDX[8];
+    char RAX[16];
+    char RBX[16];
+    char RCX[16];
+    char RDX[16];
+}t_registro;
 
 typedef struct {
 	int id;
 	char** instrucciones;
 	int program_counter;
-	char** registros_cpu;
+	t_registro* registros_cpu;
 	t_list tabla_segmentos;
 } contexto_ejecucion;
+
+
 
 int crear_conexion(char* ip, char* puerto);
 void enviar_mensaje(char* mensaje, int socket_cliente);
