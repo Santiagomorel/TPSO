@@ -162,15 +162,12 @@ t_pcb *pcb_create(char *instrucciones, int socket_consola)
 
     generar_id(new_pcb);
     new_pcb->estado_actual = NEW;
-    // list_add_all(new_pcb->instrucciones, instrucciones); // La lista del PCB se la tendre que pasar como & ?
-    // printf("%s" ,string_duplicate(instrucciones));
     new_pcb->instrucciones = separar_inst_en_lineas(instrucciones);
     new_pcb->program_counter = 0;
     // new_pcb->tabla_paginas = -1; // TODO de la conexion con memoria
     new_pcb->estimacion_rafaga = kernel_config.estimacion_inicial; // ms
     new_pcb->socket_consola = socket_consola;
     new_pcb->tabla_segmentos = list_create();
-    // new_pcb->sumatoria_rafaga = 0.0;
 
     return new_pcb;
 }

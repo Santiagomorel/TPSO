@@ -46,7 +46,7 @@ typedef enum
 	INICIAR_PCB,
 	//RECIBIR_PCB,
 	// -------  CPU->kernel --------
-	EJECUTAR_PCB, 			//  dispatch
+	EJECUTAR_CE, 			//  dispatch
 	EJECUTAR_INTERRUPCION,	// 	interrupt
 	// ------- enviadas por DIspatch: (CPU->kernel) --------
 	FIN_PROCESO,

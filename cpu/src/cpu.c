@@ -52,14 +52,6 @@ int main(int argc, char ** argv) {
 
 /*---------------------- CONEXION CON KERNEL ---------------------*/
 
-	socket_cpu = iniciar_servidor(cpu_config.puerto_escucha, cpu_logger);
-    log_error(cpu_logger, "inicia el servidor");
-	int socket_kernel = esperar_cliente(socket_cpu, cpu_logger);
-    log_error(cpu_logger, "paso el esperar cliente");
-	enviar_mensaje("me conecto con el kernel", socket_kernel);
-    //handshake_servidor(socket_kernel);
-    log_error(cpu_logger, "paso el hanshake");
-
     pthread_t threadDispatch, threadInterrupt;
 
     pthread_create(&threadDispatch, NULL, (void *) process_dispatch, NULL);
@@ -180,10 +172,12 @@ void terminar_programa(int conexion, t_log* logger, t_config* config)
 /*-------------------- HILOS -------------------*/
 void process_dispatch() {
     log_info(cpu_logger, "Soy el proceso Dispatch");
-    int server = iniciar_servidor(cpu_config.puerto_escucha, cpu_logger); //VER
+    socket_cpu = iniciar_servidor(cpu_config.puerto_escucha, cpu_logger); //VER
 	log_info(cpu_logger, "Servidor DISPATCH listo para recibir al cliente");
 
-	socket_cpu = esperar_cliente(server, cpu_logger); //VER
+	int socket_kernel = esperar_cliente(socket_cpu, cpu_logger);
+	enviar_mensaje("me conecto con el kernel", socket_kernel);
+    //handshake_servidor(socket_kernel);
     
     log_info(cpu_logger, "Esperando a que envie mensaje/paquete");
 
@@ -194,9 +188,9 @@ void process_dispatch() {
         t_pcb* pcb;
 
 		switch (op_code) {
-            case EJECUTAR_PCB: 
-                //pcb = receive_pcb(socket_cpu, cpu_logger);
-                log_info(cpu_logger, "Llego correctamente el PCB con id: %d", pcb->id);
+            case EJECUTAR_CE: 
+                //ce = recivir_ce(socket_kernel);
+                log_info(cpu_logger, "Llego correctamente el CE con id: %d", ce->id);
                 execute_process(pcb);
                 break;   
             case -1:
