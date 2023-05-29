@@ -32,10 +32,10 @@ int main(int argc, char ** argv){
     
     pthread_t atiende_cliente_CPU, atiende_cliente_FILESYSTEM, atiende_cliente_KERNEL;
 
-    // log_trace(log_memoria, "esperando cliente CPU");
-    // socket_cliente_memoria_CPU = esperar_cliente(socket_servidor_memoria, log_memoria);
-    // pthread_create(&atiende_cliente_CPU, NULL, (void*) recibir_cpu, (void*)socket_cliente_memoria_CPU);
-    // pthread_detach(atiende_cliente_CPU);
+    log_trace(log_memoria, "esperando cliente CPU");
+    socket_cliente_memoria_CPU = esperar_cliente(socket_servidor_memoria, log_memoria);
+    pthread_create(&atiende_cliente_CPU, NULL, (void*) recibir_cpu, (void*)socket_cliente_memoria_CPU);
+    pthread_detach(atiende_cliente_CPU);
 
     // log_trace(log_memoria, "esperando cliente fileSystem");
     // socket_cliente_memoria_FILESYSTEM = esperar_cliente(socket_servidor_memoria, log_memoria);

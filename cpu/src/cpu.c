@@ -51,18 +51,26 @@ int main(int argc, char ** argv) {
 	establecer_conexion(cpu_config.ip_memoria, cpu_config.puerto_memoria, cpu_config_file, cpu_logger);
 
 /*---------------------- CONEXION CON KERNEL ---------------------*/
-/*
+
 	socket_cpu = iniciar_servidor(cpu_config.puerto_escucha, cpu_logger);
-	esperar_cliente(socket_cpu, cpu_logger);
-	handshake_servidor(socket_cpu);
-*/
+    log_error(cpu_logger, "inicia el servidor");
+	int socket_kernel = esperar_cliente(socket_cpu, cpu_logger);
+    log_error(cpu_logger, "paso el esperar cliente");
+	enviar_mensaje("me conecto con el kernel", socket_kernel);
+    //handshake_servidor(socket_kernel);
+    log_error(cpu_logger, "paso el hanshake");
+
     pthread_t threadDispatch, threadInterrupt;
 
     pthread_create(&threadDispatch, NULL, (void *) process_dispatch, NULL);
     pthread_create(&threadInterrupt, NULL, (void *) process_interrupt, NULL);
     pthread_join(threadDispatch, NULL);
     pthread_join(threadInterrupt, NULL);
-    return 0;
+    
+    while (1)
+    {
+    }
+    
 
 /*---------------------- TERMINO CPU ---------------------*/
 	terminar_programa(conexion_cpu, cpu_logger, cpu_config_file);
@@ -99,11 +107,8 @@ void establecer_conexion(char * ip_memoria, char* puerto_memoria, t_config* conf
 
 	/*----------------------------------------------------------------------------------------------------------------*/
 
-	// Creamos una conexión hacia el servidor
-	conexion_cpu = crear_conexion(ip_memoria, puerto_memoria);
-
 	// Enviamos al servidor el valor de ip como mensaje si es que levanta el cliente
-	if((crear_conexion(ip_memoria, puerto_memoria)) == -1){
+	if((conexion_cpu = crear_conexion(ip_memoria, puerto_memoria)) == -1){
 		log_info(logger, "Error al conectar con Memoria. El servidor no esta activo");
 		exit(-1);
 	}else{
@@ -175,10 +180,10 @@ void terminar_programa(int conexion, t_log* logger, t_config* config)
 /*-------------------- HILOS -------------------*/
 void process_dispatch() {
     log_info(cpu_logger, "Soy el proceso Dispatch");
-    int server = iniciar_servidor(cpu_config.puerto_escucha, cpu_logger);
+    int server = iniciar_servidor(cpu_config.puerto_escucha, cpu_logger); //VER
 	log_info(cpu_logger, "Servidor DISPATCH listo para recibir al cliente");
 
-	socket_cpu = esperar_cliente(server, cpu_logger); 
+	socket_cpu = esperar_cliente(server, cpu_logger); //VER
     
     log_info(cpu_logger, "Esperando a que envie mensaje/paquete");
 
@@ -207,7 +212,7 @@ void process_dispatch() {
     }
 }
 /* ------------------HILO para interrupciones ------------------- */
-void process_interrupt() {
+void process_interrupt() { // este tp creo que no tiene interrupciones, todos los procesos son sin desalojo
 
     int server = iniciar_servidor(cpu_config.puerto_escucha, cpu_logger);
 	int client = esperar_cliente(server, cpu_logger);

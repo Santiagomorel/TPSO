@@ -224,6 +224,14 @@ void agregar_entero_a_paquete(t_paquete* paquete, int x)
 	paquete->buffer->size += sizeof(int);
 }
 
+void agregar_array_string_a_paquete(t_paquete* paquete, char** arr)
+{
+    int size = string_array_size(arr);
+    agregar_entero_a_paquete(paquete,size);
+    for(int i = 0; i < size; i++)
+        agregar_a_paquete(paquete, arr[i], string_length(arr[i]) +1 );
+}
+
 void enviar_paquete(t_paquete* paquete, int socket_cliente)
 {
 	int bytes = paquete->buffer->size + 2*sizeof(int);
@@ -377,6 +385,24 @@ t_list *recibir_paquete_segmento(int socket){ // usar desp de recibir el COD_OP
 
 
 
-t_paquete* agregar_tabla_segmentos_a_paquete(t_paquete * paquete, t_list * tabla, int tamanioTabla) {
-	
+t_paquete* agregar_tabla_segmentos_a_paquete(t_paquete * paquete, t_list * tabla) { //le saque el tamanio tabla porque creo que con sizeof t_list se soluciona
+
+}
+
+void enviar_ce(int conexion, contexto_ejecucion * ce, int codOP){
+	t_paquete* paquete = crear_paquete_op_code(codOP);
+
+	agregar_ce_a_paquete(paquete, ce);
+
+	enviar_paquete(paquete, conexion);
+
+	eliminar_paquete(paquete);
+}
+
+void agregar_ce_a_paquete(t_paquete * paquete, contexto_ejecucion * ce) {
+	agregar_entero_a_paquete(paquete, ce->id);
+	agregar_array_string_a_paquete(paquete, ce->instrucciones);
+	agregar_entero_a_paquete(paquete, ce->program_counter);
+	agregar_array_string_a_paquete(paquete, ce->registros_cpu);
+	//agregar_tabla_segmentos_a_paquete(paquete, ce->tabla_segmentos);
 }

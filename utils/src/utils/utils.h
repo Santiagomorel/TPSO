@@ -145,6 +145,7 @@ t_paquete* crear_paquete_op_code(op_code codigo_op);
 t_paquete* crear_super_paquete(void);
 void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio);
 void agregar_entero_a_paquete(t_paquete* , int );
+void agregar_array_string_a_paquete(t_paquete* paquete, char** arr);
 void enviar_paquete(t_paquete* paquete, int socket_cliente);
 void liberar_conexion(int socket_cliente);
 void eliminar_paquete(t_paquete* paquete);
@@ -169,5 +170,9 @@ void loggear_estado(t_log* , int );
 
 t_list* recibir_paquete_segmento(int );
 
-t_paquete* agregar_tabla_segmentos_a_paquete(t_paquete * , t_list * , int );
+t_paquete* agregar_tabla_segmentos_a_paquete(t_paquete * , t_list *);
+
+void enviar_ce(int, contexto_ejecucion *, int);
+
+void agregar_ce_a_paquete(t_paquete *, contexto_ejecucion *);
 #endif /* UTILS_H_ */
