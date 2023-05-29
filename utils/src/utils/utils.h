@@ -168,4 +168,6 @@ void loggear_pcb(t_pcb* , t_log* );
 void loggear_estado(t_log* , int );
 
 t_list* recibir_paquete_segmento(int );
+
+t_paquete* agregar_tabla_segmentos_a_paquete(t_paquete * , t_list * , int );
 #endif /* UTILS_H_ */

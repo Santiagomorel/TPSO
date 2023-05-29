@@ -294,14 +294,14 @@ void planificar_sig_to_ready()
         log_trace(kernel_logger, "Inicializamos estructuras del pcb en memoria");
         inicializar_estructuras(pcb_a_ready);
 
-        t_list *nuevo_segmento = pedir_tabla_segmentos();
-        t_segmento * primerSegmentoNuevo = list_get(nuevo_segmento,0);
-        log_error(kernel_logger, "info de la tabla de segmentos pedida: %d, %d, %d", primerSegmentoNuevo->tamanio_segmento,primerSegmentoNuevo->id_segmento, primerSegmentoNuevo->direccion_base);
+        /*t_list *nuevo_segmento =*/ pedir_tabla_segmentos();
+        // t_segmento * primerSegmentoNuevo = list_get(nuevo_segmento,0);
+        // log_error(kernel_logger, "info de la tabla de segmentos pedida: %d, %d, %d", primerSegmentoNuevo->tamanio_segmento,primerSegmentoNuevo->id_segmento, primerSegmentoNuevo->direccion_base);
 
-        list_add_all(pcb_a_ready->tabla_segmentos, nuevo_segmento);
+        // list_add_all(pcb_a_ready->tabla_segmentos, nuevo_segmento);
 
-        t_segmento * posibleSegmento = list_get(pcb_a_ready->tabla_segmentos, 0);
-        log_error(kernel_logger, "info (tamanio de segmento) de la tabla de segmentos creada: %d, %d, %d", posibleSegmento->tamanio_segmento,posibleSegmento->id_segmento, posibleSegmento->direccion_base);
+        // t_segmento * posibleSegmento = list_get(pcb_a_ready->tabla_segmentos, 0);
+        // log_error(kernel_logger, "info (tamanio de segmento) de la tabla de segmentos creada: %d, %d, %d", posibleSegmento->tamanio_segmento,posibleSegmento->id_segmento, posibleSegmento->direccion_base);
         cambiar_estado_a(pcb_a_ready, READY, estadoActual(pcb_a_ready));                            // NO ESTABA
         agregar_a_lista_con_sems(pcb_a_ready, listaReady, m_listaReady); // NO ESTABA
 
@@ -388,15 +388,15 @@ void inicializar_estructuras(t_pcb *pcb)
     eliminar_paquete(paquete);
 }
 
-t_list *pedir_tabla_segmentos() //TODO
+void pedir_tabla_segmentos() // MODIFICAR tipo de dato que devuelve
 {
     int codigoOperacion = recibir_operacion(memory_connection);
-    if (codigoOperacion != TABLA_SEGMENTOS)
+    if (codigoOperacion != MENSAJE /*TABLA_SEGMENTOS*/) // MODIFICAR cuando tengamos la tabla de segmentos
     {
         log_trace(kernel_logger, "llego otra cosa q no era un tabla pags :c");
     }
-
-    return recibir_paquete(memory_connection);
+    return recibir_mensaje(memory_connection, kernel_logger);
+    //return recibir_paquete(memory_connection);
 }
 
 // recieve_handshake(socket_cliente);

@@ -120,12 +120,13 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL) {
             case INICIAR_ESTRUCTURAS:
                 log_trace(log_memoria, "recibi el op_cod %d INICIAR_ESTRUCTURAS", codigoOperacion);
                 log_trace(log_memoria, "creando paquete con tabla de segmentos base");
-                t_list* tabla_segmentos = list_create();
-                t_segmento* segmento_base = crear_segmento(1,1,64); 
-                list_add(tabla_segmentos, segmento_base);
-                t_paquete* segmentos_paquete = crear_paquete_op_code(TABLA_SEGMENTOS);
-                agregar_a_paquete(segmentos_paquete, tabla_segmentos, sizeof(t_list));
-                enviar_paquete(segmentos_paquete, SOCKET_CLIENTE_KERNEL);
+                // t_list* tabla_segmentos = list_create();
+                // t_segmento* segmento_base = crear_segmento(1,1,64); 
+                // list_add(tabla_segmentos, segmento_base);
+                // t_paquete* segmentos_paquete = crear_paquete_op_code(TABLA_SEGMENTOS);
+                // agregar_a_paquete(segmentos_paquete, tabla_segmentos, sizeof(t_list));
+                // enviar_paquete(segmentos_paquete, SOCKET_CLIENTE_KERNEL);
+                enviar_mensaje("envio nueva tabla de segmentos", SOCKET_CLIENTE_KERNEL);
                 break;
             // ---------LP entrante----------
             // case INICIAR_PCB: 

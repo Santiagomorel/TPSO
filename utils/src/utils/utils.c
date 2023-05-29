@@ -374,3 +374,9 @@ t_list *recibir_paquete_segmento(int socket){ // usar desp de recibir el COD_OP
     free(buffer);
     return segmento;
 }
+
+
+
+t_paquete* agregar_tabla_segmentos_a_paquete(t_paquete * paquete, t_list * tabla, int tamanioTabla) {
+	
+}
