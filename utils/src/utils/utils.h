@@ -99,15 +99,31 @@ typedef struct{
 	char* archivo;
 	int puntero;
 } t_archivo_abierto;
+
+typedef struct{
+    char AX[4];
+    char BX[4];
+    char CX[4];
+    char DX[4];
+    char EAX[8];
+    char EBX[8];
+    char ECX[8];
+    char EDX[8];
+    char RAX[16];
+    char RBX[16];
+    char RCX[16];
+    char RDX[16];
+}t_registro;
+
 typedef struct {
     int id;
 	char** instrucciones;
     int program_counter;
-	char** registros_cpu;
-	t_list tabla_segmentos;
+	t_registro* registros_cpu;
+	t_list* tabla_segmentos;
 	float estimacion_rafaga;
     t_temporal tiempo_llegada_ready;
-	t_list tabla_archivos_abiertos; // [t_archivo_abierto]
+	t_list* tabla_archivos_abiertos; // [t_archivo_abierto]
 
 	t_temporal salida_ejecucion;
 	t_temporal llegada_ejecucion;
@@ -128,27 +144,13 @@ typedef struct
 	t_buffer* buffer;
 } t_paquete;
 
-typedef struct{
-    char AX[4];
-    char BX[4];
-    char CX[4];
-    char DX[4];
-    char EAX[8];
-    char EBX[8];
-    char ECX[8];
-    char EDX[8];
-    char RAX[16];
-    char RBX[16];
-    char RCX[16];
-    char RDX[16];
-}t_registro;
 
 typedef struct {
 	int id;
 	char** instrucciones;
 	int program_counter;
 	t_registro* registros_cpu;
-	t_list tabla_segmentos;
+	t_list* tabla_segmentos;
 } contexto_ejecucion;
 
 
