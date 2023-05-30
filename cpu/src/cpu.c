@@ -61,6 +61,8 @@ int main(int argc, char ** argv) {
     pthread_create(&threadDispatch, NULL, (void *) process_dispatch, NULL);
     pthread_join(threadDispatch, NULL);
  
+    
+
 /*---------------------- TERMINO CPU ---------------------*/
 	terminar_programa(conexion_cpu, cpu_logger, cpu_config_file);
 
@@ -207,19 +209,19 @@ void process_dispatch() {
 
 /*-------------------- REGISTROS -------------------*/
 void set_registers(contexto_ejecucion* pcb) {
-    strcpy
-    registros->AX= pcb->registros_cpu->AX;
-    registros->BX = pcb->registros_cpu->BX;
-    registros->CX = pcb->registros_cpu->CX;
-    registros->DX = pcb->registros_cpu->DX;
-	registros->EAX = pcb->registros_cpu->EAX;
-	registros->EBX = pcb->registros_cpu->EBX;
-	registros->ECX = pcb->registros_cpu->ECX;
-	registros->EDX = pcb->registros_cpu->EDX;
-	registros->RAX = pcb->registros_cpu->RAX;
-	registros->RBX = pcb->registros_cpu->RBX;
-	registros->RCX = pcb->registros_cpu->RCX;
-	registros->RDX = pcb->registros_cpu->RDX;
+
+    strcpy(registros->AX, pcb->registros_cpu->AX);
+    strcpy(registros->BX , pcb->registros_cpu->BX);
+    strcpy(registros->CX , pcb->registros_cpu->CX);
+    strcpy(registros->DX , pcb->registros_cpu->DX);
+	strcpy(registros->EAX , pcb->registros_cpu->EAX);
+	strcpy(registros->EBX , pcb->registros_cpu->EBX);
+	strcpy(registros->ECX , pcb->registros_cpu->ECX);
+	strcpy(registros->EDX , pcb->registros_cpu->EDX);
+	strcpy(registros->RAX , pcb->registros_cpu->RAX);
+	strcpy(registros->RBX , pcb->registros_cpu->RBX);
+	strcpy(registros->RCX , pcb->registros_cpu->RCX);
+	strcpy(registros->RDX , pcb->registros_cpu->RDX);
 
 
 }
@@ -229,18 +231,19 @@ void set_registers(contexto_ejecucion* pcb) {
 /* ---------------- PCB ----------------*/
 
 void save_context_pcb(contexto_ejecucion* pcb){
-    pcb->registros_cpu->AX= registros->AX;   
-    pcb->registros_cpu->BX= registros->BX;   
-    pcb->registros_cpu->CX= registros->CX;  
-    pcb->registros_cpu->DX= registros->DX; 
-    pcb->registros_cpu->EAX =registros->EAX;
-	pcb->registros_cpu->EBX =registros->EBX;
-	pcb->registros_cpu->ECX =registros->ECX;
-	pcb->registros_cpu->EDX =registros->EDX;
-	pcb->registros_cpu->RAX =registros->RAX;
-	pcb->registros_cpu->RBX =registros->RBX;
-	pcb->registros_cpu->RCX =registros->RCX;
-	pcb->registros_cpu->RDX =registros->RDX;
+
+    strcpy(pcb->registros_cpu->AX, registros->AX);   
+    strcpy(pcb->registros_cpu->BX, registros->BX);   
+    strcpy(pcb->registros_cpu->CX, registros->CX);  
+    strcpy(pcb->registros_cpu->DX, registros->DX); 
+    strcpy(pcb->registros_cpu->EAX ,registros->EAX);
+	strcpy(pcb->registros_cpu->EBX ,registros->EBX);
+	strcpy(pcb->registros_cpu->ECX ,registros->ECX);
+	strcpy(pcb->registros_cpu->EDX ,registros->EDX);
+	strcpy(pcb->registros_cpu->RAX ,registros->RAX);
+	strcpy(pcb->registros_cpu->RBX ,registros->RBX);
+	strcpy(pcb->registros_cpu->RCX ,registros->RCX);
+	strcpy(pcb->registros_cpu->RDX ,registros->RDX);
 
 }
 
@@ -255,36 +258,36 @@ void add_value_to_register(char* registerToModify, char* valueToAdd){
     
     log_info(cpu_logger, "Caracteres a sumarle al registro %d",valueToAdd);
     if (strcmp(registerToModify, "AX") == 0) {
-        registros->AX = valueToAdd;
+        strcpy(registros->AX , valueToAdd);
     }
     else if (strcmp(registerToModify, "BX") == 0) {
-        registros->BX = valueToAdd;
+        strcpy(registros->BX , valueToAdd);
     }
     else if (strcmp(registerToModify, "CX") == 0) {
-        registros->CX =  valueToAdd;
+        strcpy(registros->CX , valueToAdd);
     }
     else if (strcmp(registerToModify, "DX") == 0) {
-        registros->DX = valueToAdd;
+        strcpy(registros->DX , valueToAdd);
     }else if (strcmp(registerToModify, "EAX") == 0) {
-        registros->EAX = valueToAdd;
+        strcpy(registros->EAX , valueToAdd);
     }else if (strcmp(registerToModify, "EBX") == 0) {
-        registros->EBX = valueToAdd;
+        strcpy(registros->EBX , valueToAdd);
     }
     else if (strcmp(registerToModify, "ECX") == 0) {
-        registros->ECX = valueToAdd;
+        strcpy(registros->ECX , valueToAdd);
     }
     else if (strcmp(registerToModify, "EDX") == 0) {
-        registros->EDX = valueToAdd;
+        strcpy(registros->EDX , valueToAdd);
     }else if (strcmp(registerToModify, "RAX") == 0) {
-        registros->RAX = valueToAdd;
+        strcpy(registros->RAX , valueToAdd);
     }else if (strcmp(registerToModify, "RBX") == 0) {
-        registros->RBX = valueToAdd;
+        strcpy(registros->RBX , valueToAdd);
     }
     else if (strcmp(registerToModify, "RCX") == 0) {
-        registros->RCX = valueToAdd;
+        strcpy(registros->RCX , valueToAdd);
     }
     else if (strcmp(registerToModify, "RDX") == 0) {
-        registros->RDX = valueToAdd;
+        strcpy(registros->RDX , valueToAdd);
     }
 }
 
