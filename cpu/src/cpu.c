@@ -174,7 +174,7 @@ void process_dispatch() {
     socket_cpu = iniciar_servidor(cpu_config.puerto_escucha, cpu_logger);
 	log_info(cpu_logger, "Servidor DISPATCH listo para recibir al cliente");
 
-	int socket_kernel = esperar_cliente(socket_cpu, cpu_logger); 
+	socket_kernel = esperar_cliente(socket_cpu, cpu_logger); 
     handshake_servidor(socket_kernel);
     
     log_info(cpu_logger, "Esperando a que envie mensaje/paquete");
@@ -188,7 +188,7 @@ void process_dispatch() {
 		switch (op_code) {
             case EJECUTAR_CE: 
                 //ce = recivir_ce(socket_kernel);
-                log_info(cpu_logger, "Llego correctamente el CE con id: %d", ce->id);
+                log_info(cpu_logger, "Llego correctamente el CE con id: %d", pcb->id);
                 execute_process(pcb);
                 break;   
             case -1:
@@ -313,17 +313,19 @@ char** decode(char* linea){ // separarSegunEspacios
 int end_process = 0;
 int input_ouput = 0;
 int check_interruption = 0;
+int wait = 0;
+int desalojo_por_yield = 0;
 
 
 char* parameter = "NONE";
 
-void execute_instruction(char** instruction, contexto_ejecucion* pcb){
+void execute_instruction(char** instruction, contexto_ejecucion* ce){
 
      switch(keyfromstring(instruction[0])){
         case I_SET: 
             // SET (Registro, Valor)
             log_info(cpu_logger, "Por ejecutar instruccion SET");
-            log_info(mandatory_logger, "PID: %d - Ejecutando: %s - %s - %s", pcb->id, instruction[0], instruction[1], instruction[2]);
+            log_info(mandatory_logger, "PID: %d - Ejecutando: %s - %s - %s", ce->id, instruction[0], instruction[1], instruction[2]);
 
             usleep(atoi(cpu_config.retardo_instruccion));
 
@@ -332,7 +334,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* pcb){
         case I_IO:
             // I/O (Tiempo)
             log_info(cpu_logger, "Por ejecutar instruccion I/O");
-            log_info(mandatory_logger, "PID: %d - Ejecutando: %s - %s - %s", pcb->id, instruction[0], instruction[1]);
+            log_info(mandatory_logger, "PID: %d - Ejecutando: %s - %s - %s", ce->id, instruction[0], instruction[1]);
 
             
             parameter = instruction[1];
@@ -342,9 +344,9 @@ void execute_instruction(char** instruction, contexto_ejecucion* pcb){
             break;
          case I_EXIT:
             //EXIT: Esta instrucción representa la syscall de finalización del proceso.
-            //Se deberá devolver el PCB actualizado al Kernel para su finalización.
+            //Se deberá devolver el ce actualizado al Kernel para su finalización.
             log_info(cpu_logger, "Instruccion EXIT ejecutada");
-            log_info(mandatory_logger, "PID: %d - Ejecutando: %s", pcb->id, instruction[0]);
+            log_info(mandatory_logger, "PID: %d - Ejecutando: %s", ce->id, instruction[0]);
 
             end_process = 1;
             break;
@@ -352,24 +354,26 @@ void execute_instruction(char** instruction, contexto_ejecucion* pcb){
             // WAIT (Recurso)
             //Esta instruccion asigna un recurso pasado por parametro
             log_info(cpu_logger, "Por ejecutar instruccion WAIT");
-            log_info(mandatory_logger, "PID: %d - Ejecutando: %s - %s ", pcb->id, instruction[0], instruction[1]);
+            log_info(mandatory_logger, "PID: %d - Ejecutando: %s - %s ", ce->id, instruction[0], instruction[1]);
 
-            
+           enviar_recurso(socket_kernel, ce, instruction[1], WAIT_RECURSO);
 
+            wait = 1;
             break;
         case I_SIGNAL:
             // SIGNAL (Recurso)
             //Esta instruccion libera un recurso pasado por parametro
-
             log_info(cpu_logger, "Por ejecutar instruccion SIGNAL");
-            log_info(mandatory_logger, "PID: %d - Ejecutando: %s - %s", pcb->id, instruction[0], instruction[1]);
+            log_info(mandatory_logger, "PID: %d - Ejecutando: %s - %s", ce->id, instruction[0], instruction[1]);
+
+            enviar_recurso(socket_kernel, ce, instruction[1], SIGNAL_RECURSO);
 
             break;
         case I_YIELD:
             log_info(cpu_logger, "Por ejecutar instruccion YIELD");
-            log_info(mandatory_logger, "PID: %d - Ejecutando: %s - %s", pcb->id, instruction[0]);
+            log_info(mandatory_logger, "PID: %d - Ejecutando: %s - %s", ce->id, instruction[0]);
 
-            
+            desalojo_por_yield = 1;
             break;
             default:
             log_info(cpu_logger, "No ejecute nada");
@@ -389,7 +393,7 @@ void execute_process(contexto_ejecucion* pcb){
     char** decoded_instruction = malloc(sizeof(char*));
 
     log_info(cpu_logger, "Por empezar check_interruption != 1 && end_process != 1 && input_ouput != 1 && page_fault != 1"); 
-    while(check_interruption != 1 && end_process != 1 && input_ouput != 1 && page_fault != 1 && sigsegv != 1){
+    while(check_interruption != 1 && end_process != 1 && input_ouput != 1 && wait != 1 && desalojo_por_yield != 1){
         //Llega el pcb y con el program counter buscas la instruccion que necesita
         instruction = string_duplicate(fetch_next_instruction_to_execute(pcb));
         decoded_instruction = decode(instruction);
@@ -415,14 +419,14 @@ void execute_process(contexto_ejecucion* pcb){
    if(end_process) {
         end_process = 0; // IMPORTANTE: Apagar el flag para que no rompa el proximo proceso que llegue
         check_interruption = 0;
-        enviar_ce(socket_cpu, pcb, FIN_PROCESO);
+        enviar_ce(socket_kernel, pcb, FIN_PROCESO);
         log_info(cpu_logger, "Enviamos paquete a dispatch: FIN PROCESO");
     } 
     else if(input_ouput) {
         input_ouput = 0;
         check_interruption = 0;
         log_info(cpu_logger, "Parameter: %s", parameter);
-        send_pcb_io_package(socket_cpu, pcb,  parameter, REQUEST); // Ver bien tema REQUEST
+        //send_pcb_io_package(socket_cpu, pcb,  parameter, REQUEST); // Ver bien tema REQUEST
     }
     /*else if(page_fault) {
         page_fault = 0;
@@ -447,7 +451,14 @@ void execute_process(contexto_ejecucion* pcb){
     else if(check_interruption) {
         check_interruption = 0;
         log_info(cpu_logger, "Entro por check interrupt");
-        enviar_ce(socket_cpu, pcb, EJECUTAR_INTERRUPCION); //Este codigo de operacion?
+        enviar_ce(socket_kernel, pcb, EJECUTAR_INTERRUPCION); //Este codigo de operacion?
+    }else if(wait){
+        wait = 0;
+        log_info(cpu_logger, "Bloqueado por WAIT");
+    }else if(desalojo_por_yield){
+        desalojo_por_yield = 0;
+        log_info(cpu_logger, "Desalojado por YIELD");
+        enviar_ce(socket_kernel, pcb, DESALOJO_YIELD);
     }
 }
 
@@ -482,6 +493,16 @@ void update_program_counter(contexto_ejecucion* pcb){
     pcb->program_counter += 1;
 }
 
+/*---------------------------------- PARA INSTRUCCION WAIT Y SIGNAL ----------------------------------*/
+
+enviar_recurso(int client_socket, contexto_ejecucion* ce, char* parameter, int codOP){
+    t_paquete* paquete = crear_paquete_op_code(codOP);
+
+    agregar_ce_a_paquete(paquete, ce);
+    agregar_a_paquete(client_socket, parameter, string_length(parameter) + 1);
+    enviar_paquete(paquete, client_socket);
+    eliminar_paquete(paquete);
+}
 
 
 

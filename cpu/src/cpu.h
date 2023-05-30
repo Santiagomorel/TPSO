@@ -20,6 +20,7 @@ t_config * cpu_config_file;
 
 int conexion_cpu;
 int socket_cpu;
+int socket_kernel;
 
 
 void load_config(void);
@@ -64,6 +65,7 @@ void init_registers();
 void set_registers(contexto_ejecucion* pcb);
 void add_value_to_register(char* registerToModify, char* valueToAdd);
 void add_two_registers(char* registerToModify, char* registroParaSumarleAlOtroRegistro);
+enviar_recurso(int client_socket, contexto_ejecucion* ce, char* parameter, int codOP);
 
 
 /*------------------- INSTRUCCIONES --------------------*/
