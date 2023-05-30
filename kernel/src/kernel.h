@@ -77,6 +77,7 @@ void inicializarListasGlobales(void );
 void iniciarSemaforos();
 void destruirSemaforos();
 void planificar_sig_to_ready();
+void planificar_sig_to_running();
 void iniciar_planificadores();
 
 void pedir_tabla_segmentos(void ); //MODIFICAR cuando este implementado a (t_list *)

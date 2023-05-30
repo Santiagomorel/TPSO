@@ -103,7 +103,7 @@ void establecer_conexion(char * ip_memoria, char* puerto_memoria, t_config* conf
 		log_info(logger, "Error al conectar con Memoria. El servidor no esta activo");
 		exit(-1);
 	}else{
-		handshake_cliente(conexion_cpu);
+		//handshake_cliente(conexion_cpu);
 		enviar_mensaje(ip_memoria, conexion_cpu);
 	}
 
@@ -174,8 +174,9 @@ void process_dispatch() {
     socket_cpu = iniciar_servidor(cpu_config.puerto_escucha, cpu_logger);
 	log_info(cpu_logger, "Servidor DISPATCH listo para recibir al cliente");
 
-	int socket_kernel = esperar_cliente(socket_cpu, cpu_logger); 
-    handshake_servidor(socket_kernel);
+	socket_kernel = esperar_cliente(socket_cpu, cpu_logger);
+    enviar_mensaje("Dispatch conectado",socket_kernel);
+    //handshake_servidor(socket_kernel);
     
     log_info(cpu_logger, "Esperando a que envie mensaje/paquete");
 
@@ -187,8 +188,9 @@ void process_dispatch() {
 
 		switch (op_code) {
             case EJECUTAR_CE: 
+                log_error(cpu_logger, "El cpu lee cod de op EJECUTAR CE");
                 //ce = recivir_ce(socket_kernel);
-                log_info(cpu_logger, "Llego correctamente el CE con id: %d", ce->id);
+                log_info(cpu_logger, "Llego correctamente el CE con id: %d", pcb->id);
                 execute_process(pcb);
                 break;   
             case -1:
@@ -422,7 +424,7 @@ void execute_process(contexto_ejecucion* pcb){
         input_ouput = 0;
         check_interruption = 0;
         log_info(cpu_logger, "Parameter: %s", parameter);
-        send_pcb_io_package(socket_cpu, pcb,  parameter, REQUEST); // Ver bien tema REQUEST
+        //send_pcb_io_package(socket_cpu, pcb,  parameter, REQUEST); // Ver bien tema REQUEST
     }
     /*else if(page_fault) {
         page_fault = 0;

@@ -192,4 +192,6 @@ t_paquete* agregar_tabla_segmentos_a_paquete(t_paquete * , t_list *);
 void enviar_ce(int, contexto_ejecucion *, int);
 
 void agregar_ce_a_paquete(t_paquete *, contexto_ejecucion *);
+contexto_ejecucion * obtener_ce(t_pcb * pcb);
+
 #endif /* UTILS_H_ */

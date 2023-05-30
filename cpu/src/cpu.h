@@ -20,7 +20,7 @@ t_config * cpu_config_file;
 
 int conexion_cpu;
 int socket_cpu;
-
+int socket_kernel;
 
 void load_config(void);
 void leer_consola(t_log*);

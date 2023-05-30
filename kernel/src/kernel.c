@@ -88,7 +88,7 @@ void load_config(void)
     kernel_config.ip_cpu = config_get_string_value(kernel_config_file, "IP_CPU");
     kernel_config.puerto_cpu = config_get_string_value(kernel_config_file, "PUERTO_CPU");
     kernel_config.puerto_escucha = config_get_string_value(kernel_config_file, "PUERTO_ESCUCHA");
-    kernel_config.algoritmo_planificacion = config_get_string_value(kernel_config_file, "ALGORITMO_CLASIFICACION");
+    kernel_config.algoritmo_planificacion = config_get_string_value(kernel_config_file, "ALGORITMO_PLANIFICACION");
 
     kernel_config.estimacion_inicial = config_get_int_value(kernel_config_file, "ESTIMACION_INICIAL");
 
@@ -221,9 +221,8 @@ void inicializarListasGlobales(void)
 
 void iniciar_planificadores()
 {
-    //pthread_create(&planificadorCP, NULL, (void *)planificar_sig_to_running, (void *)socket_cliente);
-    //pthread_detach(planificadorCP);
-    // MODIFICAR cuando haga falta hacer el running
+    pthread_create(&planificadorCP, NULL, (void *)planificar_sig_to_running, (void *)socket_cliente);
+    pthread_detach(planificadorCP);
 
 }
 
@@ -247,8 +246,8 @@ void planificar_sig_to_running(){
 
     while(1){
         sem_wait(&proceso_en_ready);
-
-        if(kernel_config.algoritmo_planificacion == "FIFO") { // FIFO
+        log_warning(kernel_logger, "Entra en la planificacion de READY RUNNING");
+        if(strcmp(kernel_config.algoritmo_planificacion, "FIFO") == 0) { // FIFO
             //log_info(kernel_logger, "Cola Ready FIFO: %s", funcionQueMuestraPID()); // HACER // VER LOCALIZACION
             pthread_mutex_lock(&m_listaReady);
             t_pcb* pcb_a_ejecutar = list_remove(listaReady, 0);
@@ -259,7 +258,7 @@ void planificar_sig_to_running(){
             cambiar_estado_a(pcb_a_ejecutar, RUNNING, estadoActual(pcb_a_ejecutar));
             agregar_a_lista_con_sems(pcb_a_ejecutar, listaEjecutando, m_listaEjecutando);
 
-            enviar_ce(cpu_dispatch_connection, pcb_a_ejecutar, EJECUTAR_PCB);
+            enviar_ce(cpu_dispatch_connection, obtener_ce(pcb_a_ejecutar), EJECUTAR_CE);
             //eliminar_pcb(pcb_a_ejecutar)??
         }
         //logica hrrn?
@@ -302,11 +301,10 @@ void planificar_sig_to_ready()
 
         // t_segmento * posibleSegmento = list_get(pcb_a_ready->tabla_segmentos, 0);
         // log_error(kernel_logger, "info (tamanio de segmento) de la tabla de segmentos creada: %d, %d, %d", posibleSegmento->tamanio_segmento,posibleSegmento->id_segmento, posibleSegmento->direccion_base);
-        cambiar_estado_a(pcb_a_ready, READY, estadoActual(pcb_a_ready));                            // NO ESTABA
-        agregar_a_lista_con_sems(pcb_a_ready, listaReady, m_listaReady); // NO ESTABA
+        cambiar_estado_a(pcb_a_ready, READY, estadoActual(pcb_a_ready));
+        agregar_a_lista_con_sems(pcb_a_ready, listaReady, m_listaReady);
 
         sem_post(&proceso_en_ready);
-        // log_trace(kernel_logger, "entro el primer pcb a READY!");
     }
 }
 
@@ -397,6 +395,31 @@ void pedir_tabla_segmentos() // MODIFICAR tipo de dato que devuelve
     }
     recibir_mensaje(memory_connection, kernel_logger);
     //return recibir_paquete(memory_connection);
+}
+
+contexto_ejecucion * obtener_ce(t_pcb * pcb){ // PENSAR EN HACERLO EN AMBOS SENTIDOS
+    contexto_ejecucion * nuevoContexto = malloc(sizeof(contexto_ejecucion));
+    //copiar id
+    //copiar array strings de intstrucciones
+    //copiar int program counter
+    //copiar t_registro registros cpu
+    // t_list tabla de segmentos
+    nuevoContexto->id = pcb->id;
+    nuevoContexto->program_counter = pcb -> program_counter;
+    //copiarIntrucciones()
+
+    strcpy(registros->AX, pcb->registros_cpu->AX);
+    strcpy(registros->BX , pcb->registros_cpu->BX);
+    strcpy(registros->CX , pcb->registros_cpu->CX);
+    strcpy(registros->DX , pcb->registros_cpu->DX);
+	strcpy(registros->EAX , pcb->registros_cpu->EAX);
+	strcpy(registros->EBX , pcb->registros_cpu->EBX);
+	strcpy(registros->ECX , pcb->registros_cpu->ECX);
+	strcpy(registros->EDX , pcb->registros_cpu->EDX);
+	strcpy(registros->RAX , pcb->registros_cpu->RAX);
+	strcpy(registros->RBX , pcb->registros_cpu->RBX);
+	strcpy(registros->RCX , pcb->registros_cpu->RCX);
+	strcpy(registros->RDX , pcb->registros_cpu->RDX);
 }
 
 // recieve_handshake(socket_cliente);
