@@ -83,6 +83,16 @@ void iniciar_planificadores();
 void pedir_tabla_segmentos(void ); //MODIFICAR cuando este implementado a (t_list *)
 void inicializar_estructuras(t_pcb *);
 void cambiar_estado_a(t_pcb *, estados , estados );
+
+contexto_ejecucion * obtener_ce(t_pcb *);
+void copiar_registros_pcb_a_ce(t_pcb*, contexto_ejecucion*);
+void copiar_registros_ce_a_pcb(contexto_ejecucion*, t_pcb*);
+void copiar_instrucciones_pcb_a_ce(t_pcb *, contexto_ejecucion *);
+void copiar_instrucciones_ce_a_pcb(contexto_ejecucion *, t_pcb *);
+void copiar_id_pcb_a_ce(t_pcb* , contexto_ejecucion* );
+void copiar_id_ce_a_pcb(contexto_ejecucion* , t_pcb* );
+void copiar_PC_pcb_a_ce(t_pcb* , contexto_ejecucion* );
+void copiar_PC_ce_a_pcb(contexto_ejecucion* , t_pcb* );
 // Listas de estados de tipo de planificacion
 t_list* listaNuevos;        // NEW
 t_list* listaReady;         // READY

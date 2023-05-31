@@ -257,9 +257,11 @@ void planificar_sig_to_running(){
 
             cambiar_estado_a(pcb_a_ejecutar, RUNNING, estadoActual(pcb_a_ejecutar));
             agregar_a_lista_con_sems(pcb_a_ejecutar, listaEjecutando, m_listaEjecutando);
+            log_warning(kernel_logger, "antes de obtener el ce");
+            contexto_ejecucion * nuevoContexto = obtener_ce(pcb_a_ejecutar); // ERROR hay seg fault cuando intento acceder al pcb a ejecutar
+            log_warning(kernel_logger, "despues de obtener el ce");
 
-            enviar_ce(cpu_dispatch_connection, obtener_ce(pcb_a_ejecutar), EJECUTAR_CE);
-            //eliminar_pcb(pcb_a_ejecutar)??
+            enviar_ce(cpu_dispatch_connection, nuevoContexto, EJECUTAR_CE);
         }
         //logica hrrn?
 
@@ -399,56 +401,72 @@ void pedir_tabla_segmentos() // MODIFICAR tipo de dato que devuelve
 
 contexto_ejecucion * obtener_ce(t_pcb * pcb){ // PENSAR EN HACERLO EN AMBOS SENTIDOS
     contexto_ejecucion * nuevoContexto = malloc(sizeof(contexto_ejecucion));
-    //copiar id
-    //copiar array strings de intstrucciones
-    //copiar int program counter
-    //copiar t_registro registros cpu
-    // t_list tabla de segmentos
-    nuevoContexto->id = pcb->id;
-    nuevoContexto->program_counter = pcb -> program_counter;
-    //copiarIntrucciones()
-
-    strcpy(registros->AX, pcb->registros_cpu->AX);
-    strcpy(registros->BX , pcb->registros_cpu->BX);
-    strcpy(registros->CX , pcb->registros_cpu->CX);
-    strcpy(registros->DX , pcb->registros_cpu->DX);
-	strcpy(registros->EAX , pcb->registros_cpu->EAX);
-	strcpy(registros->EBX , pcb->registros_cpu->EBX);
-	strcpy(registros->ECX , pcb->registros_cpu->ECX);
-	strcpy(registros->EDX , pcb->registros_cpu->EDX);
-	strcpy(registros->RAX , pcb->registros_cpu->RAX);
-	strcpy(registros->RBX , pcb->registros_cpu->RBX);
-	strcpy(registros->RCX , pcb->registros_cpu->RCX);
-	strcpy(registros->RDX , pcb->registros_cpu->RDX);
+    copiar_id_pcb_a_ce(pcb, nuevoContexto);
+    copiar_instrucciones_pcb_a_ce(pcb, nuevoContexto);
+    copiar_PC_pcb_a_ce(pcb, nuevoContexto);
+    copiar_registros_pcb_a_ce(pcb, nuevoContexto);
+    // copiar_tabla_segmentos(pcb, nuevoContexto);    // FALTA HACER
+    return nuevoContexto;
 }
 
-// recieve_handshake(socket_cliente);
+void copiar_instrucciones_pcb_a_ce(t_pcb * pcb, contexto_ejecucion * ce) { //copia instrucciones de la estructura 1 a la 2
+    for (int i = 0; i < string_array_size(pcb->instrucciones); i++) {
+        strcpy(ce->instrucciones[i], pcb->instrucciones[i]);
+    }
+}
 
-// t_list * lista;
-// while(1) {
-//     int cod_op = recibir_operacion(socket_cliente);
-//     log_trace(kernel_logger, "El codigo de operacion es %d",cod_op);
+void copiar_instrucciones_ce_a_pcb(contexto_ejecucion * ce, t_pcb * pcb) { //copia instrucciones de la estructura 1 a la 2
+    for (int i = 0; i < string_array_size(ce->instrucciones); i++) {
+        strcpy(pcb->instrucciones[i], ce->instrucciones[i]);
+    }
+}
 
-//     switch (cod_op)
-//     {
-//     case MENSAJE:
-//         recibir_mensaje(socket_cliente,kernel_logger);
-//         break;
-//     case PAQUETE:
-//         lista = recibir_paquete(socket_cliente);
-//         log_trace(kernel_logger, "Paquete recibido");
-//         list_iterate(lista, (void*) iterator);
-//         break;
+void copiar_registros_pcb_a_ce(t_pcb * pcb, contexto_ejecucion * ce) {
+    strcpy(ce->registros_cpu->AX , pcb->registros_cpu->AX);
+    strcpy(ce->registros_cpu->BX , pcb->registros_cpu->BX);
+    strcpy(ce->registros_cpu->CX , pcb->registros_cpu->CX);
+    strcpy(ce->registros_cpu->DX , pcb->registros_cpu->DX);
+	strcpy(ce->registros_cpu->EAX , pcb->registros_cpu->EAX);
+	strcpy(ce->registros_cpu->EBX , pcb->registros_cpu->EBX);
+	strcpy(ce->registros_cpu->ECX , pcb->registros_cpu->ECX);
+	strcpy(ce->registros_cpu->EDX , pcb->registros_cpu->EDX);
+	strcpy(ce->registros_cpu->RAX , pcb->registros_cpu->RAX);
+	strcpy(ce->registros_cpu->RBX , pcb->registros_cpu->RBX);
+	strcpy(ce->registros_cpu->RCX , pcb->registros_cpu->RCX);
+	strcpy(ce->registros_cpu->RDX , pcb->registros_cpu->RDX);
+}
 
-//     case -1:
-//         log_error(kernel_logger, "El cliente se desconecto");
-//         return EXIT_FAILURE;
-//     default:
-//         log_warning(kernel_logger, "Operacion desconocida");
-//         return EXIT_FAILURE;
-//     }
-// }
-// recibir_mensaje(socket_cliente,kernel_logger);
+void copiar_registros_ce_a_pcb(contexto_ejecucion * ce, t_pcb * pcb) {
+    strcpy(pcb->registros_cpu->AX , ce->registros_cpu->AX);
+    strcpy(pcb->registros_cpu->BX , ce->registros_cpu->BX);
+    strcpy(pcb->registros_cpu->CX , ce->registros_cpu->CX);
+    strcpy(pcb->registros_cpu->DX , ce->registros_cpu->DX);
+	strcpy(pcb->registros_cpu->EAX , ce->registros_cpu->EAX);
+	strcpy(pcb->registros_cpu->EBX , ce->registros_cpu->EBX);
+	strcpy(pcb->registros_cpu->ECX , ce->registros_cpu->ECX);
+	strcpy(pcb->registros_cpu->EDX , ce->registros_cpu->EDX);
+	strcpy(pcb->registros_cpu->RAX , ce->registros_cpu->RAX);
+	strcpy(pcb->registros_cpu->RBX , ce->registros_cpu->RBX);
+	strcpy(pcb->registros_cpu->RCX , ce->registros_cpu->RCX);
+	strcpy(pcb->registros_cpu->RDX , ce->registros_cpu->RDX);
+}
+
+void copiar_id_pcb_a_ce(t_pcb* pcb, contexto_ejecucion* ce) {
+    ce->id = pcb->id;
+}
+
+void copiar_id_ce_a_pcb(contexto_ejecucion* ce, t_pcb* pcb) {
+    pcb->id = ce->id;
+}
+
+void copiar_PC_pcb_a_ce(t_pcb* pcb, contexto_ejecucion* ce) {
+    ce->program_counter = pcb->program_counter;
+}
+
+void copiar_PC_ce_a_pcb(contexto_ejecucion* ce, t_pcb* pcb) {
+    pcb->program_counter = ce->program_counter;
+}
+
 
 /*
 Logs minimos obligatorios
