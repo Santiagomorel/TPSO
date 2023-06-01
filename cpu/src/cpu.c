@@ -183,13 +183,13 @@ void process_dispatch() {
         //sem_wait(&proceso_a_ejecutar);
 		int op_code = recibir_operacion(socket_kernel);
         log_warning(cpu_logger, "Codigo de operacion recibido de kernel: %d", op_code);
-        contexto_ejecucion* pcb;
+        contexto_ejecucion* ce;
 
 		switch (op_code) {
             case EJECUTAR_CE: 
                 //ce = recivir_ce(socket_kernel);
-                log_info(cpu_logger, "Llego correctamente el CE con id: %d", pcb->id);
-                execute_process(pcb);
+                log_info(cpu_logger, "Llego correctamente el CE con id: %d", ce->id);
+                execute_process(ce);
                 break;   
             case -1:
                 log_warning(cpu_logger, "El kernel se desconecto");
@@ -208,42 +208,42 @@ void process_dispatch() {
 
 
 /*-------------------- REGISTROS -------------------*/
-void set_registers(contexto_ejecucion* pcb) {
+void set_registers(contexto_ejecucion* ce) {
 
-    strcpy(registros->AX, pcb->registros_cpu->AX);
-    strcpy(registros->BX , pcb->registros_cpu->BX);
-    strcpy(registros->CX , pcb->registros_cpu->CX);
-    strcpy(registros->DX , pcb->registros_cpu->DX);
-	strcpy(registros->EAX , pcb->registros_cpu->EAX);
-	strcpy(registros->EBX , pcb->registros_cpu->EBX);
-	strcpy(registros->ECX , pcb->registros_cpu->ECX);
-	strcpy(registros->EDX , pcb->registros_cpu->EDX);
-	strcpy(registros->RAX , pcb->registros_cpu->RAX);
-	strcpy(registros->RBX , pcb->registros_cpu->RBX);
-	strcpy(registros->RCX , pcb->registros_cpu->RCX);
-	strcpy(registros->RDX , pcb->registros_cpu->RDX);
+    strcpy(registros->AX, ce->registros_cpu->AX);
+    strcpy(registros->BX , ce->registros_cpu->BX);
+    strcpy(registros->CX , ce->registros_cpu->CX);
+    strcpy(registros->DX , ce->registros_cpu->DX);
+	strcpy(registros->EAX , ce->registros_cpu->EAX);
+	strcpy(registros->EBX , ce->registros_cpu->EBX);
+	strcpy(registros->ECX , ce->registros_cpu->ECX);
+	strcpy(registros->EDX , ce->registros_cpu->EDX);
+	strcpy(registros->RAX , ce->registros_cpu->RAX);
+	strcpy(registros->RBX , ce->registros_cpu->RBX);
+	strcpy(registros->RCX , ce->registros_cpu->RCX);
+	strcpy(registros->RDX , ce->registros_cpu->RDX);
 
 
 }
 
 
 
-/* ---------------- PCB ----------------*/
+/* ---------------- CE ----------------*/
 
-void save_context_pcb(contexto_ejecucion* pcb){
+void save_context_ce(contexto_ejecucion* ce){
 
-    strcpy(pcb->registros_cpu->AX, registros->AX);   
-    strcpy(pcb->registros_cpu->BX, registros->BX);   
-    strcpy(pcb->registros_cpu->CX, registros->CX);  
-    strcpy(pcb->registros_cpu->DX, registros->DX); 
-    strcpy(pcb->registros_cpu->EAX ,registros->EAX);
-	strcpy(pcb->registros_cpu->EBX ,registros->EBX);
-	strcpy(pcb->registros_cpu->ECX ,registros->ECX);
-	strcpy(pcb->registros_cpu->EDX ,registros->EDX);
-	strcpy(pcb->registros_cpu->RAX ,registros->RAX);
-	strcpy(pcb->registros_cpu->RBX ,registros->RBX);
-	strcpy(pcb->registros_cpu->RCX ,registros->RCX);
-	strcpy(pcb->registros_cpu->RDX ,registros->RDX);
+    strcpy(ce->registros_cpu->AX, registros->AX);   
+    strcpy(ce->registros_cpu->BX, registros->BX);   
+    strcpy(ce->registros_cpu->CX, registros->CX);  
+    strcpy(ce->registros_cpu->DX, registros->DX); 
+    strcpy(ce->registros_cpu->EAX ,registros->EAX);
+	strcpy(ce->registros_cpu->EBX ,registros->EBX);
+	strcpy(ce->registros_cpu->ECX ,registros->ECX);
+	strcpy(ce->registros_cpu->EDX ,registros->EDX);
+	strcpy(ce->registros_cpu->RAX ,registros->RAX);
+	strcpy(ce->registros_cpu->RBX ,registros->RBX);
+	strcpy(ce->registros_cpu->RCX ,registros->RCX);
+	strcpy(ce->registros_cpu->RDX ,registros->RDX);
 
 }
 
@@ -292,8 +292,8 @@ void add_value_to_register(char* registerToModify, char* valueToAdd){
 }
 
 /*-------------------- FETCH ---------------------- */
-char* fetch_next_instruction_to_execute(contexto_ejecucion* pcb){
-    return pcb->instrucciones[pcb->program_counter];
+char* fetch_next_instruction_to_execute(contexto_ejecucion* ce){
+    return ce->instrucciones[ce->program_counter];
 }
 
 /*-------------------- DECODE ---------------------- */
@@ -317,7 +317,7 @@ int wait = 0;
 int desalojo_por_yield = 0;
 
 
-char* parameter = "NONE";
+char* tiempo = "NONE";
 
 void execute_instruction(char** instruction, contexto_ejecucion* ce){
 
@@ -337,9 +337,9 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             log_info(mandatory_logger, "PID: %d - Ejecutando: %s - %s - %s", ce->id, instruction[0], instruction[1]);
 
             
-            parameter = instruction[1];
+            tiempo = instruction[1];
             
-            log_info(cpu_logger, "%s",parameter);
+            log_info(cpu_logger, "%s",tiempo);
             input_ouput = 1;
             break;
          case I_EXIT:
@@ -384,29 +384,29 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
 
 
 
-void execute_process(contexto_ejecucion* pcb){
+void execute_process(contexto_ejecucion* ce){
     //char* value_to_copy = string_new(); // ?????
 
-    set_registers(pcb);
+    set_registers(ce);
 
     char* instruction = malloc(sizeof(char*));
     char** decoded_instruction = malloc(sizeof(char*));
 
     log_info(cpu_logger, "Por empezar check_interruption != 1 && end_process != 1 && input_ouput != 1 && page_fault != 1"); 
     while(check_interruption != 1 && end_process != 1 && input_ouput != 1 && wait != 1 && desalojo_por_yield != 1){
-        //Llega el pcb y con el program counter buscas la instruccion que necesita
-        instruction = string_duplicate(fetch_next_instruction_to_execute(pcb));
+        //Llega el ce y con el program counter buscas la instruccion que necesita
+        instruction = string_duplicate(fetch_next_instruction_to_execute(ce));
         decoded_instruction = decode(instruction);
 
         log_info(cpu_logger, "Por ejecutar la instruccion decodificada %s", decoded_instruction[0]);
-        execute_instruction(decoded_instruction, pcb);
+        execute_instruction(decoded_instruction, ce);
 
         if(page_fault != 1) {   // en caso de tener page fault no se actualiza program counter
-            update_program_counter(pcb);
+            update_program_counter(ce);
         }
         
         
-        log_info(cpu_logger, "PROGRAM COUNTER: %d", pcb->program_counter);
+        log_info(cpu_logger, "PROGRAM COUNTER: %d", ce->program_counter);
 
 
     } //si salis del while es porque te llego una interrupcion o termino el proceso o entrada y salida
@@ -414,51 +414,51 @@ void execute_process(contexto_ejecucion* pcb){
     log_info(cpu_logger, "SALI DEL WHILE DE EJECUCION");
 
 
-    save_context_pcb(pcb); // ACA GUARDAMOS EL CONTEXTO
+    save_context_ce(ce); // ACA GUARDAMOS EL CONTEXTO
 
    if(end_process) {
         end_process = 0; // IMPORTANTE: Apagar el flag para que no rompa el proximo proceso que llegue
         check_interruption = 0;
-        enviar_ce(socket_kernel, pcb, FIN_PROCESO);
+        enviar_ce(socket_kernel, ce, FIN_PROCESO);
         log_info(cpu_logger, "Enviamos paquete a dispatch: FIN PROCESO");
     } 
     else if(input_ouput) {
         input_ouput = 0;
         check_interruption = 0;
-        log_info(cpu_logger, "Parameter: %s", parameter);
-        //send_pcb_io_package(socket_cpu, pcb,  parameter, REQUEST); // Ver bien tema REQUEST
+        log_info(cpu_logger, "Tiempo: %s", tiempo);
+ 
     }
     /*else if(page_fault) {
         page_fault = 0;
         check_interruption = 0;
         log_info(cpu_logger, "OCURRIO UN PAGE FAULT, ENVIANDO A KERNEL PARA QUE SOLUCIONE");
         
-        // subirle pcb , 
+        // subirle ce , 
         t_paquete* package = create_package(PAGE_FAULT); // FALTA PAGE_FAULT
-        add_pcb_to_package(package, pcb);
+        add_ce_to_package(package, ce);
         add_int_to_package(package, numeroSegmentoGlobalPageFault);
         add_int_to_package(package, numeroPaginaGlobalPageFault);
         send_package(package, socket_cpu);
         delete_package(package);
-        //send_pcb_package(socket_kernel, pcb, REQUEST_PAGE_FAULT); //Este codigo de operacion?
+        //send_ce_package(socket_kernel, ce, REQUEST_PAGE_FAULT); //Este codigo de operacion?
     }*/
     /*else if(sigsegv == 1){
         sigsegv = 0;
         check_interruption = 0;
         log_info(cpu_logger, "Error: Segmentation Fault (SEG_FAULT), enviando para terminar proceso");
-        send_pcb_package(socket_cpu, pcb, SEG_FAULT); //FALTA SEG_FAULT EN UTILS.H
+        send_ce_package(socket_cpu, ce, SEG_FAULT); //FALTA SEG_FAULT EN UTILS.H
     }*/
     else if(check_interruption) {
         check_interruption = 0;
         log_info(cpu_logger, "Entro por check interrupt");
-        enviar_ce(socket_kernel, pcb, EJECUTAR_INTERRUPCION); //Este codigo de operacion?
+        enviar_ce(socket_kernel, ce, EJECUTAR_INTERRUPCION); //Este codigo de operacion?
     }else if(wait){
         wait = 0;
         log_info(cpu_logger, "Bloqueado por WAIT");
     }else if(desalojo_por_yield){
         desalojo_por_yield = 0;
         log_info(cpu_logger, "Desalojado por YIELD");
-        enviar_ce(socket_kernel, pcb, DESALOJO_YIELD);
+        enviar_ce(socket_kernel, ce, DESALOJO_YIELD);
     }
 }
 
@@ -489,13 +489,13 @@ int keyfromstring(char *key) {
 }
 
 
-void update_program_counter(contexto_ejecucion* pcb){
-    pcb->program_counter += 1;
+void update_program_counter(contexto_ejecucion* ce){
+    ce->program_counter += 1;
 }
 
 /*---------------------------------- PARA INSTRUCCION WAIT Y SIGNAL ----------------------------------*/
 
-enviar_recurso(int client_socket, contexto_ejecucion* ce, char* parameter, int codOP){
+void enviar_recurso(int client_socket, contexto_ejecucion* ce, char* parameter, int codOP){
     t_paquete* paquete = crear_paquete_op_code(codOP);
 
     agregar_ce_a_paquete(paquete, ce);
@@ -503,6 +503,11 @@ enviar_recurso(int client_socket, contexto_ejecucion* ce, char* parameter, int c
     enviar_paquete(paquete, client_socket);
     eliminar_paquete(paquete);
 }
+void enviar_io(int client_socket, contexto_ejecucion* ce, char* tiempo, int codOP){
+    t_paquete* paquete = crear_paquete_op_code(codOP);
 
-
-
+    agregar_ce_a_paquete(paquete, ce);
+    agregar_entero_a_paquete(paquete, atoi(tiempo));
+    enviar_paquete(paquete, client_socket);
+    eliminar_paquete(paquete);
+}
