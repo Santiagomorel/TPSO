@@ -184,14 +184,14 @@ void process_dispatch() {
         //sem_wait(&proceso_a_ejecutar);
 		int op_code = recibir_operacion(socket_kernel);
         log_warning(cpu_logger, "Codigo de operacion recibido de kernel: %d", op_code);
-        contexto_ejecucion* pcb;
+        contexto_ejecucion* ce; //hay que hacer un free del contexto de ejecucion una vez termine de ejecutar
 
 		switch (op_code) {
             case EJECUTAR_CE: 
                 log_error(cpu_logger, "El cpu lee cod de op EJECUTAR CE");
-                //ce = recivir_ce(socket_kernel);
-                log_info(cpu_logger, "Llego correctamente el CE con id: %d", pcb->id);
-                execute_process(pcb);
+                ce = recibir_ce(socket_kernel); // ERROR hay que mirar si el ce se recibe bien
+                log_info(cpu_logger, "Llego correctamente el CE con id: %d", ce->id);
+                execute_process(ce);
                 break;   
             case -1:
                 log_warning(cpu_logger, "El kernel se desconecto");
@@ -417,7 +417,7 @@ void execute_process(contexto_ejecucion* pcb){
    if(end_process) {
         end_process = 0; // IMPORTANTE: Apagar el flag para que no rompa el proximo proceso que llegue
         check_interruption = 0;
-        enviar_ce(socket_cpu, pcb, FIN_PROCESO);
+        enviar_ce(socket_cpu, pcb, FIN_PROCESO, cpu_logger);
         log_info(cpu_logger, "Enviamos paquete a dispatch: FIN PROCESO");
     } 
     else if(input_ouput) {
@@ -449,7 +449,7 @@ void execute_process(contexto_ejecucion* pcb){
     else if(check_interruption) {
         check_interruption = 0;
         log_info(cpu_logger, "Entro por check interrupt");
-        enviar_ce(socket_cpu, pcb, EJECUTAR_INTERRUPCION); //Este codigo de operacion?
+        enviar_ce(socket_cpu, pcb, EJECUTAR_INTERRUPCION, cpu_logger); //Este codigo de operacion?
     }
 }
 
