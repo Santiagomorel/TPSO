@@ -57,6 +57,7 @@ bool bloqueado_termino_io(t_pcb *);
 char * obtenerEstado(estados);
 int obtenerPid(t_pcb *);
 t_pcb* mayorRR (t_pcb*,t_pcb*);
+t_pcb* mayorRRdeLista ( void*,void*);
 double calculoEstimado (time_t,time_t);
 time_t calculoRR (time_t,time_t,time_t );
 

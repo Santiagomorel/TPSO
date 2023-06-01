@@ -263,6 +263,17 @@ void planificar_sig_to_running(){
             //eliminar_pcb(pcb_a_ejecutar)??
         }
         else if (kernel_config.algoritmo_planificacion == "HRRN"){
+             pthread_mutex_lock(&m_listaReady);
+              //log_info(kernel_logger,"HRRN: Hay %d procesos listos para ejecutar",list_size(listaReady);
+            t_pcb* pcb_mayorRR = list_get_maximum(listaReady,(void*) mayorRRdeLista);
+            t_pcb* pcb_a_ejecutar = list_remove_element(listaReady, pcb_mayorRR);
+             pthread_mutex_unlock(&m_listaReady,pcb_mayorRR);
+            log_trace(kernel_logger, "agrego a RUNING y se lo paso a cpu para q ejecute!");
+
+            cambiar_estado_a(pcb_a_ejecutar, RUNNING, estadoActual(pcb_a_ejecutar));
+            agregar_a_lista_con_sems(pcb_a_ejecutar, listaEjecutando, m_listaEjecutando);
+
+            enviar_ce(cpu_dispatch_connection, pcb_a_ejecutar, EJECUTAR_PCB);
 
         }
 
@@ -401,19 +412,28 @@ void pedir_tabla_segmentos() // MODIFICAR tipo de dato que devuelve
     //return recibir_paquete(memory_connection);
 }
 
-double calculoEstimado (time_t duracionRealAnterior,time_t estimacionAnterior){
+t_pcb* mayorRRdeLista ( void* _pcb1,void* _pcb2){
 
-    double alfa = kernel_config->ALFA;
+        t_pcb* pcb1 = (t_pcb*)_pcb1;
 
-    return (alfa * duracionRealAnterior) + ( (1 - alfa) * estimacionAnterior) ;
+        t_pcb* pcb2 = (t_pcb*)_pcb2;
 
-}
+        return mayorRR(pcb1,pcb2);
 
+    };
 
 
 time_t calculoRR (time_t tiempoEsperaEnReady,time_t duracionRealAnterior,time_t estimacionAnterior){
 
     return 1 +( ( (time(NULL) - tiempoEsperaEnReady) *1000) /calculoEstimado(duracionRealAnterior,estimacionAnterior) );
+
+}
+
+double calculoEstimado (time_t duracionRealAnterior,time_t estimacionAnterior){
+
+    double alfa = kernel_config.hrrn_alfa;
+
+    return (alfa * duracionRealAnterior) + ( (1 - alfa) * estimacionAnterior) ;
 
 }
 
