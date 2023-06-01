@@ -56,6 +56,10 @@ void enviar_Fin_consola(int);
 bool bloqueado_termino_io(t_pcb *);
 char * obtenerEstado(estados);
 int obtenerPid(t_pcb *);
+t_pcb* mayorRR (t_pcb*,t_pcb*);
+double calculoEstimado (time_t,time_t);
+time_t calculoRR (time_t,time_t,time_t );
+
 
 void agregar_a_lista_con_sems(t_pcb *, t_list *, pthread_mutex_t );
 

@@ -262,7 +262,9 @@ void planificar_sig_to_running(){
             enviar_ce(cpu_dispatch_connection, pcb_a_ejecutar, EJECUTAR_PCB);
             //eliminar_pcb(pcb_a_ejecutar)??
         }
-        //logica hrrn?
+        else if (kernel_config.algoritmo_planificacion == "HRRN"){
+
+        }
 
     }
 }
@@ -398,6 +400,37 @@ void pedir_tabla_segmentos() // MODIFICAR tipo de dato que devuelve
     recibir_mensaje(memory_connection, kernel_logger);
     //return recibir_paquete(memory_connection);
 }
+
+double calculoEstimado (time_t duracionRealAnterior,time_t estimacionAnterior){
+
+    double alfa = kernel_config->ALFA;
+
+    return (alfa * duracionRealAnterior) + ( (1 - alfa) * estimacionAnterior) ;
+
+}
+
+
+
+time_t calculoRR (time_t tiempoEsperaEnReady,time_t duracionRealAnterior,time_t estimacionAnterior){
+
+    return 1 +( ( (time(NULL) - tiempoEsperaEnReady) *1000) /calculoEstimado(duracionRealAnterior,estimacionAnterior) );
+
+}
+
+t_pcb* mayorRR (t_pcb* pcb1,t_pcb* pcb2){
+
+    int RR_pcb1 = calculoRR(pcb1->instanteEstado,pcb1->duracionRealAnterior,pcb1->estimacionAnterior);
+
+    int RR_pcb2 = calculoRR(pcb2->instanteEstado,pcb2->duracionRealAnterior,pcb2->estimacionAnterior);
+
+    //log_info(logger,"Comparo pcb1 [%d] y pcb2[%d], RR_pcb1 [%d] y RR_pcb2 [%d] ",pcb1->pid, pcb2->pid,RR_pcb1,RR_pcb2 );
+
+    if (RR_pcb1 >= RR_pcb2) return pcb1;
+
+    else return pcb2;
+
+}
+
 
 // recieve_handshake(socket_cliente);
 
