@@ -46,7 +46,7 @@ typedef enum
 	INICIAR_PCB,
 	//RECIBIR_PCB,
 	// -------  CPU->kernel --------
-	EJECUTAR_PCB, 			//  dispatch
+	EJECUTAR_CE, 			//  dispatch
 	EJECUTAR_INTERRUPCION,	// 	interrupt
 	// ------- enviadas por DIspatch: (CPU->kernel) --------
 	FIN_PROCESO,
@@ -99,11 +99,27 @@ typedef struct{
 	char* archivo;
 	int puntero;
 } t_archivo_abierto;
+
+typedef struct{
+    char AX[4];
+    char BX[4];
+    char CX[4];
+    char DX[4];
+    char EAX[8];
+    char EBX[8];
+    char ECX[8];
+    char EDX[8];
+    char RAX[16];
+    char RBX[16];
+    char RCX[16];
+    char RDX[16];
+}t_registro;
+
 typedef struct {
     int id;
 	char** instrucciones;
     int program_counter;
-	char** registros_cpu;
+	t_registro* registros_cpu;
 	t_list* tabla_segmentos;
 	float estimacion_rafaga;
     t_temporal tiempo_llegada_ready;
@@ -129,14 +145,15 @@ typedef struct
 } t_paquete;
 
 
-
 typedef struct {
 	int id;
 	char** instrucciones;
 	int program_counter;
-	char** registros_cpu;
+	t_registro* registros_cpu;
 	t_list* tabla_segmentos;
 } contexto_ejecucion;
+
+
 
 int crear_conexion(char* ip, char* puerto);
 void enviar_mensaje(char* mensaje, int socket_cliente);
@@ -145,6 +162,7 @@ t_paquete* crear_paquete_op_code(op_code codigo_op);
 t_paquete* crear_super_paquete(void);
 void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio);
 void agregar_entero_a_paquete(t_paquete* , int );
+void agregar_array_string_a_paquete(t_paquete* paquete, char** arr);
 void enviar_paquete(t_paquete* paquete, int socket_cliente);
 void liberar_conexion(int socket_cliente);
 void eliminar_paquete(t_paquete* paquete);
@@ -168,4 +186,10 @@ void loggear_pcb(t_pcb* , t_log* );
 void loggear_estado(t_log* , int );
 
 t_list* recibir_paquete_segmento(int );
+
+t_paquete* agregar_tabla_segmentos_a_paquete(t_paquete * , t_list *);
+
+void enviar_ce(int, contexto_ejecucion *, int);
+
+void agregar_ce_a_paquete(t_paquete *, contexto_ejecucion *);
 #endif /* UTILS_H_ */

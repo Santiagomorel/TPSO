@@ -114,22 +114,16 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL) {
     int codigoOperacion = recibir_operacion(SOCKET_CLIENTE_KERNEL);
     switch(codigoOperacion)
         {
-            case MENSAJE:
-                
-                log_trace(log_memoria, "recibi el op_cod %d MENSAJE , codigoOperacion", codigoOperacion);
-
-                //char* valCodOp = string_from_format("recibido el codigo de operacion %d de kernel", codigoOperacion);
-                enviar_mensaje("recibido el codigo de operacion de kernel, enviando tabla de segmentos", SOCKET_CLIENTE_KERNEL);
-                
+            case INICIAR_ESTRUCTURAS:
+                log_trace(log_memoria, "recibi el op_cod %d INICIAR_ESTRUCTURAS", codigoOperacion);
                 log_trace(log_memoria, "creando paquete con tabla de segmentos base");
-                t_list* tabla_segmentos = list_create(); 
-                t_segmento* segmento_base = crear_segmento(0,memoria_config.tam_segmento,64); 
-                list_add(tabla_segmentos, segmento_base);
-                t_paquete* segmentos_paquete = crear_paquete_op_code(TABLA_SEGMENTOS);
-                agregar_a_paquete(segmentos_paquete, tabla_segmentos, sizeof(&tabla_segmentos));
-
-
-                enviar_paquete(segmentos_paquete, SOCKET_CLIENTE_KERNEL);
+                // t_list* tabla_segmentos = list_create();
+                // t_segmento* segmento_base = crear_segmento(1,1,64); 
+                // list_add(tabla_segmentos, segmento_base);
+                // t_paquete* segmentos_paquete = crear_paquete_op_code(TABLA_SEGMENTOS);
+                // agregar_a_paquete(segmentos_paquete, tabla_segmentos, sizeof(t_list));
+                // enviar_paquete(segmentos_paquete, SOCKET_CLIENTE_KERNEL);
+                enviar_mensaje("envio nueva tabla de segmentos", SOCKET_CLIENTE_KERNEL);
                 break;
             // ---------LP entrante----------
             // case INICIAR_PCB: 

@@ -39,14 +39,15 @@ int main(int argc, char **argv)
         log_trace(kernel_logger, "No se pudo conectar al servidor de MEMORIA");
         exit(2);
     }
-    int codop = recibir_operacion(memory_connection);
+    recibir_operacion(memory_connection);
     recibir_mensaje(memory_connection, kernel_logger);
 
-    // if((cpu_dispatch_connection = crear_conexion(kernel_config.ip_cpu , kernel_config.puerto_cpu)) == -1) {
-    //     log_trace(kernel_logger, "No se pudo conectar al servidor de CPU DISPATCH");
-    //     exit(2);
-    // }
-
+    if((cpu_dispatch_connection = crear_conexion(kernel_config.ip_cpu , kernel_config.puerto_cpu)) == -1) {
+        log_trace(kernel_logger, "No se pudo conectar al servidor de CPU DISPATCH");
+        exit(2);
+    }
+    recibir_operacion(cpu_dispatch_connection);
+    recibir_mensaje(cpu_dispatch_connection, kernel_logger);
     // if((file_system_connection = crear_conexion(kernel_config.ip_file_system , kernel_config.puerto_file_system)) == -1) {
     //     log_trace(kernel_logger, "No se pudo conectar al servidor de FILE SYSTEM");
     //     exit(2);
@@ -85,7 +86,7 @@ void load_config(void)
     kernel_config.ip_file_system = config_get_string_value(kernel_config_file, "IP_FILESYSTEM");
     kernel_config.puerto_file_system = config_get_string_value(kernel_config_file, "PUERTO_FILESYSTEM");
     kernel_config.ip_cpu = config_get_string_value(kernel_config_file, "IP_CPU");
-    kernel_config.puerto_cpu = config_get_string_value(kernel_config_file, "PUERTO_CP");
+    kernel_config.puerto_cpu = config_get_string_value(kernel_config_file, "PUERTO_CPU");
     kernel_config.puerto_escucha = config_get_string_value(kernel_config_file, "PUERTO_ESCUCHA");
     kernel_config.algoritmo_planificacion = config_get_string_value(kernel_config_file, "ALGORITMO_CLASIFICACION");
 
@@ -161,14 +162,12 @@ t_pcb *pcb_create(char *instrucciones, int socket_consola)
 
     generar_id(new_pcb);
     new_pcb->estado_actual = NEW;
-    // list_add_all(new_pcb->instrucciones, instrucciones); // La lista del PCB se la tendre que pasar como & ?
-    // printf("%s" ,string_duplicate(instrucciones));
     new_pcb->instrucciones = separar_inst_en_lineas(instrucciones);
     new_pcb->program_counter = 0;
     // new_pcb->tabla_paginas = -1; // TODO de la conexion con memoria
     new_pcb->estimacion_rafaga = kernel_config.estimacion_inicial; // ms
     new_pcb->socket_consola = socket_consola;
-    // new_pcb->sumatoria_rafaga = 0.0;
+    new_pcb->tabla_segmentos = list_create();
 
     return new_pcb;
 }
@@ -233,6 +232,7 @@ void iniciarSemaforos()
     pthread_mutex_init(&m_listaNuevos, NULL);
     pthread_mutex_init(&m_listaReady, NULL);
     pthread_mutex_init(&m_listaBloqueados, NULL);
+    pthread_mutex_init(&m_listaEjecutando, NULL);
     pthread_mutex_init(&m_contador_id, NULL);
     sem_init(&proceso_en_ready, 0, 0);
     sem_init(&grado_multiprog, 0, kernel_config.grado_max_multiprogramacion);
@@ -243,28 +243,29 @@ void destruirSemaforos()
     sem_destroy(&proceso_en_ready);
 }
 
-// void planificar_sig_to_running(){
+void planificar_sig_to_running(){
 
-//     while(1){
-//         sem_wait(&proceso_en_ready);
+    while(1){
+        sem_wait(&proceso_en_ready);
 
-//         if(!tieneDesalojo) { // FIFO
-//             pthread_mutex_lock(&m_listaReady);
-//             t_pcb* pcb_a_ejecutar = list_remove(listaReady, 0);
-//                 pthread_mutex_unlock(&m_listaReady);
+        if(kernel_config.algoritmo_planificacion == "FIFO") { // FIFO
+            //log_info(kernel_logger, "Cola Ready FIFO: %s", funcionQueMuestraPID()); // HACER // VER LOCALIZACION
+            pthread_mutex_lock(&m_listaReady);
+            t_pcb* pcb_a_ejecutar = list_remove(listaReady, 0);
+            pthread_mutex_unlock(&m_listaReady);
 
-//             log_info(kernel_logger, "agrego a RUNING y se lo paso a cpu para q ejecute!");
+            log_trace(kernel_logger, "agrego a RUNING y se lo paso a cpu para q ejecute!");
 
-//             cambiar_estado_a(pcb_a_ejecutar, RUNNING);
-//             agregar_a_lista_con_sems( pcb_a_ejecutar, listaEjecutando, listaEjecutando);
+            cambiar_estado_a(pcb_a_ejecutar, RUNNING, estadoActual(pcb_a_ejecutar));
+            agregar_a_lista_con_sems(pcb_a_ejecutar, listaEjecutando, m_listaEjecutando);
 
-//             paquete_pcb(cpu_dispatch_connection, pcb_a_ejecutar, EJECUTAR_PCB); // falta sacar comments a la conexion
-//             //eliminar_pcb(pcb_a_ejecutar)??
-//         }
-//         //logica hrrn?
+            enviar_ce(cpu_dispatch_connection, pcb_a_ejecutar, EJECUTAR_PCB);
+            //eliminar_pcb(pcb_a_ejecutar)??
+        }
+        //logica hrrn?
 
-//     }
-
+    }
+}
 void planificar_sig_to_ready()
 {
 
@@ -293,14 +294,19 @@ void planificar_sig_to_ready()
         log_trace(kernel_logger, "Inicializamos estructuras del pcb en memoria");
         inicializar_estructuras(pcb_a_ready);
 
-        t_list *nuevo_segmento = pedir_tabla_segmentos();
-        pcb_a_ready->tabla_segmentos = nuevo_segmento;
+        /*t_list *nuevo_segmento =*/ pedir_tabla_segmentos();
+        // t_segmento * primerSegmentoNuevo = list_get(nuevo_segmento,0);
+        // log_error(kernel_logger, "info de la tabla de segmentos pedida: %d, %d, %d", primerSegmentoNuevo->tamanio_segmento,primerSegmentoNuevo->id_segmento, primerSegmentoNuevo->direccion_base);
 
+        // list_add_all(pcb_a_ready->tabla_segmentos, nuevo_segmento);
+
+        // t_segmento * posibleSegmento = list_get(pcb_a_ready->tabla_segmentos, 0);
+        // log_error(kernel_logger, "info (tamanio de segmento) de la tabla de segmentos creada: %d, %d, %d", posibleSegmento->tamanio_segmento,posibleSegmento->id_segmento, posibleSegmento->direccion_base);
         cambiar_estado_a(pcb_a_ready, READY, estadoActual(pcb_a_ready));                            // NO ESTABA
         agregar_a_lista_con_sems(pcb_a_ready, listaReady, m_listaReady); // NO ESTABA
 
         sem_post(&proceso_en_ready);
-        log_trace(kernel_logger, "entro el primer pcb a READY!");
+        // log_trace(kernel_logger, "entro el primer pcb a READY!");
     }
 }
 
@@ -382,15 +388,15 @@ void inicializar_estructuras(t_pcb *pcb)
     eliminar_paquete(paquete);
 }
 
-t_list *pedir_tabla_segmentos() //TODO
+void pedir_tabla_segmentos() // MODIFICAR tipo de dato que devuelve
 {
     int codigoOperacion = recibir_operacion(memory_connection);
-    if (codigoOperacion != TABLA_SEGMENTOS)
+    if (codigoOperacion != MENSAJE) //TABLA_SEGMENTOS MODIFICAR cuando tengamos la tabla de segmentos
     {
         log_trace(kernel_logger, "llego otra cosa q no era un tabla pags :c");
     }
-
-    return recibir_paquete_segmento(memory_connection);
+    recibir_mensaje(memory_connection, kernel_logger);
+    //return recibir_paquete(memory_connection);
 }
 
 // recieve_handshake(socket_cliente);
