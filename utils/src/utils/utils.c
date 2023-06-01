@@ -217,6 +217,21 @@ void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio)
 	paquete->buffer->size += tamanio + sizeof(int);
 }
 
+void agregar_entero_a_paquete(t_paquete* paquete, int x)
+{
+	paquete->buffer->stream = realloc(paquete->buffer->stream, paquete->buffer->size + sizeof(int));
+	memcpy(paquete->buffer->stream + paquete->buffer->size, &x, sizeof(int));
+	paquete->buffer->size += sizeof(int);
+}
+
+void agregar_array_string_a_paquete(t_paquete* paquete, char** arr)
+{
+    int size = string_array_size(arr);
+    agregar_entero_a_paquete(paquete,size);
+    for(int i = 0; i < size; i++)
+        agregar_a_paquete(paquete, arr[i], string_length(arr[i]) +1 );
+}
+
 void enviar_paquete(t_paquete* paquete, int socket_cliente)
 {
 	int bytes = paquete->buffer->size + 2*sizeof(int);
@@ -281,6 +296,14 @@ int leer_entero(char* buffer, int* desplazamiento)	// Lee un entero en base a un
 
 }
 
+t_list *leer_segmento(char* buffer, int* desplazamiento)	// Lee un entero en base a un buffer y un desplazamiento, ambos se pasan por referencia
+{
+	t_list *ret;
+	memcpy(&ret, buffer + (*desplazamiento), sizeof(t_list));
+	(*desplazamiento)+=sizeof(int);
+	return ret;
+} // revisar si se descerializa bien
+
 float leer_float(char* buffer, int* desplazamiento)	// Lee un float en base a un buffer y un desplazamiento, ambos se pasan por referencia
 {
 	float ret;
@@ -307,7 +330,6 @@ void loggear_pcb(t_pcb* pcb, t_log* logger){
 
 	log_trace(logger, "id %d", pcb->id);
 	loggear_estado(logger, pcb->estado_actual);
-	log_trace(logger, "tamanio %d", pcb->tamanio);
 	for(i=0; i < string_array_size(pcb->instrucciones); i++)
 	{
 		log_trace(logger, "instruccion Linea %d: %s", i, pcb->instrucciones[i]);
@@ -315,8 +337,6 @@ void loggear_pcb(t_pcb* pcb, t_log* logger){
 	log_trace(logger, "program counter %d", pcb->program_counter);
 	// log_trace(logger, "tabla de pags %d", pcb->tabla_paginas);
 	log_trace(logger, "estimacion rafaga actual %f", pcb->estimacion_rafaga);	
-	log_trace(logger, "estimacion fija %f", pcb->estimacion_fija);
-	log_trace(logger, "rafaga anterior %f", pcb->rafaga_anterior);
 	log_trace(logger, "socket_cliente_consola %d", pcb->socket_consola);
 
 }
@@ -347,4 +367,42 @@ void loggear_estado(t_log* logger, int estado) {
 
 	log_trace(logger, "estado %d (%s)", estado, string_estado);
 	free(string_estado);
+}
+
+t_list *recibir_paquete_segmento(int socket){ // usar desp de recibir el COD_OP
+    
+    int size;
+    char* buffer;
+    int desp = 0;
+    
+    buffer = recibir_buffer(&size, socket);
+    
+    t_list *segmento = leer_segmento(buffer, &desp);        
+    
+    free(buffer);
+    return segmento;
+}
+
+
+
+t_paquete* agregar_tabla_segmentos_a_paquete(t_paquete * paquete, t_list * tabla) { //le saque el tamanio tabla porque creo que con sizeof t_list se soluciona
+
+}
+
+void enviar_ce(int conexion, contexto_ejecucion * ce, int codOP){
+	t_paquete* paquete = crear_paquete_op_code(codOP);
+
+	agregar_ce_a_paquete(paquete, ce);
+
+	enviar_paquete(paquete, conexion);
+
+	eliminar_paquete(paquete);
+}
+
+void agregar_ce_a_paquete(t_paquete * paquete, contexto_ejecucion * ce) {
+	agregar_entero_a_paquete(paquete, ce->id);
+	agregar_array_string_a_paquete(paquete, ce->instrucciones);
+	agregar_entero_a_paquete(paquete, ce->program_counter);
+	agregar_array_string_a_paquete(paquete, ce->registros_cpu);
+	//agregar_tabla_segmentos_a_paquete(paquete, ce->tabla_segmentos);
 }

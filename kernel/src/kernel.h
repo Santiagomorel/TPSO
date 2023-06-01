@@ -48,29 +48,40 @@ int file_system_connection;
 
 void recibir_consola(int);
 t_pcb* iniciar_pcb(int );
-t_pcb* pcb_create(char* , int , int );
+t_pcb* pcb_create(char* , int );
 void generar_id(t_pcb* );
 char** separar_inst_en_lineas(char* );
 char** parsearPorSaltosDeLinea(char* );
 void enviar_Fin_consola(int);
+bool bloqueado_termino_io(t_pcb *);
+char * obtenerEstado(estados);
+int obtenerPid(t_pcb *);
+
+void agregar_a_lista_con_sems(t_pcb *, t_list *, pthread_mutex_t );
+
 
 int contador_id = 60;
-int tieneDesalojo = 0;
 
 // Semaforos
+sem_t proceso_en_ready;
+sem_t grado_multiprog;
 pthread_mutex_t m_contador_id;
 pthread_mutex_t m_listaNuevos;
+pthread_mutex_t m_listaBloqueados;
+pthread_mutex_t m_listaEjecutando;
 pthread_mutex_t m_listaReady;
 pthread_t planificadorCP;
-sem_t proceso_en_ready;
 // void iterator(char*);
 
 void inicializarListasGlobales(void );
 void iniciarSemaforos();
 void destruirSemaforos();
-void planificar_sig_to_running();
+void planificar_sig_to_ready();
 void iniciar_planificadores();
 
+void pedir_tabla_segmentos(void ); //MODIFICAR cuando este implementado a (t_list *)
+void inicializar_estructuras(t_pcb *);
+void cambiar_estado_a(t_pcb *, estados , estados );
 // Listas de estados de tipo de planificacion
 t_list* listaNuevos;        // NEW
 t_list* listaReady;         // READY

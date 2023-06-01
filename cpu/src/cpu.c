@@ -4,15 +4,29 @@ void funcion(char *str, int i) {
     VALGRIND_PRINTF_BACKTRACE("%s: %d\n", str, i);
 }
 
-
+void end_cpu_module(sig_t s){
+    close(socket_cpu);
+    close(conexion_cpu);
+    exit(1); 
+}
 
 int main(int argc, char ** argv) {
 
-
+    signal(SIGINT, end_cpu_module);
 
     /* ---------------- LOGGING ---------------- */
+        /* 
+        IMPORTANTE: Tenemos que cambiar el flag del 3er parametro de los loggers. 
+        logger:
+            - Testeando nosotros -> true
+            - En el lab -> false
+         mandatory_logger:
+            - Testeando nosotros -> false
+            - En el lab -> true
 
+*/
 	cpu_logger = init_logger("./runlogs/cpu.log", "CPU", 1, LOG_LEVEL_TRACE);
+    mandatory_logger = log_create("./runlogs/cpu.log", "CPU", 0, LOG_LEVEL_TRACE);
 
 	    log_info(cpu_logger, "Levanto la configuracion del cpu");
     if (argc < 2) {
@@ -37,10 +51,17 @@ int main(int argc, char ** argv) {
 	establecer_conexion(cpu_config.ip_memoria, cpu_config.puerto_memoria, cpu_config_file, cpu_logger);
 
 /*---------------------- CONEXION CON KERNEL ---------------------*/
-
+/*
 	socket_cpu = iniciar_servidor(cpu_config.puerto_escucha, cpu_logger);
 	esperar_cliente(socket_cpu, cpu_logger);
 	handshake_servidor(socket_cpu);
+*/
+    pthread_t threadDispatch;
+
+    pthread_create(&threadDispatch, NULL, (void *) process_dispatch, NULL);
+    pthread_join(threadDispatch, NULL);
+ 
+    
 
 /*---------------------- TERMINO CPU ---------------------*/
 	terminar_programa(conexion_cpu, cpu_logger, cpu_config_file);
@@ -77,11 +98,8 @@ void establecer_conexion(char * ip_memoria, char* puerto_memoria, t_config* conf
 
 	/*----------------------------------------------------------------------------------------------------------------*/
 
-	// Creamos una conexión hacia el servidor
-	conexion_cpu = crear_conexion(ip_memoria, puerto_memoria);
-
 	// Enviamos al servidor el valor de ip como mensaje si es que levanta el cliente
-	if((crear_conexion(ip_memoria, puerto_memoria)) == -1){
+	if((conexion_cpu = crear_conexion(ip_memoria, puerto_memoria)) == -1){
 		log_info(logger, "Error al conectar con Memoria. El servidor no esta activo");
 		exit(-1);
 	}else{
@@ -149,56 +167,83 @@ void terminar_programa(int conexion, t_log* logger, t_config* config)
 	liberar_conexion(conexion);
 }
 
-/*-------------------- REGISTROS -------------------*/
-void set_registers(t_pcb* pcb) {
-    registers[AX] = pcb->registros_cpu[AX];
-    registers[BX] = pcb->registros_cpu[BX];
-    registers[CX] = pcb->registros_cpu[CX];
-    registers[DX] = pcb->registros_cpu[DX];
-	registers[EAX] = pcb->registros_cpu[EAX];
-	registers[EBX] = pcb->registros_cpu[EBX];
-	registers[ECX] = pcb->registros_cpu[ECX];
-	registers[EDX] = pcb->registros_cpu[EDX];
-	registers[RAX] = pcb->registros_cpu[RAX];
-	registers[RBX] = pcb->registros_cpu[RBX];
-	registers[RCX] = pcb->registros_cpu[RCX];
-	registers[RDX] = pcb->registros_cpu[RDX];
 
+/*-------------------- HILOS -------------------*/
+void process_dispatch() {
+    log_info(cpu_logger, "Soy el proceso Dispatch");
+    socket_cpu = iniciar_servidor(cpu_config.puerto_escucha, cpu_logger);
+	log_info(cpu_logger, "Servidor DISPATCH listo para recibir al cliente");
 
+	int socket_kernel = esperar_cliente(socket_cpu, cpu_logger); 
+    handshake_servidor(socket_kernel);
+    
+    log_info(cpu_logger, "Esperando a que envie mensaje/paquete");
+
+	while (1) {
+        //sem_wait(&proceso_a_ejecutar);
+		int op_code = recibir_operacion(socket_kernel);
+        log_warning(cpu_logger, "Codigo de operacion recibido de kernel: %d", op_code);
+        contexto_ejecucion* pcb;
+
+		switch (op_code) {
+            case EJECUTAR_CE: 
+                //ce = recivir_ce(socket_kernel);
+                log_info(cpu_logger, "Llego correctamente el CE con id: %d", ce->id);
+                execute_process(pcb);
+                break;   
+            case -1:
+                log_warning(cpu_logger, "El kernel se desconecto");
+                end_cpu_module(1);
+                pthread_exit(NULL);
+                break;
+            default:
+                log_error(cpu_logger, "Codigo de operacion desconocido");
+                exit(1);
+                break;     
+	    }
+    }
 }
 
-void init_registers() {
-    registers[AX] = "";
-    registers[BX] = "";
-    registers[CX] = "";
-    registers[DX] = "";
-	registers[EAX] = "";
-    registers[EBX] = "";
-    registers[ECX] = "";
-    registers[EDX] = "";
-	registers[RAX] = "";
-    registers[RBX] = "";
-    registers[RCX] = "";
-    registers[RDX] = "";
+
+
+
+/*-------------------- REGISTROS -------------------*/
+void set_registers(contexto_ejecucion* pcb) {
+
+    strcpy(registros->AX, pcb->registros_cpu->AX);
+    strcpy(registros->BX , pcb->registros_cpu->BX);
+    strcpy(registros->CX , pcb->registros_cpu->CX);
+    strcpy(registros->DX , pcb->registros_cpu->DX);
+	strcpy(registros->EAX , pcb->registros_cpu->EAX);
+	strcpy(registros->EBX , pcb->registros_cpu->EBX);
+	strcpy(registros->ECX , pcb->registros_cpu->ECX);
+	strcpy(registros->EDX , pcb->registros_cpu->EDX);
+	strcpy(registros->RAX , pcb->registros_cpu->RAX);
+	strcpy(registros->RBX , pcb->registros_cpu->RBX);
+	strcpy(registros->RCX , pcb->registros_cpu->RCX);
+	strcpy(registros->RDX , pcb->registros_cpu->RDX);
+
+
 }
 
 
 
 /* ---------------- PCB ----------------*/
 
-void save_context_pcb(t_pcb* pcb){
-    pcb->registros_cpu[AX] = registers[AX];
-    pcb->registros_cpu[BX] = registers[BX];
-    pcb->registros_cpu[CX] = registers[CX];
-    pcb->registros_cpu[DX] = registers[DX];
-	pcb->registros_cpu[EAX] = registers[EAX];
-	pcb->registros_cpu[EBX] = registers[EBX];
-	pcb->registros_cpu[ECX] = registers[ECX];
-	pcb->registros_cpu[EDX] = registers[EDX];
-	pcb->registros_cpu[RAX] = registers[RAX];
-	pcb->registros_cpu[RBX] = registers[RBX];
-	pcb->registros_cpu[RCX] = registers[RCX];
-	pcb->registros_cpu[RDX] = registers[RDX];
+void save_context_pcb(contexto_ejecucion* pcb){
+
+    strcpy(pcb->registros_cpu->AX, registros->AX);   
+    strcpy(pcb->registros_cpu->BX, registros->BX);   
+    strcpy(pcb->registros_cpu->CX, registros->CX);  
+    strcpy(pcb->registros_cpu->DX, registros->DX); 
+    strcpy(pcb->registros_cpu->EAX ,registros->EAX);
+	strcpy(pcb->registros_cpu->EBX ,registros->EBX);
+	strcpy(pcb->registros_cpu->ECX ,registros->ECX);
+	strcpy(pcb->registros_cpu->EDX ,registros->EDX);
+	strcpy(pcb->registros_cpu->RAX ,registros->RAX);
+	strcpy(pcb->registros_cpu->RBX ,registros->RBX);
+	strcpy(pcb->registros_cpu->RCX ,registros->RCX);
+	strcpy(pcb->registros_cpu->RDX ,registros->RDX);
 
 }
 
@@ -213,41 +258,41 @@ void add_value_to_register(char* registerToModify, char* valueToAdd){
     
     log_info(cpu_logger, "Caracteres a sumarle al registro %d",valueToAdd);
     if (strcmp(registerToModify, "AX") == 0) {
-        registers[AX] = valueToAdd;
+        strcpy(registros->AX , valueToAdd);
     }
     else if (strcmp(registerToModify, "BX") == 0) {
-        registers[BX] = valueToAdd;
+        strcpy(registros->BX , valueToAdd);
     }
     else if (strcmp(registerToModify, "CX") == 0) {
-        registers[CX] = valueToAdd;
+        strcpy(registros->CX , valueToAdd);
     }
     else if (strcmp(registerToModify, "DX") == 0) {
-        registers[DX] = valueToAdd;
+        strcpy(registros->DX , valueToAdd);
     }else if (strcmp(registerToModify, "EAX") == 0) {
-        registers[EAX] = valueToAdd;
+        strcpy(registros->EAX , valueToAdd);
     }else if (strcmp(registerToModify, "EBX") == 0) {
-        registers[EBX] = valueToAdd;
+        strcpy(registros->EBX , valueToAdd);
     }
     else if (strcmp(registerToModify, "ECX") == 0) {
-        registers[ECX] = valueToAdd;
+        strcpy(registros->ECX , valueToAdd);
     }
     else if (strcmp(registerToModify, "EDX") == 0) {
-        registers[EDX] = valueToAdd;
+        strcpy(registros->EDX , valueToAdd);
     }else if (strcmp(registerToModify, "RAX") == 0) {
-        registers[RAX] = valueToAdd;
+        strcpy(registros->RAX , valueToAdd);
     }else if (strcmp(registerToModify, "RBX") == 0) {
-        registers[RBX] = valueToAdd;
+        strcpy(registros->RBX , valueToAdd);
     }
     else if (strcmp(registerToModify, "RCX") == 0) {
-        registers[RCX] = valueToAdd;
+        strcpy(registros->RCX , valueToAdd);
     }
     else if (strcmp(registerToModify, "RDX") == 0) {
-        registers[RDX] = valueToAdd;
+        strcpy(registros->RDX , valueToAdd);
     }
 }
 
 /*-------------------- FETCH ---------------------- */
-char* fetch_next_instruction_to_execute(t_pcb* pcb){
+char* fetch_next_instruction_to_execute(contexto_ejecucion* pcb){
     return pcb->instrucciones[pcb->program_counter];
 }
 
@@ -265,17 +310,66 @@ char** decode(char* linea){ // separarSegunEspacios
 
 /*-------------------- EXECUTE ---------------------- */
 
-void execute_instruction(char** instruction, t_pcb* pcb){
+int end_process = 0;
+int input_ouput = 0;
+int check_interruption = 0;
+
+
+char* parameter = "NONE";
+
+void execute_instruction(char** instruction, contexto_ejecucion* pcb){
 
      switch(keyfromstring(instruction[0])){
         case I_SET: 
             // SET (Registro, Valor)
             log_info(cpu_logger, "Por ejecutar instruccion SET");
-            log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s", pcb->id, instruction[0], instruction[1], instruction[2]);
+            log_info(mandatory_logger, "PID: %d - Ejecutando: %s - %s - %s", pcb->id, instruction[0], instruction[1], instruction[2]);
 
             usleep(atoi(cpu_config.retardo_instruccion));
 
             add_value_to_register(instruction[1], instruction[2]);
+            break;
+        case I_IO:
+            // I/O (Tiempo)
+            log_info(cpu_logger, "Por ejecutar instruccion I/O");
+            log_info(mandatory_logger, "PID: %d - Ejecutando: %s - %s - %s", pcb->id, instruction[0], instruction[1]);
+
+            
+            parameter = instruction[1];
+            
+            log_info(cpu_logger, "%s",parameter);
+            input_ouput = 1;
+            break;
+         case I_EXIT:
+            //EXIT: Esta instrucción representa la syscall de finalización del proceso.
+            //Se deberá devolver el PCB actualizado al Kernel para su finalización.
+            log_info(cpu_logger, "Instruccion EXIT ejecutada");
+            log_info(mandatory_logger, "PID: %d - Ejecutando: %s", pcb->id, instruction[0]);
+
+            end_process = 1;
+            break;
+        case I_WAIT:
+            // WAIT (Recurso)
+            //Esta instruccion asigna un recurso pasado por parametro
+            log_info(cpu_logger, "Por ejecutar instruccion WAIT");
+            log_info(mandatory_logger, "PID: %d - Ejecutando: %s - %s ", pcb->id, instruction[0], instruction[1]);
+
+            
+
+            break;
+        case I_SIGNAL:
+            // SIGNAL (Recurso)
+            //Esta instruccion libera un recurso pasado por parametro
+
+            log_info(cpu_logger, "Por ejecutar instruccion SIGNAL");
+            log_info(mandatory_logger, "PID: %d - Ejecutando: %s - %s", pcb->id, instruction[0], instruction[1]);
+
+            break;
+        case I_YIELD:
+            log_info(cpu_logger, "Por ejecutar instruccion YIELD");
+            log_info(mandatory_logger, "PID: %d - Ejecutando: %s - %s", pcb->id, instruction[0]);
+
+            
             break;
             default:
             log_info(cpu_logger, "No ejecute nada");
@@ -283,15 +377,10 @@ void execute_instruction(char** instruction, t_pcb* pcb){
 }
 }
 
-int end_process = 0;
-int input_ouput = 0;
-int check_interruption = 0;
-
-char* device = "NONE";
-char* parameter = "NONE";
 
 
-void execute_process(t_pcb* pcb){
+
+void execute_process(contexto_ejecucion* pcb){
     //char* value_to_copy = string_new(); // ?????
 
     set_registers(pcb);
@@ -323,19 +412,19 @@ void execute_process(t_pcb* pcb){
 
     save_context_pcb(pcb); // ACA GUARDAMOS EL CONTEXTO
 
-   /* if(end_process) {
+   if(end_process) {
         end_process = 0; // IMPORTANTE: Apagar el flag para que no rompa el proximo proceso que llegue
         check_interruption = 0;
-        send_pcb_package(socket_cpu, pcb, FIN_PROCESO);
+        enviar_ce(socket_cpu, pcb, FIN_PROCESO);
         log_info(cpu_logger, "Enviamos paquete a dispatch: FIN PROCESO");
     } 
     else if(input_ouput) {
         input_ouput = 0;
         check_interruption = 0;
-        log_info(cpu_logger, "Device: %s, Parameter: %s", device, parameter);
-        send_pcb_io_package(socket_cpu, pcb, device, parameter, REQUEST); // Ver bien tema REQUEST
+        log_info(cpu_logger, "Parameter: %s", parameter);
+        send_pcb_io_package(socket_cpu, pcb,  parameter, REQUEST); // Ver bien tema REQUEST
     }
-    else if(page_fault) {
+    /*else if(page_fault) {
         page_fault = 0;
         check_interruption = 0;
         log_info(cpu_logger, "OCURRIO UN PAGE FAULT, ENVIANDO A KERNEL PARA QUE SOLUCIONE");
@@ -348,18 +437,18 @@ void execute_process(t_pcb* pcb){
         send_package(package, socket_cpu);
         delete_package(package);
         //send_pcb_package(socket_kernel, pcb, REQUEST_PAGE_FAULT); //Este codigo de operacion?
-    }
-    else if(sigsegv == 1){
+    }*/
+    /*else if(sigsegv == 1){
         sigsegv = 0;
         check_interruption = 0;
         log_info(cpu_logger, "Error: Segmentation Fault (SEG_FAULT), enviando para terminar proceso");
         send_pcb_package(socket_cpu, pcb, SEG_FAULT); //FALTA SEG_FAULT EN UTILS.H
-    }
+    }*/
     else if(check_interruption) {
         check_interruption = 0;
         log_info(cpu_logger, "Entro por check interrupt");
-        send_pcb_package(socket_cpu, pcb, EJECUTAR_INTERRUPCION); //Este codigo de operacion?
-    }*/
+        enviar_ce(socket_cpu, pcb, EJECUTAR_INTERRUPCION); //Este codigo de operacion?
+    }
 }
 
 /*---------------------------------- INSTRUCTIONS ----------------------------------*/
@@ -370,7 +459,12 @@ typedef struct {
     } t_symstruct;
 
 static t_symstruct lookuptable[] = {
-    { "SET", I_SET }	
+    { "SET", I_SET },
+    { "I/O", I_IO },
+    { "EXIT", I_EXIT },
+    { "WAIT", I_WAIT },
+    { "SIGNAL", I_SIGNAL },
+    {"YIELD",I_YIELD}
 };
 
 int keyfromstring(char *key) {
@@ -384,6 +478,10 @@ int keyfromstring(char *key) {
 }
 
 
-void update_program_counter(t_pcb* pcb){
+void update_program_counter(contexto_ejecucion* pcb){
     pcb->program_counter += 1;
 }
+
+
+
+

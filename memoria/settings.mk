@@ -1,5 +1,5 @@
 # Libraries
-LIBS=utils commons
+LIBS=utils commons pthread
 
 
 # Custom libraries' paths
@@ -11,7 +11,7 @@ CDEBUG=-g -Wall -DDEBUG
 CRELEASE=-O3 -Wall -DNDEBUG
 
 # Arguments when executing with start, memcheck or helgrind
-ARGS=./config/consola.config
+ARGS=./config/memoria.config
 
 # Valgrind flags
 MEMCHECK_FLAGS=--track-origins=yes --log-file="runlogs/memcheck.log"
