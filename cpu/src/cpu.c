@@ -228,7 +228,7 @@ void set_registers(contexto_ejecucion* ce) {
 
 
 
-/* ---------------- CE ----------------*/
+/* ---------------- Contexto Ejecucion ----------------*/
 
 void save_context_ce(contexto_ejecucion* ce){
 
@@ -355,8 +355,8 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             //Esta instruccion asigna un recurso pasado por parametro
             log_info(cpu_logger, "Por ejecutar instruccion WAIT");
             log_info(mandatory_logger, "PID: %d - Ejecutando: %s - %s ", ce->id, instruction[0], instruction[1]);
-
-           enviar_recurso(socket_kernel, ce, instruction[1], WAIT_RECURSO);
+            // Si rompe crear una varible char* recurso, asignandole instruccion[1] y enviar el recurso en el execute process
+            enviar_recurso(socket_kernel, ce, instruction[1], WAIT_RECURSO);
 
             wait = 1;
             break;
@@ -392,7 +392,7 @@ void execute_process(contexto_ejecucion* ce){
     char* instruction = malloc(sizeof(char*));
     char** decoded_instruction = malloc(sizeof(char*));
 
-    log_info(cpu_logger, "Por empezar check_interruption != 1 && end_process != 1 && input_ouput != 1 && page_fault != 1"); 
+    log_info(cpu_logger, "Por empezar check_interruption != 1 && end_process != 1 && input_ouput != 1 && wait != 1 && desalojo_por_yield != 1"); 
     while(check_interruption != 1 && end_process != 1 && input_ouput != 1 && wait != 1 && desalojo_por_yield != 1){
         //Llega el ce y con el program counter buscas la instruccion que necesita
         instruction = string_duplicate(fetch_next_instruction_to_execute(ce));
@@ -451,7 +451,7 @@ void execute_process(contexto_ejecucion* ce){
     else if(check_interruption) {
         check_interruption = 0;
         log_info(cpu_logger, "Entro por check interrupt");
-        enviar_ce(socket_kernel, ce, EJECUTAR_INTERRUPCION); //Este codigo de operacion?
+        enviar_ce(socket_kernel, ce, EJECUTAR_INTERRUPCION); 
     }else if(wait){
         wait = 0;
         log_info(cpu_logger, "Bloqueado por WAIT");
@@ -503,6 +503,9 @@ void enviar_recurso(int client_socket, contexto_ejecucion* ce, char* parameter, 
     enviar_paquete(paquete, client_socket);
     eliminar_paquete(paquete);
 }
+
+/*---------------------------------- PARA INSTRUCCION IO ----------------------------------*/
+
 void enviar_io(int client_socket, contexto_ejecucion* ce, char* tiempo, int codOP){
     t_paquete* paquete = crear_paquete_op_code(codOP);
 
