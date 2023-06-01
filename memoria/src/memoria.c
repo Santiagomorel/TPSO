@@ -110,14 +110,16 @@ t_segmento* crear_segmento(int id_seg, int base, int tamanio){
 }
 
 void recibir_kernel(int SOCKET_CLIENTE_KERNEL) {
-
-    enviar_mensaje("recibido kernel", SOCKET_CLIENTE_KERNEL);
     while(1){
     int codigoOperacion = recibir_operacion(SOCKET_CLIENTE_KERNEL);
     switch(codigoOperacion)
         {
             case MENSAJE:
+                
                 log_trace(log_memoria, "recibi el op_cod %d MENSAJE , codigoOperacion", codigoOperacion);
+
+                //char* valCodOp = string_from_format("recibido el codigo de operacion %d de kernel", codigoOperacion);
+                enviar_mensaje("recibido el codigo de operacion de kernel, enviando tabla de segmentos", SOCKET_CLIENTE_KERNEL);
                 
                 log_trace(log_memoria, "creando paquete con tabla de segmentos base");
                 t_list* tabla_segmentos = list_create(); 
