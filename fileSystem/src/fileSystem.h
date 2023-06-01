@@ -2,7 +2,8 @@
 #define FILESYSTEM _H_
 
 #include <utils/utils.h>
-
+#include <stdbool.h>
+#include <limits.h>
 
 void load_config(void);
 void end_program(int, t_log*, t_config*);
@@ -16,12 +17,12 @@ void end_program(int, t_log*, t_config*);
 
 // } FileSystem_FCB;
 
-// typedef struct{
+ typedef struct{
 
-//     int tamaño_bloque;
-//     int cantidad_bloque;
+    int bloque;
+    int cantidad_bloque;
 
-// } FileSystem_superbloque;
+} Filesystem_superbloque;
 
 typedef struct{
 
@@ -34,20 +35,19 @@ typedef struct{
     int puerto_escucha;
     int retardo_acceso_bloque;
 
-    char* ip_fileSystem;
+    char* ip_filesystem;
 
-    int puerto_fileSystem;
+    int puerto_filesystem;
 
 
 } FileSystem_config;
 
-FileSystem_config fileSystem_config;
+FileSystem_config filesystem_config;
 
-t_log * fileSystem_logger;
-t_config * fileSystem_config_file;
+t_log * filesystem_logger;
+t_config * filesystem_config_file;
 
-// t_bitarray * bitmap_bloques
-// t_list * bloques
+
 
 #endif /* FILESYSTEM_H_ */
 
