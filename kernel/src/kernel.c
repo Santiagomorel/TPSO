@@ -164,6 +164,7 @@ t_pcb *pcb_create(char *instrucciones, int socket_consola)
     new_pcb->estado_actual = NEW;
     new_pcb->instrucciones = separar_inst_en_lineas(instrucciones);
     new_pcb->program_counter = 0;
+    new_pcb->registros_cpu = crear_registros();
     // new_pcb->tabla_paginas = -1; // TODO de la conexion con memoria
     new_pcb->estimacion_rafaga = kernel_config.estimacion_inicial; // ms
     new_pcb->socket_consola = socket_consola;
@@ -179,6 +180,24 @@ void generar_id(t_pcb *pcb)
     contador_id++;
     pthread_mutex_unlock(&m_contador_id);
 }
+
+t_registro * crear_registros() {
+    t_registro * nuevosRegistros = malloc(sizeof(t_registro));
+    strcpy(nuevosRegistros->AX , "0");
+    strcpy(nuevosRegistros->BX , "0");
+    strcpy(nuevosRegistros->CX , "0");
+    strcpy(nuevosRegistros->DX , "0");
+	strcpy(nuevosRegistros->EAX , "0");
+	strcpy(nuevosRegistros->EBX , "0");
+	strcpy(nuevosRegistros->ECX , "0");
+	strcpy(nuevosRegistros->EDX , "0");
+	strcpy(nuevosRegistros->RAX , "0");
+	strcpy(nuevosRegistros->RBX , "0");
+	strcpy(nuevosRegistros->RCX , "0");
+	strcpy(nuevosRegistros->RDX , "0");
+    return nuevosRegistros;
+}
+
 
 char **separar_inst_en_lineas(char *instrucciones)
 {
@@ -258,7 +277,7 @@ void planificar_sig_to_running(){
             cambiar_estado_a(pcb_a_ejecutar, RUNNING, estadoActual(pcb_a_ejecutar));
             agregar_a_lista_con_sems(pcb_a_ejecutar, listaEjecutando, m_listaEjecutando);
             log_warning(kernel_logger, "antes de obtener el ce");
-            contexto_ejecucion * nuevoContexto = obtener_ce(pcb_a_ejecutar); // ERROR hay seg fault cuando intento acceder al pcb a ejecutar
+            contexto_ejecucion * nuevoContexto = obtener_ce(pcb_a_ejecutar); // SOLUCIONADO!!! hay seg fault cuando intento acceder al pcb a ejecutar
             log_warning(kernel_logger, "despues de obtener el ce");
 
             enviar_ce(cpu_dispatch_connection, nuevoContexto, EJECUTAR_CE);
@@ -401,9 +420,15 @@ void pedir_tabla_segmentos() // MODIFICAR tipo de dato que devuelve
 
 contexto_ejecucion * obtener_ce(t_pcb * pcb){ // PENSAR EN HACERLO EN AMBOS SENTIDOS
     contexto_ejecucion * nuevoContexto = malloc(sizeof(contexto_ejecucion));
+    nuevoContexto->instrucciones = string_array_new();
+    nuevoContexto->registros_cpu = malloc(sizeof(t_registro));
+    log_warning(kernel_logger, "hace maloc del nuevo contexto");
     copiar_id_pcb_a_ce(pcb, nuevoContexto);
+    log_warning(kernel_logger, "copia el id del pcb");
     copiar_instrucciones_pcb_a_ce(pcb, nuevoContexto);
+    log_warning(kernel_logger, "copia instrucciones del pcb");
     copiar_PC_pcb_a_ce(pcb, nuevoContexto);
+    log_warning(kernel_logger, "copia program counter");
     copiar_registros_pcb_a_ce(pcb, nuevoContexto);
     // copiar_tabla_segmentos(pcb, nuevoContexto);    // FALTA HACER
     return nuevoContexto;
@@ -411,7 +436,10 @@ contexto_ejecucion * obtener_ce(t_pcb * pcb){ // PENSAR EN HACERLO EN AMBOS SENT
 
 void copiar_instrucciones_pcb_a_ce(t_pcb * pcb, contexto_ejecucion * ce) { //copia instrucciones de la estructura 1 a la 2
     for (int i = 0; i < string_array_size(pcb->instrucciones); i++) {
-        strcpy(ce->instrucciones[i], pcb->instrucciones[i]);
+        log_trace(kernel_logger, "copio en ce %s", pcb->instrucciones[i]);
+        // probar funciones de la commons para suplicar listas de strings
+        string_array_push(&(ce->instrucciones), string_duplicate(pcb->instrucciones[i]));
+        // strcpy(ce->instrucciones[i], pcb->instrucciones[i]);
     }
 }
 
@@ -422,6 +450,7 @@ void copiar_instrucciones_ce_a_pcb(contexto_ejecucion * ce, t_pcb * pcb) { //cop
 }
 
 void copiar_registros_pcb_a_ce(t_pcb * pcb, contexto_ejecucion * ce) {
+    log_warning(kernel_logger, "registro ax del pcb = %s", pcb->registros_cpu->AX);
     strcpy(ce->registros_cpu->AX , pcb->registros_cpu->AX);
     strcpy(ce->registros_cpu->BX , pcb->registros_cpu->BX);
     strcpy(ce->registros_cpu->CX , pcb->registros_cpu->CX);

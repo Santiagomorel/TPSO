@@ -50,6 +50,7 @@ void recibir_consola(int);
 t_pcb* iniciar_pcb(int );
 t_pcb* pcb_create(char* , int );
 void generar_id(t_pcb* );
+t_registro * crear_registros(void);
 char** separar_inst_en_lineas(char* );
 char** parsearPorSaltosDeLinea(char* );
 void enviar_Fin_consola(int);
