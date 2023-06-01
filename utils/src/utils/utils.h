@@ -14,6 +14,7 @@
 #include <commons/config.h>
 #include <commons/temporal.h>
 #include <commons/collections/list.h>
+#include <commons/bitarray.h>
 #include <string.h>
 #include <assert.h>
 #include <errno.h>

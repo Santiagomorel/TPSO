@@ -1,4 +1,4 @@
-#include "filesystem.h"
+#include "fileSystem.h"
 
 int main(int argc, char ** argv)
 {
@@ -23,15 +23,15 @@ int main(int argc, char ** argv)
     log_info(filesystem_logger, "cargo la configuracion del filesystem");
     
     load_config();
-    armar_estructuras_iniciales();
+    armar_superbloque();
+    armar_bitmap();
+    armar_bloques();
     log_info(filesystem_logger, "aca no llego si esta la funcion load config puesta");
     log_info(filesystem_logger, "%s", filesystem_config.ip_memoria);
-    log_info(filesystem_logger, "%s", filesystem_config.puerto_memoria);
+    log_info(filesystem_logger, "%d", filesystem_config.puerto_memoria);
 
 
-}
-
-    if((memoria_connection = crear_conexion(filesystem_config.ip_memoria , filesystem_config.puerto_memoria)) == -1) {
+    if((conexion_memoria = crear_conexion(filesystem_config.ip_memoria , filesystem_config.puerto_memoria)) == -1) {
     log_trace(filesystem_logger, "No se pudo conectar al servidor de memoria");
         exit(2);
 
@@ -42,44 +42,42 @@ int main(int argc, char ** argv)
     while (1) {
 
         log_trace(filesystem_logger, "esperando cliente kernel ");
-	    socket_cliente_filesystem = esperar_cliente(socket_servidor_filesystem, filesystem_logger);
-            log_trace(filesystem_logger, "me entro un kernel con este socket: %d", socket_cliente_filesystem); 
+	    socket_cliente_filesystem_kernel = esperar_cliente(socket_servidor_filesystem, filesystem_logger);
+            log_trace(filesystem_logger, "me entro un kernel con este socket: %d", socket_cliente_filesystem_kernel); 
 
     
         pthread_t atiende_kernel;
 
-            pthread_create(&atiende_kernel, NULL, (void*) recibir_kernel, (void*)socket_cliente_filesystem);
+            pthread_create(&atiende_kernel, NULL, (void*) recibir_kernel, (void*) socket_cliente_filesystem_kernel);
             pthread_detach(atiende_kernel);
 
 
     }
 
-        end_program(socket_servidor_filesystem, filesystem_logger, filesystem_config){
+        end_program(socket_servidor_filesystem, filesystem_logger, filesystem_config_file);
         return 0;
-        }   
+       
 }   
+}
 
-
-void recibir_kernel(int socket_cliente) {
-    int codigoDeOperacion = recibir_operacion(SOCKET_CLIENTE_KERNEL);
-    switch(codigoDeOperacion)
+void recibir_kernel(int SOCKET_CLIENTE_KERNEL) {
+    enviar_mensaje("recibido kernel", SOCKET_CLIENTE_KERNEL);
+    while(1){
+    int codigoOperacion = recibir_operacion(SOCKET_CLIENTE_KERNEL);
+    switch(codigoOperacion)
         {
             case MENSAJE:
-                log_trace(log_memoria, "recibi el op_cod %d MENSAJE , De", De);
-            
+                log_trace(filesystem_logger, "recibi el op_cod %d MENSAJE , De", codigoOperacion);
                 break;
 
             default:
-                log_trace(log_memoria, "recibi el op_cod %d y entro DEFAULT", De);
+                log_trace(filesystem_logger, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
                 break;
         }
 }
-
+}
 
 void load_config(void){
-
-
-
 
     filesystem_config.ip_memoria = config_get_string_value(filesystem_config_file, "IP_MEMORIA");
 	filesystem_config.path_superbloque = config_get_string_value(filesystem_config_file, "PATH_SUPERBLOQUE");
@@ -100,17 +98,35 @@ void end_program(int socket, t_log* log, t_config* config){
     liberar_conexion(socket);
 }
 
-void armar_estructuras_iniciales(){
+Filesystem_superbloque* armar_superbloque(){
+
     Filesystem_superbloque* superbloque = malloc(sizeof(Filesystem_superbloque));
-     
+    superbloque -> block_size = 64 ;
+    superbloque -> block_count = 65536;
+    
+    return superbloque;
 }
 
-t_list* archivo_superbloque = list_create();
+t_bitarray * armar_bitmap(){
 
-t_bitarray * bitarray_create(char)
+    Filesystem_superbloque* superbloque = armar_superbloque();
+    t_bitarray * filesystem_bitmap = malloc(sizeof(t_bitarray));
+    filesystem_bitmap -> size = (superbloque -> block_count  / 8 );
 
+    return filesystem_bitmap;
+}
 
-// hacer el receive_handshake
+t_list* armar_bloques(){
+
+    Filesystem_superbloque* superbloque = armar_superbloque();
+    t_list* filesystem_archivo_bloques = malloc(sizeof(t_list*));
+    filesystem_archivo_bloques = list_create();
+    // filesystem_archivo_bloques -> elements_count = (superbloque -> );
+    return filesystem_archivo_bloques;
+
+}
+ 
+
 // hacer la t list, pasa por parametro blocksize
 // hacer el t_bitarray pasa por parametro la cantidad de bloques
 // crear el bitarray con funcion create...
