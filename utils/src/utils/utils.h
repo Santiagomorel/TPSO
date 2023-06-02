@@ -2,6 +2,7 @@
 #define UTILS_H_
 
 /*    Includes generales    */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -13,6 +14,7 @@
 #include <commons/config.h>
 #include <commons/temporal.h>
 #include <commons/collections/list.h>
+#include <commons/bitarray.h>
 #include <string.h>
 #include <assert.h>
 #include <errno.h>
