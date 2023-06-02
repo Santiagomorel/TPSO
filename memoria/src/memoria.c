@@ -27,6 +27,7 @@ int main(int argc, char ** argv){
 
     MEMORIA_PRINCIPAL= malloc(memoria_config.tam_memoria);
     
+    enviar_tabla_segmentos();
     // ----------------------- levanto el servidor de memoria ----------------------- //
     
     socket_servidor_memoria = iniciar_servidor(memoria_config.puerto_escucha, log_memoria);
@@ -117,12 +118,7 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL) {
             case INICIAR_ESTRUCTURAS:
                 log_trace(log_memoria, "recibi el op_cod %d INICIAR_ESTRUCTURAS", codigoOperacion);
                 log_trace(log_memoria, "creando paquete con tabla de segmentos base");
-                // t_list* tabla_segmentos = list_create();
-                // t_segmento* segmento_base = crear_segmento(1,1,64); 
-                // list_add(tabla_segmentos, segmento_base);
-                // t_paquete* segmentos_paquete = crear_paquete_op_code(TABLA_SEGMENTOS);
-                // agregar_a_paquete(segmentos_paquete, tabla_segmentos, sizeof(t_list));
-                // enviar_paquete(segmentos_paquete, SOCKET_CLIENTE_KERNEL);
+                
                 enviar_mensaje("envio nueva tabla de segmentos", SOCKET_CLIENTE_KERNEL);
                 break;
             // ---------LP entrante----------
@@ -215,3 +211,29 @@ void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM) {
 - Acceso a espacio de usuario: “PID: <PID> - Acción: <LEER / ESCRIBIR> - Dirección física: <DIRECCIÓN_FÍSICA> - Tamaño: <TAMAÑO> - Origen: <CPU / FS>”
 */
 
+void enviar_tabla_segmentos(){
+    t_list* tabla_segmentos = list_create();
+    t_segmento* segmento_base = crear_segmento(1,1,64); 
+    list_add(tabla_segmentos, segmento_base);
+    list_map(tabla_segmentos, serializar_segmento);  // < = Problema
+    //t_paquete* segmentos_paquete = crear_paquete_op_code(TABLA_SEGMENTOS);
+    //agregar_a_paquete(segmentos_paquete, tabla_segmentos, sizeof(t_list));
+    //enviar_paquete(segmentos_paquete, SOCKET_CLIENTE_KERNEL);
+}
+
+
+void* serializar_segmento(t_segmento* segmento)
+{
+    int bytes = segmento->tamanio_segmento + 2*sizeof(int);
+    void* magic = malloc(bytes);
+    int desplazamiento = 0;
+
+    memcpy(magic + desplazamiento, &(segmento->id_segmento), sizeof(int));
+    desplazamiento += sizeof(int);
+    memcpy(magic + desplazamiento, &(segmento->direccion_base), sizeof(int));
+    desplazamiento += sizeof(int);
+    memcpy(magic + desplazamiento, &(segmento->tamanio_segmento), sizeof(int));
+    desplazamiento += sizeof(int);
+
+    return magic;
+}
