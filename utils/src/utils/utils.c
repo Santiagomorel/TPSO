@@ -361,18 +361,30 @@ char **leer_string_array(char *buffer, int *desp)
 t_registro * leer_registros(char* buffer, int * desp) {
 	int tamanio = leer_entero(buffer, desp);
 	t_registro * retorno = malloc(tamanio);
-	for (int i = 0; i < 4; i++) {
-		memcpy(retorno, buffer + (*desp), 4);
-		(*desp) += 4;
-	}
-	for (int i = 0; i < 4; i++) {
-		memcpy(retorno, buffer + (*desp), 8);
-		(*desp) += 8;
-	}
-	for (int i = 0; i < 4; i++) {
-		memcpy(retorno, buffer + (*desp), 16);
-		(*desp) += 16;
-	}
+	memcpy(retorno->AX, buffer + (*desp), 4);
+	(*desp) += 4;
+	memcpy(retorno->BX, buffer + (*desp), 4);
+	(*desp) += 4;
+	memcpy(retorno->CX, buffer + (*desp), 4);
+	(*desp) += 4;
+	memcpy(retorno->DX, buffer + (*desp), 4);
+	(*desp) += 4;
+	memcpy(retorno->EAX, buffer + (*desp), 8);
+	(*desp) += 8;
+	memcpy(retorno->EBX, buffer + (*desp), 8);
+	(*desp) += 8;
+	memcpy(retorno->ECX, buffer + (*desp), 8);
+	(*desp) += 8;
+	memcpy(retorno->EDX, buffer + (*desp), 8);
+	(*desp) += 8;
+	memcpy(retorno->RAX, buffer + (*desp), 16);
+	(*desp) += 16;
+	memcpy(retorno->RBX, buffer + (*desp), 16);
+	(*desp) += 16;
+	memcpy(retorno->RCX, buffer + (*desp), 16);
+	(*desp) += 16;
+	memcpy(retorno->RDX, buffer + (*desp), 16);
+	(*desp) += 16;
 	return retorno;
 }
 
@@ -444,7 +456,7 @@ contexto_ejecucion *recibir_ce(int socket_kernel)
 	char *buffer;
 	int desp = 0;
 
-	buffer = recibir_buffer(&size, socket);
+	buffer = recibir_buffer(&size, socket_kernel);
 
 	nuevoCe->id = leer_entero(buffer, &desp);
 	nuevoCe->instrucciones = leer_string_array(buffer, &desp);
@@ -483,4 +495,29 @@ void agregar_ce_a_paquete(t_paquete *paquete, contexto_ejecucion *ce, t_log *log
 	log_warning(logger, "despues de agregar program counter"); // crear la funcion para mandar los registros.
 
 	// agregar_tabla_segmentos_a_paquete(paquete, ce->tabla_segmentos); MODIFICAR
+}
+
+void imprimir_ce(contexto_ejecucion* ce, t_log* logger) {
+	log_trace(logger, "El id del CE es %d", ce->id);
+	for (int i = 0; i < string_array_size(ce->instrucciones); i++) {
+        log_trace(logger, "Instruccion %d del CE es %s", i, ce->instrucciones[i]);
+    }
+	log_trace(logger, "El PC del CE es %d", ce->program_counter);
+	imprimir_registros(ce->registros_cpu, logger);
+	//imprimir_tabla_segmentos
+}
+
+void imprimir_registros(t_registro* registros , t_log* logger) {
+	log_trace(logger, "El registro AX es %s", registros->AX);
+	log_trace(logger, "El registro BX es %s", registros->BX);
+	log_trace(logger, "El registro CX es %s", registros->CX);
+	log_trace(logger, "El registro DX es %s", registros->DX);
+	log_trace(logger, "El registro EAX es %s", registros->EAX);
+	log_trace(logger, "El registro EBX es %s", registros->EBX);
+	log_trace(logger, "El registro ECX es %s", registros->ECX);
+	log_trace(logger, "El registro EDX es %s", registros->EDX);
+	log_trace(logger, "El registro RAX es %s", registros->RAX);
+	log_trace(logger, "El registro RBX es %s", registros->RBX);
+	log_trace(logger, "El registro RCX es %s", registros->RCX);
+	log_trace(logger, "El registro RDX es %s", registros->RDX);
 }

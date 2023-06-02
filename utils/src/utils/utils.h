@@ -201,4 +201,6 @@ void enviar_ce(int, contexto_ejecucion *, int, t_log*);
 void agregar_ce_a_paquete(t_paquete *, contexto_ejecucion *, t_log*);
 contexto_ejecucion * obtener_ce(t_pcb * pcb);
 
+void imprimir_ce(contexto_ejecucion* , t_log*);
+void imprimir_registros(t_registro* , t_log*);
 #endif /* UTILS_H_ */

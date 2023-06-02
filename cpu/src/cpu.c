@@ -49,7 +49,7 @@ int main(int argc, char ** argv) {
 /*--------------------- CONECTO CON MEMORIA ----------------------*/
 
 	establecer_conexion(cpu_config.ip_memoria, cpu_config.puerto_memoria, cpu_config_file, cpu_logger);
-
+    
 /*---------------------- CONEXION CON KERNEL ---------------------*/
 /*
 	socket_cpu = iniciar_servidor(cpu_config.puerto_escucha, cpu_logger);
@@ -107,6 +107,8 @@ void establecer_conexion(char * ip_memoria, char* puerto_memoria, t_config* conf
 		enviar_mensaje(ip_memoria, conexion_cpu);
 	}
 
+    recibir_operacion(conexion_cpu);
+    recibir_mensaje(conexion_cpu, cpu_logger);
 
 
 }
@@ -190,7 +192,9 @@ void process_dispatch() {
             case EJECUTAR_CE: 
                 log_error(cpu_logger, "El cpu lee cod de op EJECUTAR CE");
                 ce = recibir_ce(socket_kernel); // ERROR hay que mirar si el ce se recibe bien
+                log_error(cpu_logger, "Antes de acceder al id de CE");
                 log_info(cpu_logger, "Llego correctamente el CE con id: %d", ce->id);
+                imprimir_ce(ce, cpu_logger);
                 execute_process(ce);
                 break;   
             case -1:
@@ -421,7 +425,7 @@ void execute_process(contexto_ejecucion* ce){
    if(end_process) {
         end_process = 0; // IMPORTANTE: Apagar el flag para que no rompa el proximo proceso que llegue
         check_interruption = 0;
-        enviar_ce(socket_cpu, pcb, FIN_PROCESO, cpu_logger);
+        enviar_ce(socket_cpu, ce, FIN_PROCESO, cpu_logger);
         log_info(cpu_logger, "Enviamos paquete a dispatch: FIN PROCESO");
     } 
     else if(input_ouput) {
@@ -460,7 +464,7 @@ void execute_process(contexto_ejecucion* ce){
     }else if(desalojo_por_yield){
         desalojo_por_yield = 0;
         log_info(cpu_logger, "Desalojado por YIELD");
-        enviar_ce(socket_kernel, ce, DESALOJO_YIELD);
+        enviar_ce(socket_kernel, ce, DESALOJO_YIELD, cpu_logger);
     }
 }
 
@@ -500,7 +504,7 @@ void update_program_counter(contexto_ejecucion* ce){
 void enviar_recurso(int client_socket, contexto_ejecucion* ce, char* parameter, int codOP){
     t_paquete* paquete = crear_paquete_op_code(codOP);
 
-    agregar_ce_a_paquete(paquete, ce);
+    agregar_ce_a_paquete(paquete, ce, cpu_logger);
     agregar_a_paquete(client_socket, parameter, string_length(parameter) + 1);
     enviar_paquete(paquete, client_socket);
     eliminar_paquete(paquete);
@@ -511,7 +515,7 @@ void enviar_recurso(int client_socket, contexto_ejecucion* ce, char* parameter, 
 void enviar_io(int client_socket, contexto_ejecucion* ce, char* tiempo, int codOP){
     t_paquete* paquete = crear_paquete_op_code(codOP);
 
-    agregar_ce_a_paquete(paquete, ce);
+    agregar_ce_a_paquete(paquete, ce, cpu_logger);
     agregar_entero_a_paquete(paquete, atoi(tiempo));
     enviar_paquete(paquete, client_socket);
     eliminar_paquete(paquete);

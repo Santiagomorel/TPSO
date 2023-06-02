@@ -40,10 +40,10 @@ int main(int argc, char ** argv){
     pthread_create(&atiende_cliente_CPU, NULL, (void*) recibir_cpu, (void*)socket_cliente_memoria_CPU);
     pthread_detach(atiende_cliente_CPU);
 
-    log_trace(log_memoria, "esperando cliente fileSystem");
-    socket_cliente_memoria_FILESYSTEM = esperar_cliente(socket_servidor_memoria, log_memoria);
-    pthread_create(&atiende_cliente_FILESYSTEM, NULL, (void*) recibir_fileSystem, (void*)socket_cliente_memoria_FILESYSTEM);
-    pthread_detach(atiende_cliente_FILESYSTEM);
+    // log_trace(log_memoria, "esperando cliente fileSystem");
+    // socket_cliente_memoria_FILESYSTEM = esperar_cliente(socket_servidor_memoria, log_memoria);
+    // pthread_create(&atiende_cliente_FILESYSTEM, NULL, (void*) recibir_fileSystem, (void*)socket_cliente_memoria_FILESYSTEM);
+    // pthread_detach(atiende_cliente_FILESYSTEM);
 
     log_trace(log_memoria, "esperando cliente kernel");
     socket_cliente_memoria_KERNEL = esperar_cliente(socket_servidor_memoria, log_memoria);
@@ -80,6 +80,11 @@ int main(int argc, char ** argv){
             break;
         }
     }*/
+    while (1)
+    {
+        //espera activa
+    }
+    
     free(MEMORIA_PRINCIPAL);
     end_program(socket_servidor_memoria, log_memoria, memoria_config_file);
     
@@ -111,9 +116,11 @@ t_segmento* crear_segmento(int id_seg, int base, int tamanio){
 }
 
 void recibir_kernel(int SOCKET_CLIENTE_KERNEL) {
+
+    enviar_mensaje("recibido kernel", SOCKET_CLIENTE_KERNEL);
     while(1){
-    int codigoOperacion = recibir_operacion(SOCKET_CLIENTE_KERNEL);
-    switch(codigoOperacion)
+        int codigoOperacion = recibir_operacion(SOCKET_CLIENTE_KERNEL);
+        switch(codigoOperacion)
         {
             case INICIAR_ESTRUCTURAS:
                 log_trace(log_memoria, "recibi el op_cod %d INICIAR_ESTRUCTURAS", codigoOperacion);
@@ -143,12 +150,14 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL) {
 void recibir_cpu(int SOCKET_CLIENTE_CPU) {
 
     enviar_mensaje("recibido cpu", SOCKET_CLIENTE_CPU);
+    log_trace(log_memoria,"recibido cpu");
     while(1){
     int codigoOperacion = recibir_operacion(SOCKET_CLIENTE_CPU);
     switch(codigoOperacion)
         {
             case MENSAJE:
                 log_trace(log_memoria, "recibi el op_cod %d MENSAJE , codigoOperacion", codigoOperacion);
+                recibir_mensaje(SOCKET_CLIENTE_CPU, log_memoria);
                 break;
             // ---------LP entrante----------
             // case INICIAR_PCB: 
@@ -164,7 +173,7 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU) {
             //     break;
 
             default:
-                log_trace(log_memoria, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
+                //log_trace(log_memoria, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
                 break;
         }
     }

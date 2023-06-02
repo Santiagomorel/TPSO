@@ -281,20 +281,20 @@ void planificar_sig_to_running(){
             log_warning(kernel_logger, "antes de mandar el contexto de ejecucion");
             enviar_ce(cpu_dispatch_connection, nuevoContexto, EJECUTAR_CE, kernel_logger);
         }
-        else if (kernel_config.algoritmo_planificacion == "HRRN"){
-             pthread_mutex_lock(&m_listaReady);
-              //log_info(kernel_logger,"HRRN: Hay %d procesos listos para ejecutar",list_size(listaReady);
-            t_pcb* pcb_mayorRR = list_get_maximum(listaReady,(void*) mayorRRdeLista);
-            t_pcb* pcb_a_ejecutar = list_remove_element(listaReady, pcb_mayorRR);
-             pthread_mutex_unlock(&m_listaReady,pcb_mayorRR);
-            log_trace(kernel_logger, "agrego a RUNING y se lo paso a cpu para q ejecute!");
+        // else if (kernel_config.algoritmo_planificacion == "HRRN"){
+        //      pthread_mutex_lock(&m_listaReady);
+        //       //log_info(kernel_logger,"HRRN: Hay %d procesos listos para ejecutar",list_size(listaReady);
+        //     t_pcb* pcb_mayorRR = list_get_maximum(listaReady,(void*) mayorRRdeLista);
+        //     t_pcb* pcb_a_ejecutar = list_remove_element(listaReady, pcb_mayorRR);
+        //      pthread_mutex_unlock(&m_listaReady,pcb_mayorRR);
+        //     log_trace(kernel_logger, "agrego a RUNING y se lo paso a cpu para q ejecute!");
 
-            cambiar_estado_a(pcb_a_ejecutar, RUNNING, estadoActual(pcb_a_ejecutar));
-            agregar_a_lista_con_sems(pcb_a_ejecutar, listaEjecutando, m_listaEjecutando);
+        //     cambiar_estado_a(pcb_a_ejecutar, RUNNING, estadoActual(pcb_a_ejecutar));
+        //     agregar_a_lista_con_sems(pcb_a_ejecutar, listaEjecutando, m_listaEjecutando);
 
-            enviar_ce(cpu_dispatch_connection, pcb_a_ejecutar, EJECUTAR_PCB);
+        //     enviar_ce(cpu_dispatch_connection, pcb_a_ejecutar, EJECUTAR_PCB);
 
-        }
+        // }
 
     }
 }
@@ -445,44 +445,44 @@ contexto_ejecucion * obtener_ce(t_pcb * pcb){ // PENSAR EN HACERLO EN   AMBOS SE
     // copiar_tabla_segmentos(pcb, nuevoContexto);    // FALTA HACER
     return nuevoContexto;
 }
-t_pcb* mayorRRdeLista ( void* _pcb1,void* _pcb2){
+// //t_pcb* mayorRRdeLista ( void* _pcb1,void* _pcb2){
 
-        t_pcb* pcb1 = (t_pcb*)_pcb1;
+//         t_pcb* pcb1 = (t_pcb*)_pcb1;
 
-        t_pcb* pcb2 = (t_pcb*)_pcb2;
+//         t_pcb* pcb2 = (t_pcb*)_pcb2;
 
-        return mayorRR(pcb1,pcb2);
+//         return mayorRR(pcb1,pcb2);
 
-    };
+//     };
 
 
-time_t calculoRR (time_t tiempoEsperaEnReady,time_t duracionRealAnterior,time_t estimacionAnterior){
+// time_t calculoRR (time_t tiempoEsperaEnReady,time_t duracionRealAnterior,time_t estimacionAnterior){
 
-    return 1 +( ( (time(NULL) - tiempoEsperaEnReady) *1000) /calculoEstimado(duracionRealAnterior,estimacionAnterior) );
+//     return 1 +( ( (time(NULL) - tiempoEsperaEnReady) *1000) /calculoEstimado(duracionRealAnterior,estimacionAnterior) );
 
-}
+// }
 
-double calculoEstimado (time_t duracionRealAnterior,time_t estimacionAnterior){
+// double calculoEstimado (time_t duracionRealAnterior,time_t estimacionAnterior){
 
-    double alfa = kernel_config.hrrn_alfa;
+//     double alfa = kernel_config.hrrn_alfa;
 
-    return (alfa * duracionRealAnterior) + ( (1 - alfa) * estimacionAnterior) ;
+//     return (alfa * duracionRealAnterior) + ( (1 - alfa) * estimacionAnterior) ;
 
-}
+// }
 
-t_pcb* mayorRR (t_pcb* pcb1,t_pcb* pcb2){
+// t_pcb* mayorRR (t_pcb* pcb1,t_pcb* pcb2){
 
-    int RR_pcb1 = calculoRR(pcb1->instanteEstado,pcb1->duracionRealAnterior,pcb1->estimacionAnterior);
+    // int RR_pcb1 = calculoRR(pcb1->instanteEstado,pcb1->duracionRealAnterior,pcb1->estimacionAnterior);
 
-    int RR_pcb2 = calculoRR(pcb2->instanteEstado,pcb2->duracionRealAnterior,pcb2->estimacionAnterior);
+    // int RR_pcb2 = calculoRR(pcb2->instanteEstado,pcb2->duracionRealAnterior,pcb2->estimacionAnterior);
 
-    //log_info(logger,"Comparo pcb1 [%d] y pcb2[%d], RR_pcb1 [%d] y RR_pcb2 [%d] ",pcb1->pid, pcb2->pid,RR_pcb1,RR_pcb2 );
+    // //log_info(logger,"Comparo pcb1 [%d] y pcb2[%d], RR_pcb1 [%d] y RR_pcb2 [%d] ",pcb1->pid, pcb2->pid,RR_pcb1,RR_pcb2 );
 
-    if (RR_pcb1 >= RR_pcb2) return pcb1;
+    // if (RR_pcb1 >= RR_pcb2) return pcb1;
 
-    else return pcb2;
+    // else return pcb2;
 
-}
+// }
 
 
 // recieve_handshake(socket_cliente);
