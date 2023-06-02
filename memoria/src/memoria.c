@@ -22,9 +22,12 @@ int main(int argc, char ** argv){
     // ----------------------- cargo la configuracion de memoria ----------------------- //
 
     log_trace(log_memoria, "cargo la configuracion de Memoria");
+    
     load_config();
+
     MEMORIA_PRINCIPAL= malloc(memoria_config.tam_memoria);
     
+    enviar_tabla_segmentos();
     // ----------------------- levanto el servidor de memoria ----------------------- //
     
     socket_servidor_memoria = iniciar_servidor(memoria_config.puerto_escucha, log_memoria);
@@ -37,19 +40,16 @@ int main(int argc, char ** argv){
     pthread_create(&atiende_cliente_CPU, NULL, (void*) recibir_cpu, (void*)socket_cliente_memoria_CPU);
     pthread_detach(atiende_cliente_CPU);
 
-    // log_trace(log_memoria, "esperando cliente fileSystem");
-    // socket_cliente_memoria_FILESYSTEM = esperar_cliente(socket_servidor_memoria, log_memoria);
-    // pthread_create(&atiende_cliente_FILESYSTEM, NULL, (void*) recibir_fileSystem, (void*)socket_cliente_memoria_FILESYSTEM);
-    // pthread_detach(atiende_cliente_FILESYSTEM);
+    log_trace(log_memoria, "esperando cliente fileSystem");
+    socket_cliente_memoria_FILESYSTEM = esperar_cliente(socket_servidor_memoria, log_memoria);
+    pthread_create(&atiende_cliente_FILESYSTEM, NULL, (void*) recibir_fileSystem, (void*)socket_cliente_memoria_FILESYSTEM);
+    pthread_detach(atiende_cliente_FILESYSTEM);
 
     log_trace(log_memoria, "esperando cliente kernel");
     socket_cliente_memoria_KERNEL = esperar_cliente(socket_servidor_memoria, log_memoria);
     pthread_create(&atiende_cliente_KERNEL, NULL, (void*) recibir_kernel, (void*)socket_cliente_memoria_KERNEL);
     pthread_detach(atiende_cliente_KERNEL);
 
-    while (1)
-    {
-    }
     
     /*while (1)
     {
@@ -111,8 +111,6 @@ t_segmento* crear_segmento(int id_seg, int base, int tamanio){
 }
 
 void recibir_kernel(int SOCKET_CLIENTE_KERNEL) {
-
-    enviar_mensaje("recibido kernel", SOCKET_CLIENTE_KERNEL);
     while(1){
     int codigoOperacion = recibir_operacion(SOCKET_CLIENTE_KERNEL);
     switch(codigoOperacion)
@@ -120,12 +118,7 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL) {
             case INICIAR_ESTRUCTURAS:
                 log_trace(log_memoria, "recibi el op_cod %d INICIAR_ESTRUCTURAS", codigoOperacion);
                 log_trace(log_memoria, "creando paquete con tabla de segmentos base");
-                // t_list* tabla_segmentos = list_create();
-                // t_segmento* segmento_base = crear_segmento(1,1,64); 
-                // list_add(tabla_segmentos, segmento_base);
-                // t_paquete* segmentos_paquete = crear_paquete_op_code(TABLA_SEGMENTOS);
-                // agregar_a_paquete(segmentos_paquete, tabla_segmentos, sizeof(t_list));
-                // enviar_paquete(segmentos_paquete, SOCKET_CLIENTE_KERNEL);
+                
                 enviar_mensaje("envio nueva tabla de segmentos", SOCKET_CLIENTE_KERNEL);
                 break;
             // ---------LP entrante----------
@@ -150,7 +143,7 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL) {
 void recibir_cpu(int SOCKET_CLIENTE_CPU) {
 
     enviar_mensaje("recibido cpu", SOCKET_CLIENTE_CPU);
-
+    while(1){
     int codigoOperacion = recibir_operacion(SOCKET_CLIENTE_CPU);
     switch(codigoOperacion)
         {
@@ -174,6 +167,7 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU) {
                 log_trace(log_memoria, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
                 break;
         }
+    }
 }
 void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM) {
 
@@ -217,3 +211,29 @@ void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM) {
 - Acceso a espacio de usuario: “PID: <PID> - Acción: <LEER / ESCRIBIR> - Dirección física: <DIRECCIÓN_FÍSICA> - Tamaño: <TAMAÑO> - Origen: <CPU / FS>”
 */
 
+void enviar_tabla_segmentos(){
+    t_list* tabla_segmentos = list_create();
+    t_segmento* segmento_base = crear_segmento(1,1,64); 
+    list_add(tabla_segmentos, segmento_base);
+    list_map(tabla_segmentos, serializar_segmento);  // < = Problema
+    //t_paquete* segmentos_paquete = crear_paquete_op_code(TABLA_SEGMENTOS);
+    //agregar_a_paquete(segmentos_paquete, tabla_segmentos, sizeof(t_list));
+    //enviar_paquete(segmentos_paquete, SOCKET_CLIENTE_KERNEL);
+}
+
+
+void* serializar_segmento(t_segmento* segmento)
+{
+    int bytes = segmento->tamanio_segmento + 2*sizeof(int);
+    void* magic = malloc(bytes);
+    int desplazamiento = 0;
+
+    memcpy(magic + desplazamiento, &(segmento->id_segmento), sizeof(int));
+    desplazamiento += sizeof(int);
+    memcpy(magic + desplazamiento, &(segmento->direccion_base), sizeof(int));
+    desplazamiento += sizeof(int);
+    memcpy(magic + desplazamiento, &(segmento->tamanio_segmento), sizeof(int));
+    desplazamiento += sizeof(int);
+
+    return magic;
+}
