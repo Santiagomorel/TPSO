@@ -223,7 +223,8 @@ void agregar_entero_a_paquete(t_paquete *paquete, int x)
 	paquete->buffer->size += sizeof(int);
 }
 
-void agregar_array_string_a_paquete(t_paquete *paquete, char **arr)
+
+void agregar_array_string_a_paquete(t_paquete* paquete, char** arr)
 {
 	int size = string_array_size(arr);
 	agregar_entero_a_paquete(paquete, size);
