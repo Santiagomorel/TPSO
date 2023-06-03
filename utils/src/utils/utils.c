@@ -361,28 +361,40 @@ char **leer_string_array(char *buffer, int *desp)
 t_registro * leer_registros(char* buffer, int * desp) {
 	int tamanio = leer_entero(buffer, desp);
 	t_registro * retorno = malloc(tamanio);
+	leer_entero(buffer, desp);
 	memcpy(retorno->AX, buffer + (*desp), 4);
 	(*desp) += 4;
+	leer_entero(buffer, desp);
 	memcpy(retorno->BX, buffer + (*desp), 4);
 	(*desp) += 4;
+	leer_entero(buffer, desp);
 	memcpy(retorno->CX, buffer + (*desp), 4);
 	(*desp) += 4;
+	leer_entero(buffer, desp);
 	memcpy(retorno->DX, buffer + (*desp), 4);
 	(*desp) += 4;
+	leer_entero(buffer, desp);
 	memcpy(retorno->EAX, buffer + (*desp), 8);
 	(*desp) += 8;
+	leer_entero(buffer, desp);
 	memcpy(retorno->EBX, buffer + (*desp), 8);
 	(*desp) += 8;
+	leer_entero(buffer, desp);
 	memcpy(retorno->ECX, buffer + (*desp), 8);
 	(*desp) += 8;
+	leer_entero(buffer, desp);
 	memcpy(retorno->EDX, buffer + (*desp), 8);
 	(*desp) += 8;
+	leer_entero(buffer, desp);
 	memcpy(retorno->RAX, buffer + (*desp), 16);
 	(*desp) += 16;
+	leer_entero(buffer, desp);
 	memcpy(retorno->RBX, buffer + (*desp), 16);
 	(*desp) += 16;
+	leer_entero(buffer, desp);
 	memcpy(retorno->RCX, buffer + (*desp), 16);
 	(*desp) += 16;
+	leer_entero(buffer, desp);
 	memcpy(retorno->RDX, buffer + (*desp), 16);
 	(*desp) += 16;
 	return retorno;
@@ -508,16 +520,16 @@ void imprimir_ce(contexto_ejecucion* ce, t_log* logger) {
 }
 
 void imprimir_registros(t_registro* registros , t_log* logger) {
-	log_trace(logger, "El registro AX es %s", registros->AX);
-	log_trace(logger, "El registro BX es %s", registros->BX);
-	log_trace(logger, "El registro CX es %s", registros->CX);
-	log_trace(logger, "El registro DX es %s", registros->DX);
-	log_trace(logger, "El registro EAX es %s", registros->EAX);
-	log_trace(logger, "El registro EBX es %s", registros->EBX);
-	log_trace(logger, "El registro ECX es %s", registros->ECX);
-	log_trace(logger, "El registro EDX es %s", registros->EDX);
-	log_trace(logger, "El registro RAX es %s", registros->RAX);
-	log_trace(logger, "El registro RBX es %s", registros->RBX);
-	log_trace(logger, "El registro RCX es %s", registros->RCX);
-	log_trace(logger, "El registro RDX es %s", registros->RDX);
+	log_trace(logger, "El registro AX es %.*s", 4,registros->AX);
+	log_trace(logger, "El registro BX es %.*s", 4,registros->BX);
+	log_trace(logger, "El registro CX es %.*s", 4,registros->CX);
+	log_trace(logger, "El registro DX es %.*s", 4,registros->DX);
+	log_trace(logger, "El registro EAX es %.*s",8,registros->EAX);
+	log_trace(logger, "El registro EBX es %.*s",8,registros->EBX);
+	log_trace(logger, "El registro ECX es %.*s",8,registros->ECX);
+	log_trace(logger, "El registro EDX es %.*s",8,registros->EDX);
+	log_trace(logger, "El registro RAX es %.*s",16,registros->RAX);
+	log_trace(logger, "El registro RBX es %.*s",16,registros->RBX);
+	log_trace(logger, "El registro RCX es %.*s",16,registros->RCX);
+	log_trace(logger, "El registro RDX es %.*s",16,registros->RDX);
 }

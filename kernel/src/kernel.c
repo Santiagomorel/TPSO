@@ -183,18 +183,18 @@ void generar_id(t_pcb *pcb)
 
 t_registro * crear_registros() {
     t_registro * nuevosRegistros = malloc(sizeof(t_registro));
-    strcpy(nuevosRegistros->AX , "0");
-    strcpy(nuevosRegistros->BX , "0");
-    strcpy(nuevosRegistros->CX , "0");
-    strcpy(nuevosRegistros->DX , "0");
-	strcpy(nuevosRegistros->EAX , "0");
-	strcpy(nuevosRegistros->EBX , "0");
-	strcpy(nuevosRegistros->ECX , "0");
-	strcpy(nuevosRegistros->EDX , "0");
-	strcpy(nuevosRegistros->RAX , "0");
-	strcpy(nuevosRegistros->RBX , "0");
-	strcpy(nuevosRegistros->RCX , "0");
-	strcpy(nuevosRegistros->RDX , "0");
+    strcpy(nuevosRegistros->AX , "HOLA");
+    strcpy(nuevosRegistros->BX , "CHAU");
+    strcpy(nuevosRegistros->CX , "TEST");
+    strcpy(nuevosRegistros->DX , "ABCD");
+	strcpy(nuevosRegistros->EAX , "PABLITOS");
+	strcpy(nuevosRegistros->EBX , "HERMANOS");
+	strcpy(nuevosRegistros->ECX , "12345678");
+	strcpy(nuevosRegistros->EDX , "87654321");
+	strcpy(nuevosRegistros->RAX , "PLISSTOPIMINPAIN");
+	strcpy(nuevosRegistros->RBX , "PLISSTOPIMINPAIN");
+	strcpy(nuevosRegistros->RCX , "PLISSTOPIMINPAIN");
+	strcpy(nuevosRegistros->RDX , "PLISSTOPIMINPAIN");
     return nuevosRegistros;
 }
 

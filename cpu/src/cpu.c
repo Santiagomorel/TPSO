@@ -215,20 +215,19 @@ void process_dispatch() {
 
 /*-------------------- REGISTROS -------------------*/
 void set_registers(contexto_ejecucion* ce) {
-
-    strcpy(registros->AX, ce->registros_cpu->AX);
-    strcpy(registros->BX , ce->registros_cpu->BX);
-    strcpy(registros->CX , ce->registros_cpu->CX);
-    strcpy(registros->DX , ce->registros_cpu->DX);
-	strcpy(registros->EAX , ce->registros_cpu->EAX);
-	strcpy(registros->EBX , ce->registros_cpu->EBX);
-	strcpy(registros->ECX , ce->registros_cpu->ECX);
-	strcpy(registros->EDX , ce->registros_cpu->EDX);
-	strcpy(registros->RAX , ce->registros_cpu->RAX);
-	strcpy(registros->RBX , ce->registros_cpu->RBX);
-	strcpy(registros->RCX , ce->registros_cpu->RCX);
-	strcpy(registros->RDX , ce->registros_cpu->RDX);
-
+    registros = malloc(sizeof(t_registro)); // ATENCION (metrovias informa) hace falta un free supongo despues de reenviar el ce
+    strncpy(registros->AX, ce->registros_cpu->AX, 4);
+    strncpy(registros->BX , ce->registros_cpu->BX, 4);
+    strncpy(registros->CX , ce->registros_cpu->CX, 4);
+    strncpy(registros->DX , ce->registros_cpu->DX, 4);
+	strncpy(registros->EAX , ce->registros_cpu->EAX, 8);
+	strncpy(registros->EBX , ce->registros_cpu->EBX, 8);
+	strncpy(registros->ECX , ce->registros_cpu->ECX, 8);
+	strncpy(registros->EDX , ce->registros_cpu->EDX, 8);
+	strncpy(registros->RAX , ce->registros_cpu->RAX, 16);
+	strncpy(registros->RBX , ce->registros_cpu->RBX, 16);
+	strncpy(registros->RCX , ce->registros_cpu->RCX, 16);
+	strncpy(registros->RDX , ce->registros_cpu->RDX, 16);
 
 }
 
@@ -238,18 +237,18 @@ void set_registers(contexto_ejecucion* ce) {
 
 void save_context_ce(contexto_ejecucion* ce){
 
-    strcpy(ce->registros_cpu->AX, registros->AX);   
-    strcpy(ce->registros_cpu->BX, registros->BX);   
-    strcpy(ce->registros_cpu->CX, registros->CX);  
-    strcpy(ce->registros_cpu->DX, registros->DX); 
-    strcpy(ce->registros_cpu->EAX ,registros->EAX);
-	strcpy(ce->registros_cpu->EBX ,registros->EBX);
-	strcpy(ce->registros_cpu->ECX ,registros->ECX);
-	strcpy(ce->registros_cpu->EDX ,registros->EDX);
-	strcpy(ce->registros_cpu->RAX ,registros->RAX);
-	strcpy(ce->registros_cpu->RBX ,registros->RBX);
-	strcpy(ce->registros_cpu->RCX ,registros->RCX);
-	strcpy(ce->registros_cpu->RDX ,registros->RDX);
+    strncpy(ce->registros_cpu->AX, registros->AX, 4);   
+    strncpy(ce->registros_cpu->BX, registros->BX, 4);   
+    strncpy(ce->registros_cpu->CX, registros->CX, 4);  
+    strncpy(ce->registros_cpu->DX, registros->DX, 4); 
+    strncpy(ce->registros_cpu->EAX ,registros->EAX, 8);
+	strncpy(ce->registros_cpu->EBX ,registros->EBX, 8);
+	strncpy(ce->registros_cpu->ECX ,registros->ECX, 8);
+	strncpy(ce->registros_cpu->EDX ,registros->EDX, 8);
+	strncpy(ce->registros_cpu->RAX ,registros->RAX, 16);
+	strncpy(ce->registros_cpu->RBX ,registros->RBX, 16);
+	strncpy(ce->registros_cpu->RCX ,registros->RCX, 16);
+	strncpy(ce->registros_cpu->RDX ,registros->RDX, 16);
 
 }
 
@@ -262,38 +261,42 @@ void add_value_to_register(char* registerToModify, char* valueToAdd){
     //convertir el valor a agregar a un tipo de dato int
  
     
-    log_info(cpu_logger, "Caracteres a sumarle al registro %d",valueToAdd);
+    log_info(cpu_logger, "Caracteres a sumarle al registro %s", valueToAdd);
     if (strcmp(registerToModify, "AX") == 0) {
-        strcpy(registros->AX , valueToAdd);
+        strncpy(registros->AX , valueToAdd, 4);
     }
     else if (strcmp(registerToModify, "BX") == 0) {
-        strcpy(registros->BX , valueToAdd);
+        strncpy(registros->BX , valueToAdd, 4);
     }
     else if (strcmp(registerToModify, "CX") == 0) {
-        strcpy(registros->CX , valueToAdd);
+        strncpy(registros->CX , valueToAdd, 4);
     }
     else if (strcmp(registerToModify, "DX") == 0) {
-        strcpy(registros->DX , valueToAdd);
-    }else if (strcmp(registerToModify, "EAX") == 0) {
-        strcpy(registros->EAX , valueToAdd);
-    }else if (strcmp(registerToModify, "EBX") == 0) {
-        strcpy(registros->EBX , valueToAdd);
+        strncpy(registros->DX , valueToAdd, 4);
+    }
+    else if (strcmp(registerToModify, "EAX") == 0) {
+        strncpy(registros->EAX , valueToAdd, 8);
+    }
+    else if (strcmp(registerToModify, "EBX") == 0) {
+        strncpy(registros->EBX , valueToAdd, 8);
     }
     else if (strcmp(registerToModify, "ECX") == 0) {
-        strcpy(registros->ECX , valueToAdd);
+        strncpy(registros->ECX , valueToAdd, 8);
     }
     else if (strcmp(registerToModify, "EDX") == 0) {
-        strcpy(registros->EDX , valueToAdd);
-    }else if (strcmp(registerToModify, "RAX") == 0) {
-        strcpy(registros->RAX , valueToAdd);
-    }else if (strcmp(registerToModify, "RBX") == 0) {
-        strcpy(registros->RBX , valueToAdd);
+        strncpy(registros->EDX , valueToAdd, 8);
+    }
+    else if (strcmp(registerToModify, "RAX") == 0) {
+        strncpy(registros->RAX , valueToAdd, 16);
+    }
+    else if (strcmp(registerToModify, "RBX") == 0) {
+        strncpy(registros->RBX , valueToAdd, 16);
     }
     else if (strcmp(registerToModify, "RCX") == 0) {
-        strcpy(registros->RCX , valueToAdd);
+        strncpy(registros->RCX , valueToAdd, 16);
     }
     else if (strcmp(registerToModify, "RDX") == 0) {
-        strcpy(registros->RDX , valueToAdd);
+        strncpy(registros->RDX , valueToAdd, 16);
     }
 }
 
@@ -381,7 +384,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
 
             desalojo_por_yield = 1;
             break;
-            default:
+        default:
             log_info(cpu_logger, "No ejecute nada");
             break;
 }
@@ -392,8 +395,9 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
 
 void execute_process(contexto_ejecucion* ce){
     //char* value_to_copy = string_new(); // ?????
-
+    log_info(cpu_logger, "antes de setear registros");
     set_registers(ce);
+    log_info(cpu_logger, "despues de setear registros");
 
     char* instruction = malloc(sizeof(char*));
     char** decoded_instruction = malloc(sizeof(char*));
@@ -505,7 +509,7 @@ void enviar_recurso(int client_socket, contexto_ejecucion* ce, char* parameter, 
     t_paquete* paquete = crear_paquete_op_code(codOP);
 
     agregar_ce_a_paquete(paquete, ce, cpu_logger);
-    agregar_a_paquete(client_socket, parameter, string_length(parameter) + 1);
+    agregar_a_paquete(client_socket, parameter, string_length(char*) + 1); //agregar string a paquete
     enviar_paquete(paquete, client_socket);
     eliminar_paquete(paquete);
 }
