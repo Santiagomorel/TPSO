@@ -22,7 +22,7 @@ void end_program(int, t_log*, t_config*);
     int block_size;
     int block_count;
 
-} Filesystem_superbloque;
+} t_superbloque;
 
 typedef struct{
 
@@ -31,14 +31,9 @@ typedef struct{
     char* path_bitmap;
     char* path_bloques;
     char* path_FCB;
-    int puerto_memoria;
-    int puerto_escucha;
-    int retardo_acceso_bloque;
-
-    char* ip_filesystem;
-
-    int puerto_filesystem;
-
+    char* puerto_memoria;
+    char* puerto_escucha;
+    char* retardo_acceso_bloque;
 
 } Filesystem_config;
 
@@ -47,9 +42,9 @@ Filesystem_config filesystem_config;
 t_log * filesystem_logger;
 t_config * filesystem_config_file;
 
-Filesystem_superbloque* armar_superbloque();
-t_bitarray * armar_bitmap();
-t_list* armar_bloques();
+void armar_superbloque();
+void armar_bitmap();
+void armar_bloques();
 
 int socket_cliente_filesystem_kernel;
 int socket_servidor_filesystem;
@@ -58,7 +53,9 @@ int conexion_memoria;
 void recibir_kernel(int);
 
 
-
+t_superbloque* superbloque;
+t_bitarray* bitmap;
+t_list* archivo_bloques;
 
 #endif /* FILESYSTEM_H_ */
 

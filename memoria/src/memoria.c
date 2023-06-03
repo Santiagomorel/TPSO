@@ -40,10 +40,10 @@ int main(int argc, char ** argv){
     pthread_create(&atiende_cliente_CPU, NULL, (void*) recibir_cpu, (void*)socket_cliente_memoria_CPU);
     pthread_detach(atiende_cliente_CPU);
 
-    // log_trace(log_memoria, "esperando cliente fileSystem");
-    // socket_cliente_memoria_FILESYSTEM = esperar_cliente(socket_servidor_memoria, log_memoria);
-    // pthread_create(&atiende_cliente_FILESYSTEM, NULL, (void*) recibir_fileSystem, (void*)socket_cliente_memoria_FILESYSTEM);
-    // pthread_detach(atiende_cliente_FILESYSTEM);
+    log_trace(log_memoria, "esperando cliente fileSystem");
+    socket_cliente_memoria_FILESYSTEM = esperar_cliente(socket_servidor_memoria, log_memoria);
+    pthread_create(&atiende_cliente_FILESYSTEM, NULL, (void*) recibir_fileSystem, (void*)socket_cliente_memoria_FILESYSTEM);
+    pthread_detach(atiende_cliente_FILESYSTEM);
 
     log_trace(log_memoria, "esperando cliente kernel");
     socket_cliente_memoria_KERNEL = esperar_cliente(socket_servidor_memoria, log_memoria);

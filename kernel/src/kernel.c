@@ -48,11 +48,13 @@ int main(int argc, char **argv)
     }
     recibir_operacion(cpu_dispatch_connection);
     recibir_mensaje(cpu_dispatch_connection, kernel_logger);
-    // if((file_system_connection = crear_conexion(kernel_config.ip_file_system , kernel_config.puerto_file_system)) == -1) {
-    //     log_trace(kernel_logger, "No se pudo conectar al servidor de FILE SYSTEM");
-    //     exit(2);
-    // }
 
+    if((file_system_connection = crear_conexion(kernel_config.ip_file_system , kernel_config.puerto_file_system)) == -1) {
+        log_trace(kernel_logger, "No se pudo conectar al servidor de FILE SYSTEM");
+        exit(2);
+    }
+    recibir_operacion(file_system_connection);
+    recibir_mensaje(file_system_connection, kernel_logger);
     // ----------------------- levanto el servidor del kernel ----------------------- //
 
     socket_servidor_kernel = iniciar_servidor(kernel_config.puerto_escucha, kernel_logger);

@@ -3,7 +3,7 @@
 int main(int argc, char ** argv)
 {
     // ----------------------- creo el log del filesystem ----------------------- //
-    filesystem_logger = log_create("./runlogs/filesystem.log", "KERNEL", 1, LOG_LEVEL_INFO);
+    filesystem_logger = log_create("./runlogs/filesystem.log", "KERNEL", 1, LOG_LEVEL_TRACE);
 
     // ----------------------- levanto la configuracion del filesystem ----------------------- //
 
@@ -26,39 +26,41 @@ int main(int argc, char ** argv)
     armar_superbloque();
     armar_bitmap();
     armar_bloques();
-    log_info(filesystem_logger, "aca no llego si esta la funcion load config puesta");
     log_info(filesystem_logger, "%s", filesystem_config.ip_memoria);
-    log_info(filesystem_logger, "%d", filesystem_config.puerto_memoria);
+    log_info(filesystem_logger, "%s", filesystem_config.puerto_memoria);
 
 
     if((conexion_memoria = crear_conexion(filesystem_config.ip_memoria , filesystem_config.puerto_memoria)) == -1) {
     log_trace(filesystem_logger, "No se pudo conectar al servidor de memoria");
         exit(2);
-
+    }
+    recibir_operacion(conexion_memoria);
+    recibir_mensaje(conexion_memoria, filesystem_logger);
 
     socket_servidor_filesystem = iniciar_servidor(filesystem_config.puerto_escucha, filesystem_logger);
     log_trace(filesystem_logger, "filesystem inicia el servidor");
 
-    while (1) {
-
-        log_trace(filesystem_logger, "esperando cliente kernel ");
-	    socket_cliente_filesystem_kernel = esperar_cliente(socket_servidor_filesystem, filesystem_logger);
-            log_trace(filesystem_logger, "me entro un kernel con este socket: %d", socket_cliente_filesystem_kernel); 
+    log_trace(filesystem_logger, "esperando cliente kernel ");
+    socket_cliente_filesystem_kernel = esperar_cliente(socket_servidor_filesystem, filesystem_logger);
+    log_trace(filesystem_logger, "me entro un kernel con este socket: %d", socket_cliente_filesystem_kernel); 
 
     
-        pthread_t atiende_kernel;
+    pthread_t atiende_kernel;
 
-            pthread_create(&atiende_kernel, NULL, (void*) recibir_kernel, (void*) socket_cliente_filesystem_kernel);
-            pthread_detach(atiende_kernel);
+        pthread_create(&atiende_kernel, NULL, (void*) recibir_kernel, (void*) socket_cliente_filesystem_kernel);
+        pthread_detach(atiende_kernel);
 
-
+    while(1) {
+        //espera activa
     }
-
+    //posibilidad para no tener que hacer una espera activa hasta que finalice todo
+    //hace un wait que reciba un signal cuando le llegue al filesystem un para finalizar el modulo
+    //wait(terminar_programa);
         end_program(socket_servidor_filesystem, filesystem_logger, filesystem_config_file);
         return 0;
        
 }   
-}
+
 
 void recibir_kernel(int SOCKET_CLIENTE_KERNEL) {
     enviar_mensaje("recibido kernel", SOCKET_CLIENTE_KERNEL);
@@ -85,9 +87,9 @@ void load_config(void){
     filesystem_config.path_bloques = config_get_string_value(filesystem_config_file, "PATH_BLOQUES");
     filesystem_config.path_FCB = config_get_string_value(filesystem_config_file, "PATH_FCB");
 	
-	filesystem_config.puerto_memoria = config_get_int_value(filesystem_config_file, "PUERTO_MEMORIA");
-    filesystem_config.puerto_escucha = config_get_int_value(filesystem_config_file, "PUERTO_ESCUCHA");
-	filesystem_config.retardo_acceso_bloque = config_get_int_value(filesystem_config_file, "RETARDO_ACCESSO_BLOQUE");
+	filesystem_config.puerto_memoria = config_get_string_value(filesystem_config_file, "PUERTO_MEMORIA");
+    filesystem_config.puerto_escucha = config_get_string_value(filesystem_config_file, "PUERTO_ESCUCHA");
+	filesystem_config.retardo_acceso_bloque = config_get_string_value(filesystem_config_file, "RETARDO_ACCESSO_BLOQUE");
 
     log_info(filesystem_logger, "config cargada en 'filesystem_config_file'");
 }
@@ -98,32 +100,22 @@ void end_program(int socket, t_log* log, t_config* config){
     liberar_conexion(socket);
 }
 
-Filesystem_superbloque* armar_superbloque(){
-
-    Filesystem_superbloque* superbloque = malloc(sizeof(Filesystem_superbloque));
+void armar_superbloque(){
+    superbloque = malloc(sizeof(t_superbloque));
     superbloque -> block_size = 64 ;
     superbloque -> block_count = 65536;
-    
-    return superbloque;
 }
 
-t_bitarray * armar_bitmap(){
-
-    Filesystem_superbloque* superbloque = armar_superbloque();
-    t_bitarray * filesystem_bitmap = malloc(sizeof(t_bitarray));
-    filesystem_bitmap -> size = (superbloque -> block_count  / 8 );
-
-    return filesystem_bitmap;
+void armar_bitmap(){
+    bitmap = malloc(sizeof(t_bitarray));
+    bitmap -> size = (superbloque -> block_count  / 8 );
 }
 
-t_list* armar_bloques(){
-
-    Filesystem_superbloque* superbloque = armar_superbloque();
-    t_list* filesystem_archivo_bloques = malloc(sizeof(t_list*));
-    filesystem_archivo_bloques = list_create();
+void armar_bloques(){
+    archivo_bloques = malloc(sizeof(t_list));
+    archivo_bloques = list_create();
+    //list_add(archivo_bloques, bloque);
     // filesystem_archivo_bloques -> elements_count = (superbloque -> );
-    return filesystem_archivo_bloques;
-
 }
  
 

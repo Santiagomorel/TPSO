@@ -509,7 +509,7 @@ void enviar_recurso(int client_socket, contexto_ejecucion* ce, char* parameter, 
     t_paquete* paquete = crear_paquete_op_code(codOP);
 
     agregar_ce_a_paquete(paquete, ce, cpu_logger);
-    agregar_a_paquete(client_socket, parameter, string_length(char*) + 1); //agregar string a paquete
+    // agregar_a_paquete(client_socket, parameter, string_length(char*) + 1); //agregar string a paquete
     enviar_paquete(paquete, client_socket);
     eliminar_paquete(paquete);
 }
