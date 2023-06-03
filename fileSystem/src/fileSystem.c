@@ -89,7 +89,7 @@ void load_config(void){
     filesystem_config.puerto_escucha = config_get_int_value(filesystem_config_file, "PUERTO_ESCUCHA");
 	filesystem_config.retardo_acceso_bloque = config_get_int_value(filesystem_config_file, "RETARDO_ACCESSO_BLOQUE");
 
-    log_info(filesystem_logger, "config cargada en 'filesystem_cofig_file'");
+    log_info(filesystem_logger, "config cargada en 'filesystem_config_file'");
 }
 
 void end_program(int socket, t_log* log, t_config* config){
