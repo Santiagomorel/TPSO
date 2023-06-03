@@ -8,6 +8,17 @@
 void load_config(void);
 void end_program(int, t_log*, t_config*);
 
+typedef enum{
+    
+    MENSAJE_G,
+    F_OPEN,
+	F_CLOSE,
+	F_SEEK,
+	F_READ,
+	F_WRITE,
+	F_TRUNCATE,
+};
+
 // typedef struct{
 
 //     char* nombre_archivo;

@@ -68,8 +68,38 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL) {
     int codigoOperacion = recibir_operacion(SOCKET_CLIENTE_KERNEL);
     switch(codigoOperacion)
         {
-            case MENSAJE:
+            case MENSAJE_G:
                 log_trace(filesystem_logger, "recibi el op_cod %d MENSAJE , De", codigoOperacion);
+                break;
+
+            case F_OPEN:
+                log_trace(filesystem_logger, "recibi el op_cod %d F_OPEN , De", codigoOperacion);
+                enviar_mensaje("envio del F_OPEN", SOCKET_CLIENTE_KERNEL);
+                break;
+
+            case F_CLOSE:
+                log_trace(filesystem_logger, "recibi el op_cod %d F_CLOSE , De", codigoOperacion);
+                enviar_mensaje("envio del F_CLOSE", SOCKET_CLIENTE_KERNEL);
+                break;
+
+            case F_SEEK:
+                log_trace(filesystem_logger, "recibi el op_cod %d F_SEEK , De", codigoOperacion);
+                enviar_mensaje("envio del F_SEEK", SOCKET_CLIENTE_KERNEL);
+                break;
+
+            case F_READ:
+                log_trace(filesystem_logger, "recibi el op_cod %d F_READ , De", codigoOperacion);
+                enviar_mensaje("envio del F_READ", SOCKET_CLIENTE_KERNEL);
+                break;
+
+            case F_WRITE:
+                log_trace(filesystem_logger, "recibi el op_cod %d F_WRITE , De", codigoOperacion);
+                enviar_mensaje("envio del F_WRITE", SOCKET_CLIENTE_KERNEL);
+                break;
+
+            case F_TRUNCATE:
+                log_trace(filesystem_logger, "recibi el op_cod %d F_TRUNCATE , De", codigoOperacion);
+                enviar_mensaje("envio del F_TRUNCATE", SOCKET_CLIENTE_KERNEL);
                 break;
 
             default:
@@ -104,16 +134,19 @@ void armar_superbloque(){
     superbloque = malloc(sizeof(t_superbloque));
     superbloque -> block_size = 64 ;
     superbloque -> block_count = 65536;
+    log_trace(filesystem_logger, "levanto superbloque ");
 }
 
 void armar_bitmap(){
     bitmap = malloc(sizeof(t_bitarray));
     bitmap -> size = (superbloque -> block_count  / 8 );
+    log_trace(filesystem_logger, "levanto bitmap ");
 }
 
 void armar_bloques(){
     archivo_bloques = malloc(sizeof(t_list));
     archivo_bloques = list_create();
+    log_trace(filesystem_logger, "levanto archivo bloques ");
     //list_add(archivo_bloques, bloque);
     // filesystem_archivo_bloques -> elements_count = (superbloque -> );
 }
