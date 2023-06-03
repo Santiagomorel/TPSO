@@ -20,6 +20,7 @@ t_config * cpu_config_file;
 
 int conexion_cpu;
 int socket_cpu;
+int socket_kernel;
 
 
 void load_config(void);
@@ -61,9 +62,12 @@ t_registro* registros;
 #define RESPONSE 1
 
 void init_registers();
-void set_registers(contexto_ejecucion* pcb);
+void set_registers(contexto_ejecucion* ce);
+void save_context_ce(contexto_ejecucion* ce);
 void add_value_to_register(char* registerToModify, char* valueToAdd);
 void add_two_registers(char* registerToModify, char* registroParaSumarleAlOtroRegistro);
+void enviar_recurso(int client_socket, contexto_ejecucion* ce, char* parameter, int codOP);
+void enviar_io(int client_socket, contexto_ejecucion* ce, char* parameter, int codOP);
 
 
 /*------------------- INSTRUCCIONES --------------------*/
@@ -94,10 +98,10 @@ pthread_mutex_t m_execute_instruct;
 
 /*-------------- CICLO DE INSTRUCCION --------------------*/
 
-char* fetch_next_instruction_to_execute(contexto_ejecucion* pcb);
+char* fetch_next_instruction_to_execute(contexto_ejecucion* ce);
 char** decode(char* linea);
-void execute_instruction(char** instruccion_a_ejecutar, contexto_ejecucion* pcb);
-void update_program_counter(contexto_ejecucion* pcb);
-void execute_process(contexto_ejecucion* pcb);
+void execute_instruction(char** instruccion_a_ejecutar, contexto_ejecucion* ce);
+void update_program_counter(contexto_ejecucion* ce);
+void execute_process(contexto_ejecucion* ce);
 
 #endif

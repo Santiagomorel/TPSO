@@ -2,6 +2,7 @@
 #define UTILS_H_
 
 /*    Includes generales    */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -13,6 +14,7 @@
 #include <commons/config.h>
 #include <commons/temporal.h>
 #include <commons/collections/list.h>
+#include <commons/bitarray.h>
 #include <string.h>
 #include <assert.h>
 #include <errno.h>
@@ -52,6 +54,9 @@ typedef enum
 	FIN_PROCESO,
 	DESALOJO_PCB,  			// TODO RUSO
 	BLOCK_IO,
+	WAIT_RECURSO,
+	DESALOJO_YIELD,
+	SIGNAL_RECURSO,
 	// -------KERNEL->MEMORIA --------
 	ACCEDER_TP,
 	ACCEDER_EU,
@@ -163,6 +168,7 @@ t_paquete* crear_super_paquete(void);
 void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio);
 void agregar_entero_a_paquete(t_paquete* , int );
 void agregar_array_string_a_paquete(t_paquete* paquete, char** arr);
+void agregar_registros_a_paquete(t_paquete* , t_registro*);
 void enviar_paquete(t_paquete* paquete, int socket_cliente);
 void liberar_conexion(int socket_cliente);
 void eliminar_paquete(t_paquete* paquete);
@@ -180,16 +186,19 @@ int leer_entero(char* , int* );
 t_list* leer_segmento(char* , int* );
 float leer_float(char* , int* );
 char* leer_string(char* , int* );
-
+char** leer_string_array(char* , int* );
+t_registro * leer_registros(char* , int * );
 
 void loggear_pcb(t_pcb* , t_log* );
 void loggear_estado(t_log* , int );
 
 t_list* recibir_paquete_segmento(int );
-
+contexto_ejecucion * recibir_ce(int );
 t_paquete* agregar_tabla_segmentos_a_paquete(t_paquete * , t_list *);
 
-void enviar_ce(int, contexto_ejecucion *, int);
+void enviar_ce(int, contexto_ejecucion *, int, t_log*);
 
-void agregar_ce_a_paquete(t_paquete *, contexto_ejecucion *);
+void agregar_ce_a_paquete(t_paquete *, contexto_ejecucion *, t_log*);
+contexto_ejecucion * obtener_ce(t_pcb * pcb);
+
 #endif /* UTILS_H_ */

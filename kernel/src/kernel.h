@@ -50,12 +50,18 @@ void recibir_consola(int);
 t_pcb* iniciar_pcb(int );
 t_pcb* pcb_create(char* , int );
 void generar_id(t_pcb* );
+t_registro * crear_registros(void);
 char** separar_inst_en_lineas(char* );
 char** parsearPorSaltosDeLinea(char* );
 void enviar_Fin_consola(int);
 bool bloqueado_termino_io(t_pcb *);
 char * obtenerEstado(estados);
 int obtenerPid(t_pcb *);
+t_pcb* mayorRR (t_pcb*,t_pcb*);
+t_pcb* mayorRRdeLista ( void*,void*);
+double calculoEstimado (time_t,time_t);
+time_t calculoRR (time_t,time_t,time_t );
+
 
 void agregar_a_lista_con_sems(t_pcb *, t_list *, pthread_mutex_t );
 
@@ -77,11 +83,22 @@ void inicializarListasGlobales(void );
 void iniciarSemaforos();
 void destruirSemaforos();
 void planificar_sig_to_ready();
+void planificar_sig_to_running();
 void iniciar_planificadores();
 
 void pedir_tabla_segmentos(void ); //MODIFICAR cuando este implementado a (t_list *)
 void inicializar_estructuras(t_pcb *);
 void cambiar_estado_a(t_pcb *, estados , estados );
+
+contexto_ejecucion * obtener_ce(t_pcb *);
+void copiar_registros_pcb_a_ce(t_pcb*, contexto_ejecucion*);
+void copiar_registros_ce_a_pcb(contexto_ejecucion*, t_pcb*);
+void copiar_instrucciones_pcb_a_ce(t_pcb *, contexto_ejecucion *);
+void copiar_instrucciones_ce_a_pcb(contexto_ejecucion *, t_pcb *);
+void copiar_id_pcb_a_ce(t_pcb* , contexto_ejecucion* );
+void copiar_id_ce_a_pcb(contexto_ejecucion* , t_pcb* );
+void copiar_PC_pcb_a_ce(t_pcb* , contexto_ejecucion* );
+void copiar_PC_ce_a_pcb(contexto_ejecucion* , t_pcb* );
 // Listas de estados de tipo de planificacion
 t_list* listaNuevos;        // NEW
 t_list* listaReady;         // READY
