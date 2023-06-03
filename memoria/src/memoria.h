@@ -54,7 +54,8 @@ void recibir_cpu(int);
 void recibir_fileSystem(int);
 
 void enviar_tabla_segmentos();
-void* serializar_segmento(t_segmento* segmento);
+//void* serializar_segmento(t_segmento* segmento);
+void* serializar_segmento(void* segmento);
 #endif /*MEMORIA_H_*/
 
 

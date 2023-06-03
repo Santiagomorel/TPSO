@@ -216,23 +216,40 @@ void enviar_tabla_segmentos(){
     t_segmento* segmento_base = crear_segmento(1,1,64); 
     list_add(tabla_segmentos, segmento_base);
     list_map(tabla_segmentos, serializar_segmento);  // < = Problema
+    
     //t_paquete* segmentos_paquete = crear_paquete_op_code(TABLA_SEGMENTOS);
     //agregar_a_paquete(segmentos_paquete, tabla_segmentos, sizeof(t_list));
     //enviar_paquete(segmentos_paquete, SOCKET_CLIENTE_KERNEL);
 }
 
 
-void* serializar_segmento(t_segmento* segmento)
+//void* serializar_segmento(t_segmento* segmento)
+//{
+//    int bytes = segmento->tamanio_segmento + 2*sizeof(int);
+//    void* magic = malloc(bytes);
+//    int desplazamiento = 0;
+//
+//    memcpy(magic + desplazamiento, &(segmento->id_segmento), sizeof(int));
+//    desplazamiento += sizeof(int);
+//    memcpy(magic + desplazamiento, &(segmento->direccion_base), sizeof(int));
+//    desplazamiento += sizeof(int);
+//    memcpy(magic + desplazamiento, &(segmento->tamanio_segmento), sizeof(int));
+//    desplazamiento += sizeof(int);
+//
+//    return magic;
+//}
+void* serializar_segmento(void* segmento)
 {
-    int bytes = segmento->tamanio_segmento + 2*sizeof(int);
+    t_segmento* segmento_actual = (t_segmento*)segmento;
+    int bytes = segmento_actual->tamanio_segmento + 2 * sizeof(int);
     void* magic = malloc(bytes);
     int desplazamiento = 0;
 
-    memcpy(magic + desplazamiento, &(segmento->id_segmento), sizeof(int));
+    memcpy(magic + desplazamiento, &(segmento_actual->id_segmento), sizeof(int));
     desplazamiento += sizeof(int);
-    memcpy(magic + desplazamiento, &(segmento->direccion_base), sizeof(int));
+    memcpy(magic + desplazamiento, &(segmento_actual->direccion_base), sizeof(int));
     desplazamiento += sizeof(int);
-    memcpy(magic + desplazamiento, &(segmento->tamanio_segmento), sizeof(int));
+    memcpy(magic + desplazamiento, &(segmento_actual->tamanio_segmento), sizeof(int));
     desplazamiento += sizeof(int);
 
     return magic;
