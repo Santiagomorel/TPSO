@@ -211,6 +211,7 @@ void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM) {
 - Acceso a espacio de usuario: “PID: <PID> - Acción: <LEER / ESCRIBIR> - Dirección física: <DIRECCIÓN_FÍSICA> - Tamaño: <TAMAÑO> - Origen: <CPU / FS>”
 */
 
+/* serializacion vieja
 void enviar_tabla_segmentos(){
     t_list* tabla_segmentos = list_create();
     t_segmento* segmento_base = crear_segmento(1,1,64); 
@@ -222,22 +223,6 @@ void enviar_tabla_segmentos(){
     //enviar_paquete(segmentos_paquete, SOCKET_CLIENTE_KERNEL);
 }
 
-
-//void* serializar_segmento(t_segmento* segmento)
-//{
-//    int bytes = segmento->tamanio_segmento + 2*sizeof(int);
-//    void* magic = malloc(bytes);
-//    int desplazamiento = 0;
-//
-//    memcpy(magic + desplazamiento, &(segmento->id_segmento), sizeof(int));
-//    desplazamiento += sizeof(int);
-//    memcpy(magic + desplazamiento, &(segmento->direccion_base), sizeof(int));
-//    desplazamiento += sizeof(int);
-//    memcpy(magic + desplazamiento, &(segmento->tamanio_segmento), sizeof(int));
-//    desplazamiento += sizeof(int);
-//
-//    return magic;
-//}
 void* serializar_segmento(void* segmento)
 {
     t_segmento* segmento_actual = (t_segmento*)segmento;
@@ -253,4 +238,97 @@ void* serializar_segmento(void* segmento)
     desplazamiento += sizeof(int);
 
     return magic;
+}*/
+//------------------------ SERIALIZACION CON MOREL -----------------------------
+
+t_segmento* crear_segmento(int id_seg, int base, int tamanio){
+    t_segmento* unSegmento = malloc(sizeof(t_segmento));
+    unSegmento->id_segmento = id_seg;
+    unSegmento->direccion_base = base;
+    unSegmento->tamanio_segmento = tamanio; 
+    return unSegmento;
+}
+
+t_list* generar_tabla_segmentos(){
+	t_list* nuevaTabla = list_create();
+	t_segmento* nuevoElemento = crear_segmento(1,1,64);
+	t_segmento* otronuevoElemento = crear_segmento(12,12,642);
+
+	list_add(nuevaTabla, nuevoElemento);
+	list_add(nuevaTabla, otronuevoElemento);
+	//pcb->tabla_segmentos = nuevaTabla;
+    return nuevaTabla;
+}
+
+
+
+void enviar_tabla_segmentos(int conexion, int codOP, t_log* logger) {
+	t_paquete *paquete = crear_paquete_op_code(codOP);
+    t_proceso* nuevoProceso;
+
+	agregar_entero_a_paquete(paquete, nuevoProceso->id);
+
+	agregar_entero_a_paquete(paquete, list_size(nuevoProceso->tabla_segmentos));
+
+	agregar_tabla_a_paquete(paquete, nuevoProceso,  logger);
+
+	enviar_paquete(paquete, conexion);
+
+	eliminar_paquete(paquete);
+}
+
+void agregar_tabla_a_paquete(t_paquete* paquete, t_proceso* proceso ,  t_log* logger){
+	t_list* tabla_segmentos = proceso->tabla_segmentos;
+	int tamanio = list_size(tabla_segmentos);
+	// por la cantidad de elementos que hay dentro de la tabla de segmentos
+	// serializar cada uno de sus elementos.
+	// serializo del primer elemento de la tabla todos sus componentes y lo coloco en un nuevo t_list*
+	// mismo con el segundo y asi hasta la long de la lista, luego serializo la nueva lista.
+
+	for(int i=0; i< tamanio; i++){
+		agregar_entero_a_paquete(paquete, (((t_segmento*)list_get(tabla_segmentos, i))->id_segmento));
+		agregar_entero_a_paquete(paquete, (((t_segmento*)list_get(tabla_segmentos, i))->direccion_base));
+		agregar_entero_a_paquete(paquete, (((t_segmento*)list_get(tabla_segmentos, i))->tamanio_segmento));
+	}
+
+	// te mando todos los segmentos de una, vs del otro lado los tomas y los vas metiendo en un t_list
+}
+
+void imprimir_tabla_segmentos(t_list* tabla_segmentos, t_log* logger){
+	int tamanio = list_size(tabla_segmentos);
+	for(int i=0; i<tamanio; i++){
+		log_trace(logger, "id_segmento es: %d", (((t_segmento*)list_get(tabla_segmentos, i))->id_segmento));
+		log_trace(logger, "direccion_base es: %d", (((t_segmento*)list_get(tabla_segmentos, i))->direccion_base));
+		log_trace(logger, "tamanio_segmento es: %d", (((t_segmento*)list_get(tabla_segmentos, i))->tamanio_segmento));
+	}
+}
+
+t_proceso * recibir_tabla_segmentos(int socket, t_log* logger){
+	t_proceso *nuevoProceso = malloc(sizeof(t_proceso));
+	int size = 0;
+	char *buffer;
+	int desp = 0;
+
+	buffer = recibir_buffer(&size, socket);
+	log_warning(logger, "Antes de leer el entero");
+	nuevoProceso->id = leer_entero(buffer, &desp);
+	log_warning(logger, "despues de leer un entero");
+	nuevoProceso->tabla_segmentos = leer_tabla_segmentos(buffer, &desp);
+	log_warning(logger, "despues de leer la tabla de segmentos");
+	free(buffer);
+
+	return nuevoProceso;
+}
+
+t_list* leer_tabla_segmentos(char* buffer, int* desp){
+	t_list* nuevalista = list_create();
+	int tamanio = leer_entero(buffer, desp);
+	for(int i=0; i<tamanio; i++){
+		int id_segmento = leer_entero(buffer, desp);
+		int direccion_base = leer_entero(buffer, desp);
+		int tamanio_segmento = leer_entero(buffer, desp);
+		t_segmento* nuevoElemento = crear_segmento(id_segmento, direccion_base, tamanio_segmento);
+		list_add(nuevalista, nuevoElemento);
+	}
+	return nuevalista;
 }
