@@ -29,11 +29,18 @@ typedef struct{
 } Memoria_config;
 Memoria_config memoria_config;
 
-//typedef struct{
-//    int32_t PID;
-//    t_list segmentos;
-//}t_tabla_segmentos;
-t_segmento* crear_segmento(int ,int ,int );
+typedef struct{
+	int id;
+	t_list* tabla_segmentos; //
+}t_proceso;
+
+t_list* generar_tabla_segmentos();
+t_segmento* crear_segmento(int id_seg, int base, int tamanio);
+void enviar_tabla_segmentos(int, t_log*);
+void agregar_tabla_a_paquete(t_paquete*,t_proceso* , t_log*);
+void imprimir_tabla_segmentos(t_list* , t_log* );
+t_proceso * recibir_tabla_segmentos(int , t_log*);
+t_list* leer_tabla_segmentos(char*,int* );
 
 int socket_servidor_memoria;
 int socket_cliente_memoria_CPU;
@@ -53,8 +60,9 @@ void recibir_kernel(int);
 void recibir_cpu(int);
 void recibir_fileSystem(int);
 
-void enviar_tabla_segmentos();
-void* serializar_segmento(t_segmento* segmento);
+//void enviar_tabla_segmentos();
+//void* serializar_segmento(t_segmento* segmento);
+//void* serializar_segmento(void* segmento);
 #endif /*MEMORIA_H_*/
 
 
