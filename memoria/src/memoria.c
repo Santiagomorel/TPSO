@@ -27,7 +27,6 @@ int main(int argc, char ** argv){
 
     MEMORIA_PRINCIPAL= malloc(memoria_config.tam_memoria);
     
-    enviar_tabla_segmentos();
     // ----------------------- levanto el servidor de memoria ----------------------- //
     
     socket_servidor_memoria = iniciar_servidor(memoria_config.puerto_escucha, log_memoria);
@@ -105,14 +104,6 @@ void end_program(int socket, t_log* log, t_config* config){
     log_destroy(log);
     config_destroy(config);
     liberar_conexion(socket);
-}
-
-t_segmento* crear_segmento(int id_seg, int base, int tamanio){
-    t_segmento* unSegmento = malloc(sizeof(t_segmento));
-    unSegmento->id_segmento = id_seg;
-    unSegmento->direccion_base = base;
-    unSegmento->tamanio_segmento = tamanio; 
-    return unSegmento;
 }
 
 void recibir_kernel(int SOCKET_CLIENTE_KERNEL) {
