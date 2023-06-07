@@ -381,7 +381,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
         case I_YIELD:
             log_info(cpu_logger, "Por ejecutar instruccion YIELD");
             log_info(mandatory_logger, "PID: %d - Ejecutando: %s - %s", ce->id, instruction[0]);
-
+            imprimir_registros(ce, cpu_logger);
             desalojo_por_yield = 1;
             break;
         default:
@@ -425,7 +425,7 @@ void execute_process(contexto_ejecucion* ce){
 
 
     save_context_ce(ce); // ACA GUARDAMOS EL CONTEXTO
-
+    imprimir_registros(ce, cpu_logger);
    if(end_process) {
         end_process = 0; // IMPORTANTE: Apagar el flag para que no rompa el proximo proceso que llegue
         check_interruption = 0;
