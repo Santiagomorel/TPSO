@@ -36,7 +36,8 @@ typedef struct{
 
 t_list* generar_tabla_segmentos();
 t_segmento* crear_segmento(int id_seg, int base, int tamanio);
-void enviar_tabla_segmentos(int, t_log*);
+// void enviar_tabla_segmentos(int, t_log*);
+void enviar_tabla_segmentos(int, int, t_log*);
 void agregar_tabla_a_paquete(t_paquete*,t_proceso* , t_log*);
 void imprimir_tabla_segmentos(t_list* , t_log* );
 t_proceso * recibir_tabla_segmentos(int , t_log*);
