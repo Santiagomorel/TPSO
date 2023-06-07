@@ -429,7 +429,7 @@ void execute_process(contexto_ejecucion* ce){
         end_process = 0; // IMPORTANTE: Apagar el flag para que no rompa el proximo proceso que llegue
         check_interruption = 0;
         log_error(cpu_logger, "llego aca?");
-        enviar_ce(socket_kernel, ce, FIN_PROCESO, cpu_logger);
+        enviar_ce(socket_kernel, ce, SUCCESS, cpu_logger);
         log_info(cpu_logger, "Enviamos paquete a dispatch: FIN PROCESO");
     } 
     else if(input_ouput) {

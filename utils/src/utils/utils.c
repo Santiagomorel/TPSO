@@ -335,7 +335,7 @@ float leer_float(char *buffer, int *desplazamiento) // Lee un float en base a un
 char *leer_string(char *buffer, int *desplazamiento) // Lee un string en base a un buffer y un desplazamiento, ambos se pasan por referencia
 {
 	int tamanio = leer_entero(buffer, desplazamiento);
-	printf("allocating / copying %d \n", tamanio);
+	//printf("allocating / copying %d \n", tamanio);
 
 	char *valor = malloc(tamanio);
 	memcpy(valor, buffer + (*desplazamiento), tamanio);
@@ -496,15 +496,15 @@ void enviar_ce(int conexion, contexto_ejecucion *ce, int codOP, t_log *logger)
 
 void agregar_ce_a_paquete(t_paquete *paquete, contexto_ejecucion *ce, t_log *logger)
 {
-	log_warning(logger, "antes de agregar entero");
+	log_trace(logger, "antes de agregar entero");
 	agregar_entero_a_paquete(paquete, ce->id);
-	log_warning(logger, "despues de agregar entero");
+	log_trace(logger, "despues de agregar entero");
 	agregar_array_string_a_paquete(paquete, ce->instrucciones);
-	log_warning(logger, "despues de agregar array de strings");
+	log_trace(logger, "despues de agregar array de strings");
 	agregar_entero_a_paquete(paquete, ce->program_counter);
-	log_warning(logger, "despues de agregar program counter");
+	log_trace(logger, "despues de agregar program counter");
 	agregar_registros_a_paquete(paquete, ce->registros_cpu);
-	log_warning(logger, "despues de agregar program counter"); // crear la funcion para mandar los registros.
+	log_trace(logger, "despues de agregar registros"); // crear la funcion para mandar los registros.
 
 	// agregar_tabla_segmentos_a_paquete(paquete, ce->tabla_segmentos); MODIFICAR
 }
@@ -540,4 +540,21 @@ void liberar_ce(contexto_ejecucion* ce){
 	//free(ce->program_counter); // seg fault por tratar de hacer un free a un int
 	free(ce->registros_cpu);
 	//liberar_tabla(ce->tabla_segmentos); falta hacer
+}
+
+char* obtenerCodOP(int cop){
+	switch (cop)
+	{
+	case SUCCESS:
+		return "SUCCESS";
+		break;
+	case SEG_FAULT:
+		return "SEG_FAULT";
+		break;
+	case OUT_OF_MEMORY:
+		return "OUT_OF_MEMORY";
+		break;
+	default:
+		break;
+	}
 }

@@ -52,7 +52,8 @@ typedef enum
 	EJECUTAR_CE, 			//  dispatch
 	EJECUTAR_INTERRUPCION,	// 	interrupt
 	// ------- enviadas por DIspatch: (CPU->kernel) --------
-	FIN_PROCESO,
+	SUCCESS,
+	SEG_FAULT,
 	DESALOJO_PCB,  			// TODO RUSO
 	BLOCK_IO,
 	WAIT_RECURSO,
@@ -77,6 +78,7 @@ typedef enum
 	INDICE_2, 	// 1er acceso mmu
 	MARCO,		// 2do acceso mmu
 	//PAGE_FAULT,
+	OUT_OF_MEMORY,
 	DIR_FISICA,
 	VALOR_A_RECIBIR,	
 
@@ -208,4 +210,5 @@ void imprimir_registros(t_registro* , t_log*);
 void liberar_ce(contexto_ejecucion* );
 //liberar registro -> 
 
+char* obtenerCodOP(int);
 #endif /* UTILS_H_ */

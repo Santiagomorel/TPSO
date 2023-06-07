@@ -562,13 +562,15 @@ void manejar_dispatch(){
         int cod_op = recibir_operacion(cpu_dispatch_connection);
         switch(cod_op){
 
-            case FIN_PROCESO:
+            case SUCCESS:
+            case SEG_FAULT:
                 contexto_ejecucion* contexto_a_finalizar = recibir_ce(cpu_dispatch_connection);
                 pthread_mutex_lock(&m_listaEjecutando);
                     t_pcb * pcb_a_finalizar = (t_pcb *) list_remove(listaEjecutando, 0); // inicializar pcb y despues liberarlo
                     actualizar_pcb(pcb_a_finalizar, contexto_a_finalizar); //FALTA HACER VER
                 pthread_mutex_unlock(&m_listaEjecutando);
-                
+                cambiar_estado_a(pcb_a_finalizar, EXIT, estadoActual(pcb_a_finalizar));
+
                 //sem_post(&cpu_libre_para_ejecutar); // si es FIFO no se usa, esto no deberia provocar nada, revisar eso iguañ
                 sem_post(&grado_multiprog); // NUEVO grado_multiprog
 
@@ -579,8 +581,8 @@ void manejar_dispatch(){
                 pthread_mutex_lock(&m_listaFinalizados);
                     list_add(listaFinalizados, pcb_a_finalizar);
                 pthread_mutex_unlock(&m_listaFinalizados);
-
-                log_trace(kernel_logger, "Finalizo proceso con id: %d", pcb_a_finalizar->id);
+                
+                log_info(kernel_logger, "Finaliza el proceso %d - Motivo: %s", pcb_a_finalizar->id, obtenerCodOP(cod_op));
                 enviar_Fin_consola(pcb_a_finalizar->socket_consola); 
                 liberar_ce(contexto_a_finalizar);
                 log_trace(kernel_logger, "el seg fault es por otra cosa");
