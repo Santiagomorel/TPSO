@@ -43,6 +43,7 @@ void recieve_handshake(int);
 
 typedef enum
 {
+	
 	MENSAJE,
 	PAQUETE,
 	INICIAR_PCB,
