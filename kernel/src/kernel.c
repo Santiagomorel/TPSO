@@ -31,7 +31,6 @@ int main(int argc, char **argv)
 
     iniciarSemaforos();
 
-    iniciar_planificadores();
 
     // ----------------------- contecto el kernel con los servidores de MEMORIA - CPU (dispatch) - FILESYSTEM ----------------------- //
 
@@ -59,6 +58,10 @@ int main(int argc, char **argv)
 
     socket_servidor_kernel = iniciar_servidor(kernel_config.puerto_escucha, kernel_logger);
     log_trace(kernel_logger, "kernel inicia el servidor");
+
+    // ----------------------- inicio los planificadores (no cambiar orden) ----------------------- //
+
+    iniciar_planificadores();
 
     // ----------------------- espero conexiones de consola ----------------------- //
 
@@ -213,7 +216,7 @@ char **separar_inst_en_lineas(char *instrucciones)
 
         char **instruccion = string_split(lineas[i], " "); // separo por espacios
         log_trace(kernel_logger, "Agrego la linea '%s' a las intrucciones del pcb", lineas[i]);
-        // log_info(logger_kernel, "instruccion[0] es: %s y la instruccion[1] es:%s", instruccion[0], instruccion[1]);
+        // log_info(kernel_logger, "instruccion[0] es: %s y la instruccion[1] es:%s", instruccion[0], instruccion[1]);
         string_array_push(&lineas_mejorado, string_duplicate(lineas[i]));
     }
     string_array_destroy(lineas);
@@ -245,12 +248,15 @@ void iniciar_planificadores()
     pthread_create(&planificadorCP, NULL, (void *)planificar_sig_to_running, (void *)socket_cliente);
     pthread_detach(planificadorCP);
 
+    pthread_create(&hiloDispatch, NULL, (void*) manejar_dispatch, (void*)cpu_dispatch_connection);
+    pthread_detach(hiloDispatch);
 }
 
 void iniciarSemaforos()
 {
     pthread_mutex_init(&m_listaNuevos, NULL);
     pthread_mutex_init(&m_listaReady, NULL);
+    pthread_mutex_init(&m_listaFinalizados, NULL);
     pthread_mutex_init(&m_listaBloqueados, NULL);
     pthread_mutex_init(&m_listaEjecutando, NULL);
     pthread_mutex_init(&m_contador_id, NULL);
@@ -549,6 +555,111 @@ void copiar_PC_ce_a_pcb(contexto_ejecucion* ce, t_pcb* pcb) {
     pcb->program_counter = ce->program_counter;
 }
 
+void manejar_dispatch(){
+    log_trace(kernel_logger, "Entre por manejar dispatch");
+    while(1){
+
+        int cod_op = recibir_operacion(cpu_dispatch_connection);
+        switch(cod_op){
+
+            case FIN_PROCESO:
+                contexto_ejecucion* contexto_a_finalizar = recibir_ce(cpu_dispatch_connection);
+                pthread_mutex_lock(&m_listaEjecutando);
+                    t_pcb * pcb_a_finalizar = (t_pcb *) list_remove(listaEjecutando, 0); // inicializar pcb y despues liberarlo
+                    actualizar_pcb(pcb_a_finalizar, contexto_a_finalizar); //FALTA HACER VER
+                pthread_mutex_unlock(&m_listaEjecutando);
+                
+                //sem_post(&cpu_libre_para_ejecutar); // si es FIFO no se usa, esto no deberia provocar nada, revisar eso iguañ
+                sem_post(&grado_multiprog); // NUEVO grado_multiprog
+
+                //signal(liberar);
+                //paquete_fin_memoria(pcb_a_finalizar->id, pcb_a_finalizar->tabla_paginas);
+                //wait (liberado);
+    
+                pthread_mutex_lock(&m_listaFinalizados);
+                    list_add(listaFinalizados, pcb_a_finalizar);
+                pthread_mutex_unlock(&m_listaFinalizados);
+
+                log_trace(kernel_logger, "Finalizo proceso con id: %d", pcb_a_finalizar->id);
+                enviar_Fin_consola(pcb_a_finalizar->socket_consola); 
+                liberar_ce(contexto_a_finalizar);
+                log_trace(kernel_logger, "el seg fault es por otra cosa");
+                //eliminar(pcb_a_finalizar);
+
+                break;
+
+            //case BLOCK_por_PF:
+            case -1:
+                break;
+            default:
+                log_error(kernel_logger, "entro algo que no deberia");
+                break;
+            //case BLOCK_por_ACCESO_A_MEM: (CREEMOS Q ES UN BLOCK IO )
+
+            // case DESALOJO_PCB: ; // solo si es SRT(con desalojo)
+
+            //     t_pcb* pcb_desalojado =  recibir_pcb(cpu_dispatch_connection, kernel_logger); //recibir_pcb_tiempo_ms(cpu_dispatch_connection, &tiempo_cpu_ms, kernel_logger);
+            //     printf("\n");
+            //     log_trace(kernel_logger, "Entro por desalojo un proceso de id: ", pcb_desalojado->id);
+
+            //     id_desalojado = pcb_desalojado->id; // artilugio para q no se calcule el sig_to_run hasta q no este el desalojado en ready
+
+            //         pthread_mutex_lock(&m_listaEjecutando);
+            //     list_remove(listaEjecutando, 0); // inicializar pcb y despues liberarlo
+            //         pthread_mutex_unlock(&m_listaEjecutando);
+ 
+            //     // Deberiamos tener en cuenta el grado de multiprogramacion a la hora de devolver el proceso a ready //Lean: yo creo q no, cualquier cosa preguntame
+            //     agregar_a_lista_con_sems(pcb_desalojado, listaReady, m_listaReady);
+
+            //     sem_post(&proceso_en_ready);          // TODO IMPORTANTE revisar                
+            //     sem_post(&cpu_libre_para_ejecutar);  // si es FIFO no se usa, esto no deberia provocar nada, revisar eso iguañ
+            //     break;
+
+            // case BLOCK_IO: ;
+            //     int tiempo_io_ms = 0; // aca rompe carajoOOOOO, cuando recibe no tiene bien los parametros
+            //     t_pcb* pcb_desalojadoIO = recibir_pcb_tiempo_ms(cpu_dispatch_connection, &tiempo_io_ms, kernel_logger);
+            //     log_trace(kernel_logger, "el tiempo a bloquear es: %d", tiempo_io_ms);
+
+            //         pthread_mutex_lock(&m_listaEjecutando);
+            //     list_remove(listaEjecutando, 0); // inicializar pcb y despues liberarlo
+            //         pthread_mutex_unlock(&m_listaEjecutando);
+                
+            //     sem_post(&cpu_libre_para_ejecutar); // el mas importante jiji
+                
+            //     pcb_desalojadoIO->rafaga_anterior = pcb_desalojadoIO->sumatoria_rafaga; // Cambiamos T(n-1) -> T(n)
+            //     pcb_desalojadoIO->sumatoria_rafaga = 0; // Reseteamos valor de sumatoria 
+
+            //     pcb_desalojadoIO->estimacion_rafaga = estimacion_proxima_rafaga(pcb_desalojadoIO); // EST(n-1) paso a ser EST(n) // TO DO REVISAR ESTO
+            //     pcb_desalojadoIO->estimacion_fija = pcb_desalojadoIO->estimacion_rafaga;
+                       
+            //     Retorno_io* nodo_io = malloc(sizeof(Retorno_io)); 
+
+            //     nodo_io->pcb = pcb_desalojadoIO;
+            //     nodo_io->tiempo_io_ms = tiempo_io_ms;
+            //     struct timeval llegada;
+            //     gettimeofday(&llegada, NULL);                
+            //     nodo_io->llegada = llegada.tv_sec;
+                
+                
+            //        pthread_mutex_unlock(&m_io);
+            //     list_add(listaIO, nodo_io);
+            //        pthread_mutex_unlock(&m_io);
+
+            //     pthread_t hilo_suspension;
+            //             //pthread_create(&hiloDispatch, NULL, (void*) manejar_dispatch, (void*)cpu_dispatch_connection);
+            //             pthread_create(&hilo_suspension, NULL, (void*)  timer_suspension, (void*) pcb_desalojadoIO   );
+            //             pthread_detach(hilo_suspension);
+
+                
+            //     sem_post(&llego_io);// hilo!!!
+        }
+    }
+}
+
+
+void actualizar_pcb(t_pcb* pcb, contexto_ejecucion* ce) {
+
+}
 
 /*
 Logs minimos obligatorios

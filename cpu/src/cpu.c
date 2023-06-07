@@ -428,7 +428,8 @@ void execute_process(contexto_ejecucion* ce){
    if(end_process) {
         end_process = 0; // IMPORTANTE: Apagar el flag para que no rompa el proximo proceso que llegue
         check_interruption = 0;
-        enviar_ce(socket_cpu, ce, FIN_PROCESO, cpu_logger);
+        log_error(cpu_logger, "llego aca?");
+        enviar_ce(socket_kernel, ce, FIN_PROCESO, cpu_logger);
         log_info(cpu_logger, "Enviamos paquete a dispatch: FIN PROCESO");
     } 
     else if(input_ouput) {
@@ -460,7 +461,7 @@ void execute_process(contexto_ejecucion* ce){
     else if(check_interruption) {
         check_interruption = 0;
         log_info(cpu_logger, "Entro por check interrupt");
-        enviar_ce(socket_cpu, ce, EJECUTAR_INTERRUPCION, cpu_logger); //Este codigo de operacion?
+        enviar_ce(socket_kernel, ce, EJECUTAR_INTERRUPCION, cpu_logger); //Este codigo de operacion?
     }else if(wait){
         wait = 0;
         log_info(cpu_logger, "Bloqueado por WAIT");

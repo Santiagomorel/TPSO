@@ -76,8 +76,12 @@ pthread_mutex_t m_listaNuevos;
 pthread_mutex_t m_listaBloqueados;
 pthread_mutex_t m_listaEjecutando;
 pthread_mutex_t m_listaReady;
+pthread_mutex_t m_listaFinalizados;
 pthread_t planificadorCP;
+pthread_t hiloDispatch;
 // void iterator(char*);
+
+void manejar_dispatch();
 
 void inicializarListasGlobales(void );
 void iniciarSemaforos();
@@ -99,6 +103,10 @@ void copiar_id_pcb_a_ce(t_pcb* , contexto_ejecucion* );
 void copiar_id_ce_a_pcb(contexto_ejecucion* , t_pcb* );
 void copiar_PC_pcb_a_ce(t_pcb* , contexto_ejecucion* );
 void copiar_PC_ce_a_pcb(contexto_ejecucion* , t_pcb* );
+
+void actualizar_pcb(t_pcb*, contexto_ejecucion*);
+
+
 // Listas de estados de tipo de planificacion
 t_list* listaNuevos;        // NEW
 t_list* listaReady;         // READY

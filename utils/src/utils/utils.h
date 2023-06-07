@@ -204,4 +204,8 @@ contexto_ejecucion * obtener_ce(t_pcb * pcb);
 
 void imprimir_ce(contexto_ejecucion* , t_log*);
 void imprimir_registros(t_registro* , t_log*);
+
+void liberar_ce(contexto_ejecucion* );
+//liberar registro -> 
+
 #endif /* UTILS_H_ */

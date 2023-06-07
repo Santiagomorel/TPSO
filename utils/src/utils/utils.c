@@ -311,7 +311,7 @@ t_log *init_logger(char *file, char *process_name, bool is_active_console, t_log
 int leer_entero(char *buffer, int *desplazamiento) // Lee un entero en base a un buffer y un desplazamiento, ambos se pasan por referencia
 {
 	int ret;
-	memcpy(&ret, buffer + (*desplazamiento), sizeof(int));
+	memcpy(&ret, buffer + (*desplazamiento), sizeof(int)); // copia dentro de ret lo que tiene el buffer con un size de int
 	(*desplazamiento) += sizeof(int);
 	return ret;
 }
@@ -471,9 +471,9 @@ contexto_ejecucion *recibir_ce(int socket_kernel)
 	buffer = recibir_buffer(&size, socket_kernel);
 
 	nuevoCe->id = leer_entero(buffer, &desp);
-	nuevoCe->instrucciones = leer_string_array(buffer, &desp);
+	nuevoCe->instrucciones = leer_string_array(buffer, &desp); // hay que liberar antes de perder la referencia
 	nuevoCe->program_counter = leer_entero(buffer, &desp);
-	nuevoCe->registros_cpu = leer_registros(buffer, &desp);
+	nuevoCe->registros_cpu = leer_registros(buffer, &desp); // hay que liberar antes de perder la referencia
 	// nuevoCe->tabla_segmentos = leer_tabla_segmentos(buffer, &desp);
 	free(buffer);
 	return nuevoCe;
@@ -532,4 +532,12 @@ void imprimir_registros(t_registro* registros , t_log* logger) {
 	log_trace(logger, "El registro RBX es %.*s",16,registros->RBX);
 	log_trace(logger, "El registro RCX es %.*s",16,registros->RCX);
 	log_trace(logger, "El registro RDX es %.*s",16,registros->RDX);
+}
+
+void liberar_ce(contexto_ejecucion* ce){
+	//free(ce->id); // seg fault por tratar de hacer un free a un int
+	free(ce->instrucciones); // probablemente tengamos tambien que liberar las instrucciones 1 a 1 (me da paja)
+	//free(ce->program_counter); // seg fault por tratar de hacer un free a un int
+	free(ce->registros_cpu);
+	//liberar_tabla(ce->tabla_segmentos); falta hacer
 }

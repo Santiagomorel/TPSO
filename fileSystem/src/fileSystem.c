@@ -3,7 +3,7 @@
 int main(int argc, char ** argv)
 {
     // ----------------------- creo el log del filesystem ----------------------- //
-    filesystem_logger = log_create("./runlogs/filesystem.log", "KERNEL", 1, LOG_LEVEL_TRACE);
+    filesystem_logger = log_create("./runlogs/filesystem.log", "FILESYSTEM", 1, LOG_LEVEL_TRACE);
 
     // ----------------------- levanto la configuracion del filesystem ----------------------- //
 
@@ -103,7 +103,7 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL) {
                 break;
 
             default:
-                log_trace(filesystem_logger, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
+                // log_trace(filesystem_logger, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
                 break;
         }
 }
