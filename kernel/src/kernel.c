@@ -430,10 +430,11 @@ void inicializar_estructuras(t_pcb *pcb)
 void pedir_tabla_segmentos() // MODIFICAR tipo de dato que devuelve
 {
     int codigoOperacion = recibir_operacion(memory_connection);
-    if (codigoOperacion != MENSAJE) //TABLA_SEGMENTOS MODIFICAR cuando tengamos la tabla de segmentos
+    if (codigoOperacion != TABLA_SEGMENTOS) //TABLA_SEGMENTOS MODIFICAR cuando tengamos la tabla de segmentos
     {
         log_trace(kernel_logger, "llego otra cosa q no era un tabla pags :c");
     }
+    
     recibir_mensaje(memory_connection, kernel_logger);
     //return recibir_paquete(memory_connection);
 }

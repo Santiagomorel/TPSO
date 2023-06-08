@@ -93,7 +93,7 @@ int main(int argc, char ** argv){
 void load_config(void){
     memoria_config.puerto_escucha           = config_get_string_value(memoria_config_file, "PUERTO_ESCUCHA");
     memoria_config.tam_memoria              = config_get_string_value(memoria_config_file, "TAM_MEMORIA");
-    memoria_config.tam_segmento             = config_get_int_value(memoria_config_file, "TAM_SEGMENTO_0");
+    memoria_config.tam_segmento_0            = config_get_int_value(memoria_config_file, "TAM_SEGMENTO_0");
     memoria_config.cant_segmentos           = config_get_string_value(memoria_config_file, "CANT_SEGMENTOS");
     memoria_config.retardo_memoria          = config_get_string_value(memoria_config_file, "RETARDO_MEMORIA");
     memoria_config.retardo_compactacion     = config_get_string_value(memoria_config_file, "RETARDO_COMPACTACION");
@@ -109,6 +109,7 @@ void end_program(int socket, t_log* log, t_config* config){
 void recibir_kernel(int SOCKET_CLIENTE_KERNEL) {
 
     enviar_mensaje("recibido kernel", SOCKET_CLIENTE_KERNEL);
+    
     while(1){
         int codigoOperacion = recibir_operacion(SOCKET_CLIENTE_KERNEL);
         switch(codigoOperacion)
@@ -117,7 +118,9 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL) {
                 log_trace(log_memoria, "recibi el op_cod %d INICIAR_ESTRUCTURAS", codigoOperacion);
                 log_trace(log_memoria, "creando paquete con tabla de segmentos base");
                 
-                enviar_mensaje("envio nueva tabla de segmentos", SOCKET_CLIENTE_KERNEL);
+                //enviar_mensaje("enviado nueva tabla de segmentos", SOCKET_CLIENTE_KERNEL);
+                enviar_tabla_segmentos(SOCKET_CLIENTE_KERNEL, TABLA_SEGMENTOS, log_memoria);
+
                 break;
             // ---------LP entrante----------
             // case INICIAR_PCB: 
@@ -249,15 +252,13 @@ t_segmento* crear_segmento(int id_seg, int base, int tamanio){
     return unSegmento;
 }
 
-t_list* generar_tabla_segmentos(){
+void generar_tabla_segmentos(t_proceso* proceso){
 	t_list* nuevaTabla = list_create();
-	t_segmento* nuevoElemento = crear_segmento(1,1,64);
-	t_segmento* otronuevoElemento = crear_segmento(12,12,642);
+	t_segmento* nuevoElemento = crear_segmento(1,1,memoria_config.tam_segmento_0);
 
 	list_add(nuevaTabla, nuevoElemento);
-	list_add(nuevaTabla, otronuevoElemento);
-	//pcb->tabla_segmentos = nuevaTabla;
-    return nuevaTabla;
+	proceso->tabla_segmentos = nuevaTabla;
+    //return nuevaTabla;
 }
 
 
@@ -266,11 +267,15 @@ void enviar_tabla_segmentos(int conexion, int codOP, t_log* logger) {
 	t_paquete *paquete = crear_paquete_op_code(codOP);
     t_proceso* nuevoProceso;
 
+    generar_tabla_segmentos(nuevoProceso);
+
 	agregar_entero_a_paquete(paquete, nuevoProceso->id);
 
 	agregar_entero_a_paquete(paquete, list_size(nuevoProceso->tabla_segmentos));
 
 	agregar_tabla_a_paquete(paquete, nuevoProceso,  logger);
+
+    imprimir_tabla_segmentos(nuevoProceso->tabla_segmentos, logger);
 
 	enviar_paquete(paquete, conexion);
 
@@ -294,14 +299,7 @@ void agregar_tabla_a_paquete(t_paquete* paquete, t_proceso* proceso ,  t_log* lo
 	// te mando todos los segmentos de una, vs del otro lado los tomas y los vas metiendo en un t_list
 }
 
-void imprimir_tabla_segmentos(t_list* tabla_segmentos, t_log* logger){
-	int tamanio = list_size(tabla_segmentos);
-	for(int i=0; i<tamanio; i++){
-		log_trace(logger, "id_segmento es: %d", (((t_segmento*)list_get(tabla_segmentos, i))->id_segmento));
-		log_trace(logger, "direccion_base es: %d", (((t_segmento*)list_get(tabla_segmentos, i))->direccion_base));
-		log_trace(logger, "tamanio_segmento es: %d", (((t_segmento*)list_get(tabla_segmentos, i))->tamanio_segmento));
-	}
-}
+
 
 t_proceso * recibir_tabla_segmentos(int socket, t_log* logger){
 	t_proceso *nuevoProceso = malloc(sizeof(t_proceso));
