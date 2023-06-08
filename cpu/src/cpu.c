@@ -183,17 +183,14 @@ void process_dispatch() {
     log_info(cpu_logger, "Esperando a que envie mensaje/paquete");
 
 	while (1) {
-        //sem_wait(&proceso_a_ejecutar);
 		int op_code = recibir_operacion(socket_kernel);
         log_warning(cpu_logger, "Codigo de operacion recibido de kernel: %d", op_code);
         contexto_ejecucion* ce; //hay que hacer un free del contexto de ejecucion una vez termine de ejecutar
 
 		switch (op_code) {
             case EJECUTAR_CE: 
-                log_error(cpu_logger, "El cpu lee cod de op EJECUTAR CE");
-                ce = recibir_ce(socket_kernel); // ERROR hay que mirar si el ce se recibe bien
-                log_error(cpu_logger, "Antes de acceder al id de CE");
-                log_info(cpu_logger, "Llego correctamente el CE con id: %d", ce->id);
+                ce = recibir_ce(socket_kernel);
+                log_trace(cpu_logger, "Llego correctamente el CE con id: %d", ce->id);
                 imprimir_ce(ce, cpu_logger);
                 execute_process(ce);
                 break;   
@@ -333,37 +330,37 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
      switch(keyfromstring(instruction[0])){
         case I_SET: 
             // SET (Registro, Valor)
-            log_info(cpu_logger, "Por ejecutar instruccion SET");
-            log_info(mandatory_logger, "PID: %d - Ejecutando: %s - %s - %s", ce->id, instruction[0], instruction[1], instruction[2]);
+            log_trace(cpu_logger, "Por ejecutar instruccion SET");
+            log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s", ce->id, instruction[0], instruction[1], instruction[2]);
 
-            usleep(atoi(cpu_config.retardo_instruccion));
+            sleep(atoi(cpu_config.retardo_instruccion)/1000);
 
             add_value_to_register(instruction[1], instruction[2]);
             break;
         case I_IO:
             // I/O (Tiempo)
-            log_info(cpu_logger, "Por ejecutar instruccion I/O");
-            log_info(mandatory_logger, "PID: %d - Ejecutando: %s - %s - %s", ce->id, instruction[0], instruction[1]);
+            log_trace(cpu_logger, "Por ejecutar instruccion I/O");
+            log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s", ce->id, instruction[0], instruction[1]);
 
             
             tiempo = instruction[1];
             
-            log_info(cpu_logger, "%s",tiempo);
+            log_trace(cpu_logger, "%s",tiempo);
             input_ouput = 1;
             break;
          case I_EXIT:
             //EXIT: Esta instrucción representa la syscall de finalización del proceso.
             //Se deberá devolver el ce actualizado al Kernel para su finalización.
-            log_info(cpu_logger, "Instruccion EXIT ejecutada");
-            log_info(mandatory_logger, "PID: %d - Ejecutando: %s", ce->id, instruction[0]);
+            log_trace(cpu_logger, "Instruccion EXIT ejecutada");
+            log_info(cpu_logger, "PID: %d - Ejecutando: %s", ce->id, instruction[0]);
 
             end_process = 1;
             break;
         case I_WAIT:
             // WAIT (Recurso)
             //Esta instruccion asigna un recurso pasado por parametro
-            log_info(cpu_logger, "Por ejecutar instruccion WAIT");
-            log_info(mandatory_logger, "PID: %d - Ejecutando: %s - %s ", ce->id, instruction[0], instruction[1]);
+            log_trace(cpu_logger, "Por ejecutar instruccion WAIT");
+            log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s ", ce->id, instruction[0], instruction[1]);
             // Si rompe crear una varible char* recurso, asignandole instruccion[1] y enviar el recurso en el execute process
             enviar_recurso(socket_kernel, ce, instruction[1], WAIT_RECURSO);
 
@@ -372,15 +369,15 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
         case I_SIGNAL:
             // SIGNAL (Recurso)
             //Esta instruccion libera un recurso pasado por parametro
-            log_info(cpu_logger, "Por ejecutar instruccion SIGNAL");
-            log_info(mandatory_logger, "PID: %d - Ejecutando: %s - %s", ce->id, instruction[0], instruction[1]);
+            log_trace(cpu_logger, "Por ejecutar instruccion SIGNAL");
+            log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s", ce->id, instruction[0], instruction[1]);
 
             enviar_recurso(socket_kernel, ce, instruction[1], SIGNAL_RECURSO);
 
             break;
         case I_YIELD:
-            log_info(cpu_logger, "Por ejecutar instruccion YIELD");
-            log_info(mandatory_logger, "PID: %d - Ejecutando: %s - %s", ce->id, instruction[0]);
+            log_trace(cpu_logger, "Por ejecutar instruccion YIELD");
+            log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s", ce->id, instruction[0]);
             desalojo_por_yield = 1;
             break;
         default:
@@ -394,9 +391,8 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
 
 void execute_process(contexto_ejecucion* ce){
     //char* value_to_copy = string_new(); // ?????
-    log_info(cpu_logger, "antes de setear registros");
     set_registers(ce);
-    log_info(cpu_logger, "despues de setear registros");
+    log_trace(cpu_logger, "Seteo los registros");
 
     char* instruction = malloc(sizeof(char*));
     char** decoded_instruction = malloc(sizeof(char*));
@@ -407,7 +403,7 @@ void execute_process(contexto_ejecucion* ce){
         instruction = string_duplicate(fetch_next_instruction_to_execute(ce));
         decoded_instruction = decode(instruction);
 
-        log_info(cpu_logger, "Por ejecutar la instruccion decodificada %s", decoded_instruction[0]);
+        log_trace(cpu_logger, "Por ejecutar la instruccion decodificada %s", decoded_instruction[0]);
         execute_instruction(decoded_instruction, ce);
 
         if(page_fault != 1) {   // en caso de tener page fault no se actualiza program counter
@@ -415,27 +411,26 @@ void execute_process(contexto_ejecucion* ce){
         }
         
         
-        log_info(cpu_logger, "PROGRAM COUNTER: %d", ce->program_counter);
+        log_trace(cpu_logger, "PROGRAM COUNTER: %d", ce->program_counter);
 
 
     } //si salis del while es porque te llego una interrupcion o termino el proceso o entrada y salida
     
-    log_info(cpu_logger, "SALI DEL WHILE DE EJECUCION");
+    log_trace(cpu_logger, "SALI DEL WHILE DE EJECUCION");
 
 
     save_context_ce(ce); // ACA GUARDAMOS EL CONTEXTO
-    imprimir_registros(ce->registros_cpu, cpu_logger);
+    imprimir_registros(ce->registros_cpu, cpu_logger); // para comprobar que los registros se guardaran bien
    if(end_process) {
         end_process = 0; // IMPORTANTE: Apagar el flag para que no rompa el proximo proceso que llegue
         check_interruption = 0;
-        log_error(cpu_logger, "llego aca?");
         enviar_ce(socket_kernel, ce, SUCCESS, cpu_logger);
-        log_info(cpu_logger, "Enviamos paquete a dispatch: FIN PROCESO");
+        log_trace(cpu_logger, "Enviamos paquete a dispatch: FIN PROCESO");
     } 
     else if(input_ouput) {
         input_ouput = 0;
         check_interruption = 0;
-        log_info(cpu_logger, "Tiempo: %s", tiempo);
+        log_trace(cpu_logger, "Tiempo: %s", tiempo);
  
     }
     /*else if(page_fault) {
@@ -460,14 +455,14 @@ void execute_process(contexto_ejecucion* ce){
     }*/
     else if(check_interruption) {
         check_interruption = 0;
-        log_info(cpu_logger, "Entro por check interrupt");
+        log_trace(cpu_logger, "Entro por check interrupt");
         enviar_ce(socket_kernel, ce, EJECUTAR_INTERRUPCION, cpu_logger); //Este codigo de operacion?
     }else if(wait){
         wait = 0;
-        log_info(cpu_logger, "Bloqueado por WAIT");
+        log_trace(cpu_logger, "Bloqueado por WAIT");
     }else if(desalojo_por_yield){
         desalojo_por_yield = 0;
-        log_info(cpu_logger, "Desalojado por YIELD");
+        log_trace(cpu_logger, "Desalojado por YIELD");
         enviar_ce(socket_kernel, ce, DESALOJO_YIELD, cpu_logger);
     }
 }

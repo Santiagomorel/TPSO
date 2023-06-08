@@ -589,7 +589,22 @@ void manejar_dispatch(){
                 //eliminar(pcb_a_finalizar);
 
                 break;
+            case DESALOJO_YIELD:
+                contexto_ejecucion* contexto_a_reencolar = recibir_ce(cpu_dispatch_connection);
+                pthread_mutex_lock(&m_listaEjecutando);
+                    t_pcb * pcb_a_reencolar = (t_pcb *) list_remove(listaEjecutando, 0); // inicializar pcb y despues liberarlo
+                    actualizar_pcb(pcb_a_reencolar, contexto_a_reencolar); //FALTA HACER VER
+                pthread_mutex_unlock(&m_listaEjecutando);
+                cambiar_estado_a(pcb_a_reencolar, READY, estadoActual(pcb_a_reencolar));
+    
+                pthread_mutex_lock(&m_listaReady);
+                    list_add(listaReady, pcb_a_reencolar);
+                pthread_mutex_unlock(&m_listaReady);
+                sem_post(&proceso_en_ready);
 
+                liberar_ce(contexto_a_reencolar);
+                //eliminar(pcb_a_reencolar);
+                break;
             //case BLOCK_por_PF:
             case -1:
                 break;
@@ -659,8 +674,12 @@ void manejar_dispatch(){
 }
 
 
-void actualizar_pcb(t_pcb* pcb, contexto_ejecucion* ce) {
-
+void actualizar_pcb(t_pcb* pcb, contexto_ejecucion* ce) { // falta hacer esto mamon
+    copiar_id_ce_a_pcb(ce, pcb);
+    copiar_instrucciones_ce_a_pcb(ce, pcb);
+    copiar_PC_ce_a_pcb(ce, pcb);
+    copiar_registros_ce_a_pcb(ce, pcb);
+    //falta copiar la tabla de segmentos.
 }
 
 /*
