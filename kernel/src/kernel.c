@@ -4,7 +4,7 @@ int main(int argc, char **argv)
 {
     // ----------------------- creo el log del kernel ----------------------- //
 
-    kernel_logger = init_logger("./runlogs/kernel.log", "KERNEL", 1, LOG_LEVEL_TRACE);
+    kernel_logger = init_logger("./runlogs/kernel.log", "KERNEL", 1, LOG_LEVEL_INFO);
 
     // ----------------------- levanto y cargo la configuracion del kernel ----------------------- //
 
@@ -273,7 +273,7 @@ void planificar_sig_to_running(){
 
     while(1){
         sem_wait(&proceso_en_ready);
-        log_warning(kernel_logger, "Entra en la planificacion de READY RUNNING");
+        log_trace(kernel_logger, "Entra en la planificacion de READY RUNNING");
         if(strcmp(kernel_config.algoritmo_planificacion, "FIFO") == 0) { // FIFO
             //log_info(kernel_logger, "Cola Ready FIFO: %s", funcionQueMuestraPID()); // HACER // VER LOCALIZACION
             pthread_mutex_lock(&m_listaReady);
@@ -286,7 +286,7 @@ void planificar_sig_to_running(){
             agregar_a_lista_con_sems(pcb_a_ejecutar, listaEjecutando, m_listaEjecutando);
             contexto_ejecucion * nuevoContexto = obtener_ce(pcb_a_ejecutar); // SOLUCIONADO!!! hay seg fault cuando intento acceder al pcb a ejecutar
 
-            log_warning(kernel_logger, "antes de mandar el contexto de ejecucion");
+            log_trace(kernel_logger, "antes de mandar el contexto de ejecucion");
             enviar_ce(cpu_dispatch_connection, nuevoContexto, EJECUTAR_CE, kernel_logger);
         }
         // else if (kernel_config.algoritmo_planificacion == "HRRN"){

@@ -25,7 +25,7 @@ int main(int argc, char ** argv) {
             - En el lab -> true
 
 */
-	cpu_logger = init_logger("./runlogs/cpu.log", "CPU", 1, LOG_LEVEL_TRACE);
+	cpu_logger = init_logger("./runlogs/cpu.log", "CPU", 1, LOG_LEVEL_INFO);
     mandatory_logger = log_create("./runlogs/cpu.log", "CPU", 0, LOG_LEVEL_TRACE);
 
 	    log_info(cpu_logger, "Levanto la configuracion del cpu");
@@ -184,7 +184,7 @@ void process_dispatch() {
 
 	while (1) {
 		int op_code = recibir_operacion(socket_kernel);
-        log_warning(cpu_logger, "Codigo de operacion recibido de kernel: %d", op_code);
+        log_trace(cpu_logger, "Codigo de operacion recibido de kernel: %d", op_code);
         contexto_ejecucion* ce; //hay que hacer un free del contexto de ejecucion una vez termine de ejecutar
 
 		switch (op_code) {
@@ -397,7 +397,7 @@ void execute_process(contexto_ejecucion* ce){
     char* instruction = malloc(sizeof(char*));
     char** decoded_instruction = malloc(sizeof(char*));
 
-    log_info(cpu_logger, "Por empezar check_interruption != 1 && end_process != 1 && input_ouput != 1 && wait != 1 && desalojo_por_yield != 1"); 
+    log_trace(cpu_logger, "Por empezar check_interruption != 1 && end_process != 1 && input_ouput != 1 && wait != 1 && desalojo_por_yield != 1"); 
     while(check_interruption != 1 && end_process != 1 && input_ouput != 1 && wait != 1 && desalojo_por_yield != 1){
         //Llega el ce y con el program counter buscas la instruccion que necesita
         instruction = string_duplicate(fetch_next_instruction_to_execute(ce));
@@ -421,7 +421,7 @@ void execute_process(contexto_ejecucion* ce){
 
     save_context_ce(ce); // ACA GUARDAMOS EL CONTEXTO
     imprimir_registros(ce->registros_cpu, cpu_logger); // para comprobar que los registros se guardaran bien
-   if(end_process) {
+    if(end_process) {
         end_process = 0; // IMPORTANTE: Apagar el flag para que no rompa el proximo proceso que llegue
         check_interruption = 0;
         enviar_ce(socket_kernel, ce, SUCCESS, cpu_logger);
