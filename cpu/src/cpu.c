@@ -172,15 +172,15 @@ void terminar_programa(int conexion, t_log* logger, t_config* config)
 
 /*-------------------- HILOS -------------------*/
 void process_dispatch() {
-    log_info(cpu_logger, "Soy el proceso Dispatch");
+    log_trace(cpu_logger, "Soy el proceso Dispatch");
     socket_cpu = iniciar_servidor(cpu_config.puerto_escucha, cpu_logger);
-	log_info(cpu_logger, "Servidor DISPATCH listo para recibir al cliente");
+	log_trace(cpu_logger, "Servidor DISPATCH listo para recibir al cliente");
 
 	socket_kernel = esperar_cliente(socket_cpu, cpu_logger);
     enviar_mensaje("Dispatch conectado",socket_kernel);
     //handshake_servidor(socket_kernel);
     
-    log_info(cpu_logger, "Esperando a que envie mensaje/paquete");
+    log_trace(cpu_logger, "Esperando a que envie mensaje/paquete");
 
 	while (1) {
 		int op_code = recibir_operacion(socket_kernel);
@@ -377,7 +377,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             break;
         case I_YIELD:
             log_trace(cpu_logger, "Por ejecutar instruccion YIELD");
-            log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s", ce->id, instruction[0]);
+            log_info(cpu_logger, "PID: %d - Ejecutando: %s", ce->id, instruction[0]);
             desalojo_por_yield = 1;
             break;
         default:
@@ -425,6 +425,7 @@ void execute_process(contexto_ejecucion* ce){
         end_process = 0; // IMPORTANTE: Apagar el flag para que no rompa el proximo proceso que llegue
         check_interruption = 0;
         enviar_ce(socket_kernel, ce, SUCCESS, cpu_logger);
+        liberar_ce(ce);
         log_trace(cpu_logger, "Enviamos paquete a dispatch: FIN PROCESO");
     } 
     else if(input_ouput) {
@@ -464,6 +465,7 @@ void execute_process(contexto_ejecucion* ce){
         desalojo_por_yield = 0;
         log_trace(cpu_logger, "Desalojado por YIELD");
         enviar_ce(socket_kernel, ce, DESALOJO_YIELD, cpu_logger);
+        liberar_ce(ce);
     }
 }
 

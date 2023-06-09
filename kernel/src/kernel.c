@@ -675,8 +675,8 @@ void manejar_dispatch(){
 
 
 void actualizar_pcb(t_pcb* pcb, contexto_ejecucion* ce) { // falta hacer esto mamon
-    copiar_id_ce_a_pcb(ce, pcb);
-    copiar_instrucciones_ce_a_pcb(ce, pcb);
+    //copiar_id_ce_a_pcb(ce, pcb);
+    //copiar_instrucciones_ce_a_pcb(ce, pcb);
     copiar_PC_ce_a_pcb(ce, pcb);
     copiar_registros_ce_a_pcb(ce, pcb);
     //falta copiar la tabla de segmentos.
