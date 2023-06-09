@@ -534,6 +534,15 @@ void imprimir_registros(t_registro* registros , t_log* logger) {
 	log_trace(logger, "El registro RDX es %.*s",16,registros->RDX);
 }
 
+void imprimir_tabla_segmentos(t_list* tabla_segmentos, t_log* logger){
+	int tamanio = list_size(tabla_segmentos);
+	for(int i=0; i<tamanio; i++){
+		log_trace(logger, "id_segmento es: %d", (((t_segmento*)list_get(tabla_segmentos, i))->id_segmento));
+		log_trace(logger, "direccion_base es: %d", (((t_segmento*)list_get(tabla_segmentos, i))->direccion_base));
+		log_trace(logger, "tamanio_segmento es: %d", (((t_segmento*)list_get(tabla_segmentos, i))->tamanio_segmento));
+	}
+}
+
 void liberar_ce(contexto_ejecucion* ce){
 	//free(ce->id); // seg fault por tratar de hacer un free a un int
 	free(ce->instrucciones); // probablemente tengamos tambien que liberar las instrucciones 1 a 1 (me da paja)
