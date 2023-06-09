@@ -93,6 +93,7 @@ int sigsegv;
 int numeroSegmentoGlobalPageFault;
 int numeroPaginaGlobalPageFault;
 pthread_mutex_t m_execute_instruct;
+int recibir_respuesta_recurso();
 
 
 

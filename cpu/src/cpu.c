@@ -321,9 +321,11 @@ int input_ouput = 0;
 int check_interruption = 0;
 int wait = 0;
 int desalojo_por_yield = 0;
+int signal_recurso = 0;
 
 
 char* tiempo = "NONE";
+
 
 void execute_instruction(char** instruction, contexto_ejecucion* ce){
 
@@ -340,7 +342,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
         case I_IO:
             // I/O (Tiempo)
             log_trace(cpu_logger, "Por ejecutar instruccion I/O");
-            log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s", ce->id, instruction[0], instruction[1]);
+            log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s", ce->id, instruction[0], instruction[1]);
 
             
             tiempo = instruction[1];
@@ -353,7 +355,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             //Se deberá devolver el ce actualizado al Kernel para su finalización.
             log_trace(cpu_logger, "Instruccion EXIT ejecutada");
             log_info(cpu_logger, "PID: %d - Ejecutando: %s", ce->id, instruction[0]);
-
+            
             end_process = 1;
             break;
         case I_WAIT:
@@ -362,9 +364,11 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             log_trace(cpu_logger, "Por ejecutar instruccion WAIT");
             log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s ", ce->id, instruction[0], instruction[1]);
             // Si rompe crear una varible char* recurso, asignandole instruccion[1] y enviar el recurso en el execute process
+            
             enviar_recurso(socket_kernel, ce, instruction[1], WAIT_RECURSO);
 
-            wait = 1;
+            wait = recibir_respuesta_recurso();
+            
             break;
         case I_SIGNAL:
             // SIGNAL (Recurso)
@@ -374,10 +378,14 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
 
             enviar_recurso(socket_kernel, ce, instruction[1], SIGNAL_RECURSO);
 
+            signal_recurso = recibir_respuesta_recurso();
+
+            
             break;
         case I_YIELD:
             log_trace(cpu_logger, "Por ejecutar instruccion YIELD");
             log_info(cpu_logger, "PID: %d - Ejecutando: %s", ce->id, instruction[0]);
+            
             desalojo_por_yield = 1;
             break;
         default:
@@ -397,8 +405,8 @@ void execute_process(contexto_ejecucion* ce){
     char* instruction = malloc(sizeof(char*));
     char** decoded_instruction = malloc(sizeof(char*));
 
-    log_info(cpu_logger, "Por empezar check_interruption != 1 && end_process != 1 && input_ouput != 1 && wait != 1 && desalojo_por_yield != 1"); 
-    while(check_interruption != 1 && end_process != 1 && input_ouput != 1 && wait != 1 && desalojo_por_yield != 1){
+    log_info(cpu_logger, "Por empezar check_interruption != 1 && end_process != 1 && input_ouput != 1 && wait == 0 && desalojo_por_yield != 1"); 
+    while(check_interruption != 1 && end_process != 1 && input_ouput != 1 && wait == 0 && desalojo_por_yield != 1 && signal_recurso != 2){
         //Llega el ce y con el program counter buscas la instruccion que necesita
         instruction = string_duplicate(fetch_next_instruction_to_execute(ce));
         decoded_instruction = decode(instruction);
@@ -457,15 +465,44 @@ void execute_process(contexto_ejecucion* ce){
     else if(check_interruption) {
         check_interruption = 0;
         log_trace(cpu_logger, "Entro por check interrupt");
-        enviar_ce(socket_kernel, ce, EJECUTAR_INTERRUPCION, cpu_logger); //Este codigo de operacion?
+        enviar_ce(socket_kernel, ce, EJECUTAR_INTERRUPCION, cpu_logger); 
     }else if(wait){
+       
+       
+        if(wait == 1){  // Se bloquea por estar ocupado recurso
+            log_trace(cpu_logger, "Bloqueado por WAIT");
+            enviar_ce(socket_kernel, ce, BLOCK_WAIT, cpu_logger);
+            liberar_ce(ce);
+        }else{
+            log_trace(cpu_logger, "No existe el recurso");
+            enviar_ce(socket_kernel, ce, EXIT_RECURSO, cpu_logger);
+            liberar_ce(ce);
+        }
+             
+        
         wait = 0;
-        log_trace(cpu_logger, "Bloqueado por WAIT");
+        liberar_ce(ce);
     }else if(desalojo_por_yield){
         desalojo_por_yield = 0;
         log_trace(cpu_logger, "Desalojado por YIELD");
         enviar_ce(socket_kernel, ce, DESALOJO_YIELD, cpu_logger);
         liberar_ce(ce);
+    }else if(signal_recurso){
+        log_trace(cpu_logger, "No existe el recurso");
+        enviar_ce(socket_kernel, ce, EXIT_RECURSO, cpu_logger);
+        liberar_ce(ce);
+    }
+}
+
+int recibir_respuesta_recurso(){
+    int codigo_op = recibir_operacion(socket_kernel);
+
+    if(codigo_op == NO_EXISTE_RECURSO){
+        return 2;
+    }else if (codigo_op == NO_LO_TENGO){
+        return 1;
+    }else if(codigo_op == LO_TENGO){
+        return 0;
     }
 }
 
