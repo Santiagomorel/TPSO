@@ -388,6 +388,30 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             
             desalojo_por_yield = 1;
             break;
+        case I_F_OPEN:
+        log_trace(cpu_logger, "Por ejecutar instruccion F_OPEN");
+            break;
+        case I_F_CLOSE:
+        log_trace(cpu_logger, "Por ejecutar instruccion F_CLOSE");
+            break;
+        case I_F_SEEK:
+        log_trace(cpu_logger, "Por ejecutar instruccion F_SEEK");
+            break;
+        case I_F_READ:
+        log_trace(cpu_logger, "Por ejecutar instruccion F_READ");
+            break;
+        case I_F_WRITE:
+        log_trace(cpu_logger, "Por ejecutar instruccion F_WRITE");
+            break;
+        case I_F_TRUNCATE:
+        log_trace(cpu_logger, "Por ejecutar instruccion F_TRUNCATE");
+            break;
+        case I_CREATE_SEGMENT:
+        log_trace(cpu_logger, "Por ejecutar instruccion CREATE_SEGMENT");
+            break;
+        case I_DELETE_SEGMENT:
+        log_trace(cpu_logger, "Por ejecutar instruccion DELETE_SEGMENT");
+            break;
         default:
             log_info(cpu_logger, "No ejecute nada");
             break;
@@ -519,7 +543,15 @@ static t_symstruct lookuptable[] = {
     { "EXIT", I_EXIT },
     { "WAIT", I_WAIT },
     { "SIGNAL", I_SIGNAL },
-    {"YIELD",I_YIELD}
+    {"YIELD",I_YIELD},
+    { "F_OPEN", I_F_OPEN },
+    { "F_CLOSE", I_F_CLOSE },
+    { "F_SEEK", I_F_SEEK },
+    { "F_READ", I_F_READ },
+    { "F_WRITE", I_F_WRITE },
+    {"F_TRUNCATE",I_F_TRUNCATE},
+    { "CREATE_SEGMENT", I_CREATE_SEGMENT },
+    { "DELETE_SEGMENT", I_DELETE_SEGMENT }
 };
 
 int keyfromstring(char *key) {

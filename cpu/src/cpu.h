@@ -79,6 +79,14 @@ void enviar_io(int client_socket, contexto_ejecucion* ce, char* parameter, int c
 #define I_WAIT 4
 #define I_SIGNAL 5
 #define I_YIELD 6
+#define I_F_OPEN 7
+#define I_F_CLOSE 8
+#define I_F_SEEK 9
+#define I_F_READ 10
+#define I_F_WRITE 11
+#define I_F_TRUNCATE 12
+#define I_CREATE_SEGMENT 13
+#define I_DELETE_SEGMENT 14
 
 
 
