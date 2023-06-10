@@ -182,6 +182,7 @@ void process_dispatch() {
     
     log_trace(cpu_logger, "Esperando a que envie mensaje/paquete");
 
+    // sem_wait(mutex_cpu);
 	while (1) {
 		int op_code = recibir_operacion(socket_kernel);
         log_warning(cpu_logger, "Codigo de operacion recibido de kernel: %d", op_code);
@@ -326,7 +327,6 @@ int signal_recurso = 0;
 
 char* tiempo = "NONE";
 
-
 void execute_instruction(char** instruction, contexto_ejecucion* ce){
 
      switch(keyfromstring(instruction[0])){
@@ -344,10 +344,11 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             log_trace(cpu_logger, "Por ejecutar instruccion I/O");
             log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s", ce->id, instruction[0], instruction[1]);
 
-            
             tiempo = instruction[1];
+
+            enviar_ce_con_entero(socket_kernel, ce, tiempo, BLOCK_IO);
             
-            log_trace(cpu_logger, "%s",tiempo);
+            log_trace(cpu_logger, "%s", tiempo);
             input_ouput = 1;
             break;
          case I_EXIT:
@@ -365,7 +366,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s ", ce->id, instruction[0], instruction[1]);
             // Si rompe crear una varible char* recurso, asignandole instruccion[1] y enviar el recurso en el execute process
             
-            enviar_recurso(socket_kernel, ce, instruction[1], WAIT_RECURSO);
+            enviar_ce_con_string(socket_kernel, ce, instruction[1], WAIT_RECURSO);
 
             wait = recibir_respuesta_recurso();
             
@@ -376,7 +377,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             log_trace(cpu_logger, "Por ejecutar instruccion SIGNAL");
             log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s", ce->id, instruction[0], instruction[1]);
 
-            enviar_recurso(socket_kernel, ce, instruction[1], SIGNAL_RECURSO);
+            enviar_ce_con_string(socket_kernel, ce, instruction[1], SIGNAL_RECURSO);
 
             signal_recurso = recibir_respuesta_recurso();
 
@@ -390,27 +391,54 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             break;
         case I_F_OPEN:
         log_trace(cpu_logger, "Por ejecutar instruccion F_OPEN");
+        log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s", ce->id, instruction[0], instruction[1]);
+
+        enviar_ce_con_string(socket_kernel, ce, instruction[1], ABRIR_ARCHIVO);
+        
             break;
         case I_F_CLOSE:
         log_trace(cpu_logger, "Por ejecutar instruccion F_CLOSE");
+        log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s", ce->id, instruction[0], instruction[1]);
+
+        
+        enviar_ce_con_string(socket_kernel, ce, instruction[1], CERRAR_ARCHIVO);
+
             break;
         case I_F_SEEK:
         log_trace(cpu_logger, "Por ejecutar instruccion F_SEEK");
+        log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s- %s", ce->id, instruction[0], instruction[1], instruction[2]);
+
+        enviar_ce_con_string_entero(socket_kernel, ce, instruction[1], instruction[2], ACTUALIZAR_PUNTERO);
+
             break;
         case I_F_READ:
         log_trace(cpu_logger, "Por ejecutar instruccion F_READ");
+        log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s", ce->id, instruction[0], instruction[1], instruction[2]);
             break;
         case I_F_WRITE:
         log_trace(cpu_logger, "Por ejecutar instruccion F_WRITE");
+        log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s", ce->id, instruction[0], instruction[1], instruction[2]);
             break;
         case I_F_TRUNCATE:
         log_trace(cpu_logger, "Por ejecutar instruccion F_TRUNCATE");
+        log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s", ce->id, instruction[0], instruction[1], instruction[2]);
+
+        enviar_ce_con_string_entero(socket_kernel, ce, instruction[1], instruction[2], MODIFICAR_TAMAÑO_ARCHIVO);
+
             break;
         case I_CREATE_SEGMENT:
         log_trace(cpu_logger, "Por ejecutar instruccion CREATE_SEGMENT");
+        log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s", ce->id, instruction[0], instruction[1], instruction[2]);
+
+        enviar_ce_con_dos_enteros(socket_kernel, ce, instruction[1], instruction[2], CREAR_SEGMENTO);
+
             break;
         case I_DELETE_SEGMENT:
         log_trace(cpu_logger, "Por ejecutar instruccion DELETE_SEGMENT");
+        log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s", ce->id, instruction[0], instruction[1]);
+
+        enviar_ce_con_entero(socket_kernel, ce, instruction[1], BORRAR_SEGMENTO);
+
             break;
         default:
             log_info(cpu_logger, "No ejecute nada");
@@ -543,20 +571,20 @@ static t_symstruct lookuptable[] = {
     { "EXIT", I_EXIT },
     { "WAIT", I_WAIT },
     { "SIGNAL", I_SIGNAL },
-    {"YIELD",I_YIELD},
+    { "YIELD",I_YIELD},
     { "F_OPEN", I_F_OPEN },
     { "F_CLOSE", I_F_CLOSE },
     { "F_SEEK", I_F_SEEK },
     { "F_READ", I_F_READ },
     { "F_WRITE", I_F_WRITE },
-    {"F_TRUNCATE",I_F_TRUNCATE},
+    { "F_TRUNCATE",I_F_TRUNCATE},
     { "CREATE_SEGMENT", I_CREATE_SEGMENT },
     { "DELETE_SEGMENT", I_DELETE_SEGMENT }
 };
 
 int keyfromstring(char *key) {
     int i;
-    for (i=0; i < 6; i++) {
+    for (i=0; i < 14; i++) {
         t_symstruct sym = lookuptable[i];
         if (strcmp(sym.key, key) == 0)
             return sym.val;
@@ -571,22 +599,50 @@ void update_program_counter(contexto_ejecucion* ce){
 
 /*---------------------------------- PARA INSTRUCCION WAIT Y SIGNAL ----------------------------------*/
 
-void enviar_recurso(int client_socket, contexto_ejecucion* ce, char* parameter, int codOP){
+void enviar_ce_con_string(int client_socket, contexto_ejecucion* ce, char* parameter, int codOP){
     t_paquete* paquete = crear_paquete_op_code(codOP);
 
     agregar_ce_a_paquete(paquete, ce, cpu_logger);
-    // agregar_a_paquete(client_socket, parameter, string_length(char*) + 1); //agregar string a paquete
+    agregar_string_a_paquete(paquete, parameter); 
     enviar_paquete(paquete, client_socket);
     eliminar_paquete(paquete);
+    
 }
+
+
+
+void enviar_ce_con_dos_enteros(int client_socket, contexto_ejecucion* ce, char* x, char* y, int codOP){
+    t_paquete* paquete = crear_paquete_op_code(codOP);
+
+    agregar_ce_a_paquete(paquete, ce, cpu_logger);
+    agregar_entero_a_paquete(paquete, atoi(x)); 
+    agregar_entero_a_paquete(paquete, atoi(y)); 
+    enviar_paquete(paquete, client_socket);
+    eliminar_paquete(paquete);
+    
+}
+
+void enviar_ce_con_string_entero(int client_socket, contexto_ejecucion* ce, char* parameter, char* x, int codOP){
+    t_paquete* paquete = crear_paquete_op_code(codOP);
+
+    agregar_ce_a_paquete(paquete, ce, cpu_logger);
+    agregar_string_a_paquete(paquete, parameter); 
+    agregar_entero_a_paquete(paquete, atoi(x));
+    enviar_paquete(paquete, client_socket);
+    eliminar_paquete(paquete);
+    
+}
+
+
+
 
 /*---------------------------------- PARA INSTRUCCION IO ----------------------------------*/
 
-void enviar_io(int client_socket, contexto_ejecucion* ce, char* tiempo, int codOP){
+void enviar_ce_con_entero(int client_socket, contexto_ejecucion* ce, char* x, int codOP){
     t_paquete* paquete = crear_paquete_op_code(codOP);
 
     agregar_ce_a_paquete(paquete, ce, cpu_logger);
-    agregar_entero_a_paquete(paquete, atoi(tiempo));
+    agregar_entero_a_paquete(paquete, atoi(x));
     enviar_paquete(paquete, client_socket);
     eliminar_paquete(paquete);
 }

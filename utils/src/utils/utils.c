@@ -223,6 +223,13 @@ void agregar_entero_a_paquete(t_paquete *paquete, int x)
 	paquete->buffer->size += sizeof(int);
 }
 
+void agregar_string_a_paquete(t_paquete *paquete, char* palabra)
+{
+	paquete->buffer->stream = realloc(paquete->buffer->stream, paquete->buffer->size + sizeof(char*));
+	memcpy(paquete->buffer->stream + paquete->buffer->size, &palabra, sizeof(char*));
+	paquete->buffer->size += sizeof(char*);
+}
+
 
 void agregar_array_string_a_paquete(t_paquete* paquete, char** arr)
 {

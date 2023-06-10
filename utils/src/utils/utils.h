@@ -61,6 +61,12 @@ typedef enum
 	WAIT_RECURSO,
 	DESALOJO_YIELD,
 	SIGNAL_RECURSO,
+	ABRIR_ARCHIVO,
+	CERRAR_ARCHIVO,
+	ACTUALIZAR_PUNTERO,
+	MODIFICAR_TAMAÑO_ARCHIVO,
+	CREAR_SEGMENTO,
+	BORRAR_SEGMENTO,
 	// ------- KERNEL->CPU -----------
 	NO_EXISTE_RECURSO,
 	NO_LO_TENGO,
@@ -176,6 +182,7 @@ t_paquete* crear_paquete_op_code(op_code codigo_op);
 t_paquete* crear_super_paquete(void);
 void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio);
 void agregar_entero_a_paquete(t_paquete* , int );
+void agregar_string_a_paquete(t_paquete *paquete, char* palabra);
 void agregar_array_string_a_paquete(t_paquete* paquete, char** arr);
 void agregar_registros_a_paquete(t_paquete* , t_registro*);
 void enviar_paquete(t_paquete* paquete, int socket_cliente);
