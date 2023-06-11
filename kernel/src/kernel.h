@@ -119,4 +119,6 @@ int64_t time_stamp_calculo;
 
 void sacar_rafaga_ejecutada(t_pcb* );
 void iniciar_nueva_espera_ready(t_pcb* );
+
+void funcion_agregar_running(t_pcb* );
 #endif /* KERNEL_H_ */

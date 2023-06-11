@@ -25,7 +25,7 @@ int main(int argc, char ** argv) {
             - En el lab -> true
 
 */
-	cpu_logger = init_logger("./runlogs/cpu.log", "CPU", 1, LOG_LEVEL_INFO);
+	cpu_logger = init_logger("./runlogs/cpu.log", "CPU", 1, LOG_LEVEL_TRACE);
     mandatory_logger = log_create("./runlogs/cpu.log", "CPU", 0, LOG_LEVEL_TRACE);
 
 	    log_info(cpu_logger, "Levanto la configuracion del cpu");

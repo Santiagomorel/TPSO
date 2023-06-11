@@ -4,7 +4,7 @@ int main(int argc, char **argv)
 {
     // ----------------------- creo el log del kernel ----------------------- //
 
-    kernel_logger = init_logger("./runlogs/kernel.log", "KERNEL", 1, LOG_LEVEL_INFO);
+    kernel_logger = init_logger("./runlogs/kernel.log", "KERNEL", 1, LOG_LEVEL_TRACE);
 
     // ----------------------- levanto y cargo la configuracion del kernel ----------------------- //
 
@@ -283,29 +283,39 @@ void planificar_sig_to_running(){
             t_pcb* pcb_a_ejecutar = list_remove(listaReady, 0);
             pthread_mutex_unlock(&m_listaReady);
 
-            log_trace(kernel_logger, "agrego a RUNING y se lo paso a cpu para q ejecute!");
-
+            funcion_agregar_running(pcb_a_ejecutar);
         }
-        else if (kernel_config.algoritmo_planificacion == "HRRN"){
-            pthread_mutex_lock(&m_listaReady);
-            if(list_size(listaReady) == 1){
+        else if (strcmp(kernel_config.algoritmo_planificacion, "HRRN") == 0){ // HRRN
+            
+            int tamanioLista = list_size(listaReady);
+            if(tamanioLista == 1){
+                pthread_mutex_lock(&m_listaReady);
                 t_pcb* pcb_a_ejecutar = list_remove(listaReady, 0);
+                pthread_mutex_unlock(&m_listaReady);
+                funcion_agregar_running(pcb_a_ejecutar);
+                log_error(kernel_logger, "El tamanio de la lista de ready es 1");
             }else{
-                t_pcb* pcb_mayorRR = list_get_maximum(listaReady,(void*) mayorRRdeLista);
-                t_pcb* pcb_a_ejecutar = list_remove_element(listaReady, pcb_mayorRR);
+                t_pcb* pcb_a_ejecutar = list_get_maximum(listaReady,(void*) mayorRRdeLista);
+                pthread_mutex_lock(&m_listaReady);
+                list_remove_element(listaReady, pcb_a_ejecutar);
+                pthread_mutex_unlock(&m_listaReady);
+                funcion_agregar_running(pcb_a_ejecutar);
+                log_error(kernel_logger, "El tamanio de la lista de ready es MAYOR");
+
             }
-            pthread_mutex_unlock(&m_listaReady);
               //log_info(kernel_logger,"HRRN: Hay %d procesos listos para ejecutar",list_size(listaReady);
         }
-
-        cambiar_estado_a(pcb_a_ejecutar, RUNNING, estadoActual(pcb_a_ejecutar));
-        agregar_a_lista_con_sems(pcb_a_ejecutar, listaEjecutando, m_listaEjecutando);
-        iniciar_tiempo_ejecucion(pcb_a_ejecutar);
-        contexto_ejecucion * nuevoContexto = obtener_ce(pcb_a_ejecutar);
-        enviar_ce(cpu_dispatch_connection, nuevoContexto, EJECUTAR_CE, kernel_logger);
-        log_trace(kernel_logger, "Agrego un proceso a running y envio el contexto de ejecucion");
     }
 }
+
+void funcion_agregar_running(t_pcb* pcb_a_ejecutar){
+    cambiar_estado_a(pcb_a_ejecutar, RUNNING, estadoActual(pcb_a_ejecutar));
+    agregar_a_lista_con_sems(pcb_a_ejecutar, listaEjecutando, m_listaEjecutando);
+    contexto_ejecucion * nuevoContexto = obtener_ce(pcb_a_ejecutar);
+    enviar_ce(cpu_dispatch_connection, nuevoContexto, EJECUTAR_CE, kernel_logger);
+    log_trace(kernel_logger, "Agrego un proceso a running y envio el contexto de ejecucion");
+}
+
 void planificar_sig_to_ready()
 {
 
@@ -595,7 +605,6 @@ void manejar_dispatch(){
                 log_info(kernel_logger, "Finaliza el proceso %d - Motivo: %s", pcb_a_finalizar->id, obtenerCodOP(cod_op));
                 enviar_Fin_consola(pcb_a_finalizar->socket_consola); 
                 liberar_ce(contexto_a_finalizar);
-                log_trace(kernel_logger, "el seg fault es por otra cosa");
                 //eliminar(pcb_a_finalizar);
 
                 break;
