@@ -170,6 +170,9 @@ t_pcb *pcb_create(char *instrucciones, int socket_consola)
     new_pcb->instrucciones = separar_inst_en_lineas(instrucciones);
     new_pcb->program_counter = 0;
     new_pcb->registros_cpu = crear_registros();
+    new_pcb->tiempo_llegada_ready = temporal_create();
+    new_pcb->rafaga_ejecutada = 0;
+    new_pcb->salida_ejecucion = temporal_create();
     // new_pcb->tabla_paginas = -1; // TODO de la conexion con memoria
     new_pcb->estimacion_rafaga = kernel_config.estimacion_inicial; // ms
     new_pcb->socket_consola = socket_consola;
@@ -282,28 +285,25 @@ void planificar_sig_to_running(){
 
             log_trace(kernel_logger, "agrego a RUNING y se lo paso a cpu para q ejecute!");
 
-            cambiar_estado_a(pcb_a_ejecutar, RUNNING, estadoActual(pcb_a_ejecutar));
-            agregar_a_lista_con_sems(pcb_a_ejecutar, listaEjecutando, m_listaEjecutando);
-            contexto_ejecucion * nuevoContexto = obtener_ce(pcb_a_ejecutar); // SOLUCIONADO!!! hay seg fault cuando intento acceder al pcb a ejecutar
-
-            log_trace(kernel_logger, "antes de mandar el contexto de ejecucion");
-            enviar_ce(cpu_dispatch_connection, nuevoContexto, EJECUTAR_CE, kernel_logger);
         }
-        // else if (kernel_config.algoritmo_planificacion == "HRRN"){
-        //      pthread_mutex_lock(&m_listaReady);
-        //       //log_info(kernel_logger,"HRRN: Hay %d procesos listos para ejecutar",list_size(listaReady);
-        //     t_pcb* pcb_mayorRR = list_get_maximum(listaReady,(void*) mayorRRdeLista);
-        //     t_pcb* pcb_a_ejecutar = list_remove_element(listaReady, pcb_mayorRR);
-        //      pthread_mutex_unlock(&m_listaReady,pcb_mayorRR);
-        //     log_trace(kernel_logger, "agrego a RUNING y se lo paso a cpu para q ejecute!");
+        else if (kernel_config.algoritmo_planificacion == "HRRN"){
+            pthread_mutex_lock(&m_listaReady);
+            if(list_size(listaReady) == 1){
+                t_pcb* pcb_a_ejecutar = list_remove(listaReady, 0);
+            }else{
+                t_pcb* pcb_mayorRR = list_get_maximum(listaReady,(void*) mayorRRdeLista);
+                t_pcb* pcb_a_ejecutar = list_remove_element(listaReady, pcb_mayorRR);
+            }
+            pthread_mutex_unlock(&m_listaReady);
+              //log_info(kernel_logger,"HRRN: Hay %d procesos listos para ejecutar",list_size(listaReady);
+        }
 
-        //     cambiar_estado_a(pcb_a_ejecutar, RUNNING, estadoActual(pcb_a_ejecutar));
-        //     agregar_a_lista_con_sems(pcb_a_ejecutar, listaEjecutando, m_listaEjecutando);
-
-        //     enviar_ce(cpu_dispatch_connection, pcb_a_ejecutar, EJECUTAR_PCB);
-
-        // }
-
+        cambiar_estado_a(pcb_a_ejecutar, RUNNING, estadoActual(pcb_a_ejecutar));
+        agregar_a_lista_con_sems(pcb_a_ejecutar, listaEjecutando, m_listaEjecutando);
+        iniciar_tiempo_ejecucion(pcb_a_ejecutar);
+        contexto_ejecucion * nuevoContexto = obtener_ce(pcb_a_ejecutar);
+        enviar_ce(cpu_dispatch_connection, nuevoContexto, EJECUTAR_CE, kernel_logger);
+        log_trace(kernel_logger, "Agrego un proceso a running y envio el contexto de ejecucion");
     }
 }
 void planificar_sig_to_ready()
@@ -344,7 +344,6 @@ void planificar_sig_to_ready()
         // log_error(kernel_logger, "info (tamanio de segmento) de la tabla de segmentos creada: %d, %d, %d", posibleSegmento->tamanio_segmento,posibleSegmento->id_segmento, posibleSegmento->direccion_base);
         cambiar_estado_a(pcb_a_ready, READY, estadoActual(pcb_a_ready));
         agregar_a_lista_con_sems(pcb_a_ready, listaReady, m_listaReady);
-
         sem_post(&proceso_en_ready);
     }
 }
@@ -453,45 +452,56 @@ contexto_ejecucion * obtener_ce(t_pcb * pcb){ // PENSAR EN HACERLO EN   AMBOS SE
     // copiar_tabla_segmentos(pcb, nuevoContexto);    // FALTA HACER
     return nuevoContexto;
 }
-// //t_pcb* mayorRRdeLista ( void* _pcb1,void* _pcb2){
 
-//         t_pcb* pcb1 = (t_pcb*)_pcb1;
+t_pcb* mayorRRdeLista ( void* _pcb1,void* _pcb2){
 
-//         t_pcb* pcb2 = (t_pcb*)_pcb2;
+        t_pcb* pcb1 = (t_pcb*)_pcb1;
 
-//         return mayorRR(pcb1,pcb2);
+        t_pcb* pcb2 = (t_pcb*)_pcb2;
 
-//     };
+        return mayorRR(pcb1,pcb2);
 
+    };
 
-// time_t calculoRR (time_t tiempoEsperaEnReady,time_t duracionRealAnterior,time_t estimacionAnterior){
+int calcularRR(t_pcb* pcb) {
+    int tiempoEspera = (temporal_gettime(pcb->tiempo_llegada_ready)/1000);
+    if (pcb->rafaga_ejecutada) {
+        log_trace(kernel_logger, "El proceso PID %d calcula rr teniendo una rafaga ejecutada", pcb->id);
+        return (1 + (tiempoEspera/(calculoEstimado(pcb)/1000)));
+    } else {
+        log_trace(kernel_logger, "El proceso PID %d calcula rr con la rafaga inicial", pcb->id);
+        return (1 + (tiempoEspera/(pcb->estimacion_rafaga/1000)));
+    }
+}
 
-//     return 1 +( ( (time(NULL) - tiempoEsperaEnReady) *1000) /calculoEstimado(duracionRealAnterior,estimacionAnterior) );
+double calculoEstimado (t_pcb* pcb){
 
-// }
+    double alfa = kernel_config.hrrn_alfa;
 
-// double calculoEstimado (time_t duracionRealAnterior,time_t estimacionAnterior){
+    return (alfa * pcb->estimacion_rafaga) + ( (1 - alfa) * pcb->rafaga_ejecutada) ;
 
-//     double alfa = kernel_config.hrrn_alfa;
+}
 
-//     return (alfa * duracionRealAnterior) + ( (1 - alfa) * estimacionAnterior) ;
+t_pcb* mayorRR (t_pcb* pcb1,t_pcb* pcb2){
 
-// }
+    int RR_pcb1 = calcularRR(pcb1);
 
-// t_pcb* mayorRR (t_pcb* pcb1,t_pcb* pcb2){
+    int RR_pcb2 = calcularRR(pcb2);
 
-    // int RR_pcb1 = calculoRR(pcb1->instanteEstado,pcb1->duracionRealAnterior,pcb1->estimacionAnterior);
+    //log_info(logger,"Comparo pcb1 [%d] y pcb2[%d], RR_pcb1 [%d] y RR_pcb2 [%d] ",pcb1->pid, pcb2->pid,RR_pcb1,RR_pcb2 );
 
-    // int RR_pcb2 = calculoRR(pcb2->instanteEstado,pcb2->duracionRealAnterior,pcb2->estimacionAnterior);
+    if (RR_pcb1 >= RR_pcb2) {
+        return pcb1;
+    }
+    else {
+        return pcb2;
+    }
+}
 
-    // //log_info(logger,"Comparo pcb1 [%d] y pcb2[%d], RR_pcb1 [%d] y RR_pcb2 [%d] ",pcb1->pid, pcb2->pid,RR_pcb1,RR_pcb2 );
-
-    // if (RR_pcb1 >= RR_pcb2) return pcb1;
-
-    // else return pcb2;
-
-// }
-
+void iniciar_tiempo_ejecucion(t_pcb* pcb){
+    temporal_destroy(pcb->salida_ejecucion);
+    pcb->salida_ejecucion = temporal_create();
+}
 
 // recieve_handshake(socket_cliente);
 
@@ -596,7 +606,8 @@ void manejar_dispatch(){
                     actualizar_pcb(pcb_a_reencolar, contexto_a_reencolar); //FALTA HACER VER
                 pthread_mutex_unlock(&m_listaEjecutando);
                 cambiar_estado_a(pcb_a_reencolar, READY, estadoActual(pcb_a_reencolar));
-    
+                sacar_rafaga_ejecutada(pcb_a_reencolar); // hacer cada vez que sale de running
+                iniciar_nueva_espera_ready(pcb_a_reencolar); // hacer cada vez que se mete en la lista de ready
                 pthread_mutex_lock(&m_listaReady);
                     list_add(listaReady, pcb_a_reencolar);
                 pthread_mutex_unlock(&m_listaReady);
@@ -673,6 +684,14 @@ void manejar_dispatch(){
     }
 }
 
+void sacar_rafaga_ejecutada(t_pcb* pcb){
+    pcb->rafaga_ejecutada = temporal_gettime(pcb->salida_ejecucion);
+}
+
+void iniciar_nueva_espera_ready(t_pcb* pcb) {
+    temporal_destroy(pcb->tiempo_llegada_ready);
+    pcb->tiempo_llegada_ready = temporal_create();
+}
 
 void actualizar_pcb(t_pcb* pcb, contexto_ejecucion* ce) { // falta hacer esto mamon
     //copiar_id_ce_a_pcb(ce, pcb);

@@ -130,11 +130,11 @@ typedef struct {
 	t_registro* registros_cpu;
 	t_list* tabla_segmentos;
 	float estimacion_rafaga;
-    t_temporal tiempo_llegada_ready;
+    t_temporal* tiempo_llegada_ready;
 	t_list* tabla_archivos_abiertos; // [t_archivo_abierto]
 
-	t_temporal salida_ejecucion;
-	t_temporal llegada_ejecucion;
+	t_temporal* salida_ejecucion;
+	int64_t rafaga_ejecutada;
 
 	int socket_consola;
 	estados estado_actual;

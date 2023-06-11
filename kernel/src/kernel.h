@@ -57,12 +57,11 @@ void enviar_Fin_consola(int);
 bool bloqueado_termino_io(t_pcb *);
 char * obtenerEstado(estados);
 int obtenerPid(t_pcb *);
-//t_pcb* mayorRR (t_pcb*,t_pcb*);
-// t_pcb* mayorRRdeLista ( void*,void*);
-// double calculoEstimado (time_t,time_t);
-// time_t calculoRR (time_t,time_t,time_t );
-
-
+t_pcb* mayorRR (t_pcb*,t_pcb*);
+t_pcb* mayorRRdeLista ( void*,void*);
+double calculoEstimado (t_pcb*);
+int calcularRR(t_pcb* );
+void iniciar_tiempo_ejecucion(t_pcb*);
 void agregar_a_lista_con_sems(t_pcb *, t_list *, pthread_mutex_t );
 
 
@@ -114,4 +113,10 @@ t_list* listaBloqueados;    // BLOCKED
 t_list* listaEjecutando;    // RUNNING (EXEC)
 t_list* listaFinalizados;   // EXIT   
 t_list* listaIO;
+
+t_temporal tiempo_global;
+int64_t time_stamp_calculo;
+
+void sacar_rafaga_ejecutada(t_pcb* );
+void iniciar_nueva_espera_ready(t_pcb* );
 #endif /* KERNEL_H_ */
