@@ -60,15 +60,17 @@ int obtenerPid(t_pcb *);
 t_pcb* mayorRR (t_pcb*,t_pcb*);
 t_pcb* mayorRRdeLista ( void*,void*);
 double calculoEstimado (t_pcb*);
-int calcularRR(t_pcb* );
+double calcularRR(t_pcb* );
 void iniciar_tiempo_ejecucion(t_pcb*);
 void agregar_a_lista_con_sems(t_pcb *, t_list *, pthread_mutex_t );
 
+void setear_estimacion(t_pcb* );
 
 int contador_id = 60;
 
 // Semaforos
 sem_t proceso_en_ready;
+sem_t fin_ejecucion;
 sem_t grado_multiprog;
 pthread_mutex_t m_contador_id;
 pthread_mutex_t m_listaNuevos;

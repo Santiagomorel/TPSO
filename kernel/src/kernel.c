@@ -4,7 +4,7 @@ int main(int argc, char **argv)
 {
     // ----------------------- creo el log del kernel ----------------------- //
 
-    kernel_logger = init_logger("./runlogs/kernel.log", "KERNEL", 1, LOG_LEVEL_TRACE);
+    kernel_logger = init_logger("./runlogs/kernel.log", "KERNEL", 1, LOG_LEVEL_INFO);
 
     // ----------------------- levanto y cargo la configuracion del kernel ----------------------- //
 
@@ -173,6 +173,7 @@ t_pcb *pcb_create(char *instrucciones, int socket_consola)
     new_pcb->tiempo_llegada_ready = temporal_create();
     new_pcb->rafaga_ejecutada = 0;
     new_pcb->salida_ejecucion = temporal_create();
+    new_pcb->calculoRR = 0;
     // new_pcb->tabla_paginas = -1; // TODO de la conexion con memoria
     new_pcb->estimacion_rafaga = kernel_config.estimacion_inicial; // ms
     new_pcb->socket_consola = socket_consola;
@@ -264,6 +265,7 @@ void iniciarSemaforos()
     pthread_mutex_init(&m_listaEjecutando, NULL);
     pthread_mutex_init(&m_contador_id, NULL);
     sem_init(&proceso_en_ready, 0, 0);
+    sem_init(&fin_ejecucion, 0, 1);
     sem_init(&grado_multiprog, 0, kernel_config.grado_max_multiprogramacion);
 }
 
@@ -275,6 +277,7 @@ void destruirSemaforos()
 void planificar_sig_to_running(){
 
     while(1){
+        sem_wait(&fin_ejecucion);
         sem_wait(&proceso_en_ready);
         log_trace(kernel_logger, "Entra en la planificacion de READY RUNNING");
         if(strcmp(kernel_config.algoritmo_planificacion, "FIFO") == 0) { // FIFO
@@ -289,19 +292,18 @@ void planificar_sig_to_running(){
             
             int tamanioLista = list_size(listaReady);
             if(tamanioLista == 1){
+                log_error(kernel_logger, "El tamanio de la lista de ready es 1");
                 pthread_mutex_lock(&m_listaReady);
                 t_pcb* pcb_a_ejecutar = list_remove(listaReady, 0);
                 pthread_mutex_unlock(&m_listaReady);
                 funcion_agregar_running(pcb_a_ejecutar);
-                log_error(kernel_logger, "El tamanio de la lista de ready es 1");
             }else{
+                log_error(kernel_logger, "El tamanio de la lista de ready es MAYOR");
                 t_pcb* pcb_a_ejecutar = list_get_maximum(listaReady,(void*) mayorRRdeLista);
                 pthread_mutex_lock(&m_listaReady);
                 list_remove_element(listaReady, pcb_a_ejecutar);
                 pthread_mutex_unlock(&m_listaReady);
                 funcion_agregar_running(pcb_a_ejecutar);
-                log_error(kernel_logger, "El tamanio de la lista de ready es MAYOR");
-
             }
               //log_info(kernel_logger,"HRRN: Hay %d procesos listos para ejecutar",list_size(listaReady);
         }
@@ -309,11 +311,18 @@ void planificar_sig_to_running(){
 }
 
 void funcion_agregar_running(t_pcb* pcb_a_ejecutar){
+    iniciar_tiempo_ejecucion(pcb_a_ejecutar);
+    setear_estimacion(pcb_a_ejecutar);
     cambiar_estado_a(pcb_a_ejecutar, RUNNING, estadoActual(pcb_a_ejecutar));
     agregar_a_lista_con_sems(pcb_a_ejecutar, listaEjecutando, m_listaEjecutando);
     contexto_ejecucion * nuevoContexto = obtener_ce(pcb_a_ejecutar);
     enviar_ce(cpu_dispatch_connection, nuevoContexto, EJECUTAR_CE, kernel_logger);
     log_trace(kernel_logger, "Agrego un proceso a running y envio el contexto de ejecucion");
+}
+
+void setear_estimacion(t_pcb* pcb) {
+    pcb->estimacion_rafaga = (pcb->calculoRR)*1000;
+    pcb->calculoRR = 0;
 }
 
 void planificar_sig_to_ready()
@@ -473,14 +482,20 @@ t_pcb* mayorRRdeLista ( void* _pcb1,void* _pcb2){
 
     };
 
-int calcularRR(t_pcb* pcb) {
+double calcularRR(t_pcb* pcb) {
     int tiempoEspera = (temporal_gettime(pcb->tiempo_llegada_ready)/1000);
+    log_error(kernel_logger, "El tiempo de espera del proceso %d es %d",pcb->id, tiempoEspera);
     if (pcb->rafaga_ejecutada) {
-        log_trace(kernel_logger, "El proceso PID %d calcula rr teniendo una rafaga ejecutada", pcb->id);
-        return (1 + (tiempoEspera/(calculoEstimado(pcb)/1000)));
+        log_error(kernel_logger, "El proceso PID %d calcula rr teniendo una rafaga ejecutada de %d ms", pcb->id, pcb->rafaga_ejecutada);
+        double valorRetorno = (1 + (tiempoEspera/(calculoEstimado(pcb)/1000)));
+        pcb->calculoRR = valorRetorno;
+        log_error(kernel_logger, "el valor de retorno es %f", valorRetorno);
+        return valorRetorno;
     } else {
-        log_trace(kernel_logger, "El proceso PID %d calcula rr con la rafaga inicial", pcb->id);
-        return (1 + (tiempoEspera/(pcb->estimacion_rafaga/1000)));
+        log_error(kernel_logger, "El proceso PID %d calcula rr con la rafaga inicial", pcb->id);
+        double valorRetorno =  (1 + (tiempoEspera/(pcb->estimacion_rafaga/1000)));
+        log_error(kernel_logger, "el valor de retorno es %f", valorRetorno);
+        return valorRetorno;
     }
 }
 
@@ -494,9 +509,9 @@ double calculoEstimado (t_pcb* pcb){
 
 t_pcb* mayorRR (t_pcb* pcb1,t_pcb* pcb2){
 
-    int RR_pcb1 = calcularRR(pcb1);
+    double RR_pcb1 = calcularRR(pcb1);
 
-    int RR_pcb2 = calcularRR(pcb2);
+    double RR_pcb2 = calcularRR(pcb2);
 
     //log_info(logger,"Comparo pcb1 [%d] y pcb2[%d], RR_pcb1 [%d] y RR_pcb2 [%d] ",pcb1->pid, pcb2->pid,RR_pcb1,RR_pcb2 );
 
@@ -593,7 +608,7 @@ void manejar_dispatch(){
 
                 //sem_post(&cpu_libre_para_ejecutar); // si es FIFO no se usa, esto no deberia provocar nada, revisar eso iguañ
                 sem_post(&grado_multiprog); // NUEVO grado_multiprog
-
+                sem_post(&fin_ejecucion);
                 //signal(liberar);
                 //paquete_fin_memoria(pcb_a_finalizar->id, pcb_a_finalizar->tabla_paginas);
                 //wait (liberado);
@@ -621,6 +636,7 @@ void manejar_dispatch(){
                     list_add(listaReady, pcb_a_reencolar);
                 pthread_mutex_unlock(&m_listaReady);
                 sem_post(&proceso_en_ready);
+                sem_post(&fin_ejecucion);
 
                 liberar_ce(contexto_a_reencolar);
                 //eliminar(pcb_a_reencolar);

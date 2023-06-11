@@ -136,6 +136,8 @@ typedef struct {
 	t_temporal* salida_ejecucion;
 	int64_t rafaga_ejecutada;
 
+	double calculoRR;
+
 	int socket_consola;
 	estados estado_actual;
 } t_pcb;
