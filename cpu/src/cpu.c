@@ -340,12 +340,12 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
         case I_IO:
             // I/O (Tiempo)
             log_trace(cpu_logger, "Por ejecutar instruccion I/O");
-            log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s", ce->id, instruction[0], instruction[1]);
+            log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s", ce->id, instruction[0], instruction[1]);
 
             
             tiempo = instruction[1];
-            
             log_trace(cpu_logger, "%s",tiempo);
+            enviar_io(socket_kernel, ce, instruction[1], BLOCK_IO);
             input_ouput = 1;
             break;
          case I_EXIT:
