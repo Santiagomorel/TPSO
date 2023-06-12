@@ -107,6 +107,7 @@ void copiar_PC_ce_a_pcb(contexto_ejecucion* , t_pcb* );
 
 void actualizar_pcb(t_pcb*, contexto_ejecucion*);
 
+t_pcb* mayor_prioridad_PID(t_pcb* , t_pcb* );
 
 // Listas de estados de tipo de planificacion
 t_list* listaNuevos;        // NEW

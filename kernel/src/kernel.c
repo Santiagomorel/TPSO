@@ -490,14 +490,14 @@ double calcularRR(t_pcb* pcb) {
     double tiempoEspera = (temporal_gettime(pcb->tiempo_llegada_ready)/1000);
     log_error(kernel_logger, "El tiempo de espera del proceso %d es %f",pcb->id, tiempoEspera);
     if (pcb->rafaga_ejecutada) {
-        log_error(kernel_logger, "El proceso PID %d calcula rr teniendo una rafaga ejecutada de %d ms", pcb->id, pcb->rafaga_ejecutada);
+        log_error(kernel_logger, "El proceso PID %d calcula RR CON CALCULO, rafaga e. de %d ms", pcb->id, pcb->rafaga_ejecutada);
         double calculo = calculoEstimado(pcb);
-        double valorRetorno = (1 + (tiempoEspera/(calculo/1000)));
+        double valorRetorno = round(1 + (tiempoEspera/(calculo/1000)));
         pcb->calculoRR = valorRetorno;
         log_error(kernel_logger, "el valor de retorno es %f", valorRetorno);
         return valorRetorno;
     } else {
-        log_error(kernel_logger, "El proceso PID %d calcula rr con la rafaga inicial", pcb->id);
+        log_error(kernel_logger, "El proceso PID %d calcula RR ESTIMACION INICIAL", pcb->id);
         double valorRetorno =  (1 + (tiempoEspera/(pcb->estimacion_rafaga/1000)));
         log_error(kernel_logger, "el valor de retorno es %f", valorRetorno);
         return valorRetorno;
@@ -520,10 +520,21 @@ t_pcb* mayorRR (t_pcb* pcb1,t_pcb* pcb2){
 
     //log_info(logger,"Comparo pcb1 [%d] y pcb2[%d], RR_pcb1 [%d] y RR_pcb2 [%d] ",pcb1->pid, pcb2->pid,RR_pcb1,RR_pcb2 );
 
-    if (RR_pcb1 >= RR_pcb2) {
+    if (RR_pcb1 == RR_pcb2){
+        return mayor_prioridad_PID(pcb1,pcb2);
+    }
+    else if (RR_pcb1 > RR_pcb2) {
         return pcb1;
     }
     else {
+        return pcb2;
+    }
+}
+
+t_pcb* mayor_prioridad_PID(t_pcb* pcb1, t_pcb* pcb2) {
+    if(pcb1->id < pcb2->id){
+        return pcb1;
+    } else {
         return pcb2;
     }
 }

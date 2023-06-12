@@ -21,6 +21,7 @@
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <math.h>
 #include <valgrind/valgrind.h>
 #include <readline/readline.h>
 #include <pthread.h>
