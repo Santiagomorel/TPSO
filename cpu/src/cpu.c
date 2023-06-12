@@ -258,7 +258,7 @@ void add_value_to_register(char* registerToModify, char* valueToAdd){
     //convertir el valor a agregar a un tipo de dato int
  
     
-    log_info(cpu_logger, "Caracteres a sumarle al registro %s", valueToAdd);
+    log_trace(cpu_logger, "Caracteres a sumarle al registro %s", valueToAdd);
     if (strcmp(registerToModify, "AX") == 0) {
         strncpy(registros->AX , valueToAdd, 4);
     }

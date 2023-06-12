@@ -173,7 +173,7 @@ t_pcb *pcb_create(char *instrucciones, int socket_consola)
     new_pcb->tiempo_llegada_ready = temporal_create();
     new_pcb->rafaga_ejecutada = 0;
     new_pcb->salida_ejecucion = temporal_create();
-    new_pcb->calculoRR = 0;
+    new_pcb->calculoRR = 1; 
     // new_pcb->tabla_paginas = -1; // TODO de la conexion con memoria
     new_pcb->estimacion_rafaga = kernel_config.estimacion_inicial; // ms
     new_pcb->socket_consola = socket_consola;
@@ -300,6 +300,7 @@ void planificar_sig_to_running(){
             }else{
                 log_error(kernel_logger, "El tamanio de la lista de ready es MAYOR");
                 t_pcb* pcb_a_ejecutar = list_get_maximum(listaReady,(void*) mayorRRdeLista);
+                setear_estimacion(pcb_a_ejecutar);
                 pthread_mutex_lock(&m_listaReady);
                 list_remove_element(listaReady, pcb_a_ejecutar);
                 pthread_mutex_unlock(&m_listaReady);
@@ -312,7 +313,7 @@ void planificar_sig_to_running(){
 
 void funcion_agregar_running(t_pcb* pcb_a_ejecutar){
     iniciar_tiempo_ejecucion(pcb_a_ejecutar);
-    setear_estimacion(pcb_a_ejecutar);
+    log_warning(kernel_logger, "La nueva estimacion de rafaga de proc %d es %f", pcb_a_ejecutar->id, pcb_a_ejecutar->estimacion_rafaga);
     cambiar_estado_a(pcb_a_ejecutar, RUNNING, estadoActual(pcb_a_ejecutar));
     agregar_a_lista_con_sems(pcb_a_ejecutar, listaEjecutando, m_listaEjecutando);
     contexto_ejecucion * nuevoContexto = obtener_ce(pcb_a_ejecutar);
@@ -321,8 +322,11 @@ void funcion_agregar_running(t_pcb* pcb_a_ejecutar){
 }
 
 void setear_estimacion(t_pcb* pcb) {
-    pcb->estimacion_rafaga = (pcb->calculoRR)*1000;
-    pcb->calculoRR = 0;
+    if(pcb->rafaga_ejecutada){
+        log_warning(kernel_logger, "se setea la nueva estimacion de %d", pcb->id);
+        pcb->estimacion_rafaga = ((pcb->calculoRR)*1000);
+        pcb->calculoRR = 0;
+    }
 }
 
 void planificar_sig_to_ready()
@@ -483,11 +487,12 @@ t_pcb* mayorRRdeLista ( void* _pcb1,void* _pcb2){
     };
 
 double calcularRR(t_pcb* pcb) {
-    int tiempoEspera = (temporal_gettime(pcb->tiempo_llegada_ready)/1000);
-    log_error(kernel_logger, "El tiempo de espera del proceso %d es %d",pcb->id, tiempoEspera);
+    double tiempoEspera = (temporal_gettime(pcb->tiempo_llegada_ready)/1000);
+    log_error(kernel_logger, "El tiempo de espera del proceso %d es %f",pcb->id, tiempoEspera);
     if (pcb->rafaga_ejecutada) {
         log_error(kernel_logger, "El proceso PID %d calcula rr teniendo una rafaga ejecutada de %d ms", pcb->id, pcb->rafaga_ejecutada);
-        double valorRetorno = (1 + (tiempoEspera/(calculoEstimado(pcb)/1000)));
+        double calculo = calculoEstimado(pcb);
+        double valorRetorno = (1 + (tiempoEspera/(calculo/1000)));
         pcb->calculoRR = valorRetorno;
         log_error(kernel_logger, "el valor de retorno es %f", valorRetorno);
         return valorRetorno;
@@ -503,7 +508,7 @@ double calculoEstimado (t_pcb* pcb){
 
     double alfa = kernel_config.hrrn_alfa;
 
-    return (alfa * pcb->estimacion_rafaga) + ( (1 - alfa) * pcb->rafaga_ejecutada) ;
+    return ((alfa * pcb->estimacion_rafaga) + ( (1 - alfa) * pcb->rafaga_ejecutada));
 
 }
 

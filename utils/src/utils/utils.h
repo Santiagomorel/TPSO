@@ -129,7 +129,7 @@ typedef struct {
     int program_counter;
 	t_registro* registros_cpu;
 	t_list* tabla_segmentos;
-	float estimacion_rafaga;
+	double estimacion_rafaga;
     t_temporal* tiempo_llegada_ready;
 	t_list* tabla_archivos_abiertos; // [t_archivo_abierto]
 
