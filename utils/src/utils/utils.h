@@ -21,6 +21,7 @@
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <math.h>
 #include <valgrind/valgrind.h>
 #include <readline/readline.h>
 #include <pthread.h>
@@ -129,12 +130,14 @@ typedef struct {
     int program_counter;
 	t_registro* registros_cpu;
 	t_list* tabla_segmentos;
-	float estimacion_rafaga;
-    t_temporal tiempo_llegada_ready;
+	double estimacion_rafaga;
+    t_temporal* tiempo_llegada_ready;
 	t_list* tabla_archivos_abiertos; // [t_archivo_abierto]
 
-	t_temporal salida_ejecucion;
-	t_temporal llegada_ejecucion;
+	t_temporal* salida_ejecucion;
+	int64_t rafaga_ejecutada;
+
+	double calculoRR;
 
 	int socket_consola;
 	estados estado_actual;

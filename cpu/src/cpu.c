@@ -15,20 +15,11 @@ int main(int argc, char ** argv) {
     signal(SIGINT, end_cpu_module);
 
     /* ---------------- LOGGING ---------------- */
-        /* 
-        IMPORTANTE: Tenemos que cambiar el flag del 3er parametro de los loggers. 
-        logger:
-            - Testeando nosotros -> true
-            - En el lab -> false
-         mandatory_logger:
-            - Testeando nosotros -> false
-            - En el lab -> true
-
-*/
 	cpu_logger = init_logger("./runlogs/cpu.log", "CPU", 1, LOG_LEVEL_TRACE);
-    mandatory_logger = log_create("./runlogs/cpu.log", "CPU", 0, LOG_LEVEL_TRACE);
 
-	    log_info(cpu_logger, "Levanto la configuracion del cpu");
+    log_info(cpu_logger, "INICIA EL MODULO DE CPU");
+	
+    log_trace(cpu_logger, "Levanto la configuracion del cpu");
     if (argc < 2) {
         fprintf(stderr, "Se esperaba: %s [CONFIG_PATH]\n", argv[0]);
         exit(1);
@@ -42,7 +33,7 @@ int main(int argc, char ** argv) {
         exit(1);
     }
 
-    log_info(cpu_logger, "Cargo la configuracion de la cpu");
+    log_trace(cpu_logger, "Cargo la configuracion de la cpu");
     
     load_config();
 	
@@ -77,7 +68,7 @@ void load_config(void){
 	cpu_config.retardo_instruccion					= config_get_string_value(cpu_config_file, "RETARDO_INSTRUCCION");
 	cpu_config.tam_max_segmento						= config_get_string_value(cpu_config_file, "TAM_MAX_SEGMENTO");
 
-	log_info(cpu_logger, "Config cargada en 'cpu_cofig_file'");
+	log_trace(cpu_logger, "Config cargada en 'cpu_cofig_file'");
 
 
 }
@@ -85,22 +76,15 @@ void load_config(void){
 void establecer_conexion(char * ip_memoria, char* puerto_memoria, t_config* config, t_log* logger){
 
 	
-	log_info(logger, "Inicio como cliente");
+	log_trace(logger, "Inicio como cliente");
 
-	log_info(logger,"Lei la IP %s , el Puerto Memoria %s ", ip_memoria, puerto_memoria);
-
-
-	// Loggeamos el valor de config
-
-    /* ---------------- LEER DE CONSOLA ---------------- */
-
-	//leer_consola(logger);
+	log_trace(logger,"Lei la IP %s , el Puerto Memoria %s ", ip_memoria, puerto_memoria);
 
 	/*----------------------------------------------------------------------------------------------------------------*/
 
 	// Enviamos al servidor el valor de ip como mensaje si es que levanta el cliente
 	if((conexion_cpu = crear_conexion(ip_memoria, puerto_memoria)) == -1){
-		log_info(logger, "Error al conectar con Memoria. El servidor no esta activo");
+		log_trace(logger, "Error al conectar con Memoria. El servidor no esta activo");
 		exit(-1);
 	}else{
 		//handshake_cliente(conexion_cpu);
@@ -120,9 +104,9 @@ void handshake_servidor(int socket_cliente){
 
 	recv(socket_cliente, &handshake, sizeof(uint32_t), MSG_WAITALL);
 	if(handshake == 1)
-   send(socket_cliente, &resultOk, sizeof(uint32_t), NULL);
+    send(socket_cliente, &resultOk, sizeof(uint32_t), NULL);
 	else
-   send(socket_cliente, &resultError, sizeof(uint32_t), NULL);
+    send(socket_cliente, &resultError, sizeof(uint32_t), NULL);
 }
 
 void handshake_cliente(int socket_cliente){
@@ -131,9 +115,9 @@ void handshake_cliente(int socket_cliente){
 
 	send(socket_cliente, &handshake, sizeof(uint32_t), NULL);
 	if(recv(socket_cliente, &result, sizeof(uint32_t), MSG_WAITALL) > 0){
-		log_info(cpu_logger, "Establecí handshake con Memoria");
+		log_trace(cpu_logger, "Establecí handshake con Memoria");
 	}else{
-		log_info(cpu_logger, "No pude establecer handshake con Memoria");
+		log_trace(cpu_logger, "No pude establecer handshake con Memoria");
 	}
 }
 
@@ -184,7 +168,7 @@ void process_dispatch() {
 
 	while (1) {
 		int op_code = recibir_operacion(socket_kernel);
-        log_warning(cpu_logger, "Codigo de operacion recibido de kernel: %d", op_code);
+        log_trace(cpu_logger, "Codigo de operacion recibido de kernel: %d", op_code);
         contexto_ejecucion* ce; //hay que hacer un free del contexto de ejecucion una vez termine de ejecutar
 
 		switch (op_code) {
@@ -258,7 +242,7 @@ void add_value_to_register(char* registerToModify, char* valueToAdd){
     //convertir el valor a agregar a un tipo de dato int
  
     
-    log_info(cpu_logger, "Caracteres a sumarle al registro %s", valueToAdd);
+    log_trace(cpu_logger, "Caracteres a sumarle al registro %s", valueToAdd);
     if (strcmp(registerToModify, "AX") == 0) {
         strncpy(registros->AX , valueToAdd, 4);
     }
@@ -397,7 +381,7 @@ void execute_process(contexto_ejecucion* ce){
     char* instruction = malloc(sizeof(char*));
     char** decoded_instruction = malloc(sizeof(char*));
 
-    log_info(cpu_logger, "Por empezar check_interruption != 1 && end_process != 1 && input_ouput != 1 && wait != 1 && desalojo_por_yield != 1"); 
+    log_trace(cpu_logger, "Por empezar check_interruption != 1 && end_process != 1 && input_ouput != 1 && wait != 1 && desalojo_por_yield != 1"); 
     while(check_interruption != 1 && end_process != 1 && input_ouput != 1 && wait != 1 && desalojo_por_yield != 1){
         //Llega el ce y con el program counter buscas la instruccion que necesita
         instruction = string_duplicate(fetch_next_instruction_to_execute(ce));
@@ -421,7 +405,7 @@ void execute_process(contexto_ejecucion* ce){
 
     save_context_ce(ce); // ACA GUARDAMOS EL CONTEXTO
     imprimir_registros(ce->registros_cpu, cpu_logger); // para comprobar que los registros se guardaran bien
-   if(end_process) {
+    if(end_process) {
         end_process = 0; // IMPORTANTE: Apagar el flag para que no rompa el proximo proceso que llegue
         check_interruption = 0;
         enviar_ce(socket_kernel, ce, SUCCESS, cpu_logger);
