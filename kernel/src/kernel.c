@@ -643,6 +643,10 @@ void manejar_dispatch()
             //case BLOCK_por_PF:
             case -1:
                 break;
+
+            case BLOCK_IO:
+                log_trace(kernel_logger,"recibi io");
+                break;
             default:
                 log_error(kernel_logger, "entro algo que no deberia");
                 break;
