@@ -5,7 +5,7 @@
 
 #define IP_KERNEL "127.0.0.1"
 #define PUERTO_KERNEL ""
-
+#define MAX_RECURSOS 20
 // Variables y structs globales
 typedef struct{
 
@@ -24,8 +24,8 @@ typedef struct{
 
     int grado_max_multiprogramacion;
 
-    char* recursos;
-    char* instancias_recursos;
+    char** recursos;
+    char** instancias_recursos;
 
     char* ip_kernel;
     char* puerto_kernel;
@@ -47,14 +47,36 @@ int file_system_connection;
 // Declaraciones de parte inicio
 void load_config();
 void inicializarListasGlobales();
+void iniciar_listas_recursos(char**);
 void iniciarSemaforos();
+void iniciar_semaforos_recursos(char**, char**);
 void iniciar_conexiones_kernel();
 void iniciar_planificadores();
 
 // Variables de semaforos
+pthread_mutex_t m_contador_id;
+pthread_mutex_t m_listaNuevos;
+pthread_mutex_t m_listaBloqueados;
+pthread_mutex_t m_listaEjecutando;
+pthread_mutex_t m_listaReady;
+pthread_mutex_t m_listaFinalizados;
 sem_t proceso_en_ready;
 sem_t fin_ejecucion;
 sem_t grado_multiprog;
+sem_t* sem_recurso[MAX_RECURSOS];
+
+// Variables de listas
+t_list* listaNuevos;        // NEW
+t_list* listaReady;         // READY
+t_list* listaBloqueados;    // BLOCKED
+t_list* listaEjecutando;    // RUNNING (EXEC)
+t_list* listaFinalizados;   // EXIT   
+t_list* listaIO;
+t_list** lista_recurso[MAX_RECURSOS];
+
+// Variables de hilo de planificadores
+pthread_t planificadorCP;
+pthread_t hiloDispatch;
 
 // Declaraciones de parte consola
 void recibir_consola(int);
@@ -117,40 +139,8 @@ void iniciar_nueva_espera_ready(t_pcb*);
 void enviar_Fin_consola(int);
 bool bloqueado_termino_io(t_pcb *);
 
-
-
-// Semaforos
-
-pthread_mutex_t m_contador_id;
-pthread_mutex_t m_listaNuevos;
-pthread_mutex_t m_listaBloqueados;
-pthread_mutex_t m_listaEjecutando;
-pthread_mutex_t m_listaReady;
-pthread_mutex_t m_listaFinalizados;
-pthread_t planificadorCP;
-pthread_t hiloDispatch;
-// void iterator(char*);
-
-
-
 void destruirSemaforos();
 
-
-
-
-
-
-
-// Listas de estados de tipo de planificacion
-t_list* listaNuevos;        // NEW
-t_list* listaReady;         // READY
-t_list* listaBloqueados;    // BLOCKED
-t_list* listaEjecutando;    // RUNNING (EXEC)
-t_list* listaFinalizados;   // EXIT   
-t_list* listaIO;
-
-t_temporal tiempo_global;
-int64_t time_stamp_calculo;
 
 
 

@@ -54,7 +54,7 @@ int main(int argc, char **argv)
         log_trace(kernel_logger, "entro una consola con el socket: %d", socket_cliente);
 
         pthread_t atiende_consola;
-        pthread_create(&atiende_consola, NULL, (void *)recibir_consola, (void *)socket_cliente);
+        pthread_create(&atiende_consola, NULL, (void *)recibir_consola, (void *) (intptr_t) socket_cliente);
         pthread_detach(atiende_consola);
     }
 
@@ -81,8 +81,8 @@ void load_config()
 
     kernel_config.grado_max_multiprogramacion = config_get_int_value(kernel_config_file, "GRADO_MAX_MULTIPROGRAMACION");
 
-    kernel_config.recursos = config_get_string_value(kernel_config_file, "RECURSOS");
-    kernel_config.instancias_recursos = config_get_string_value(kernel_config_file, "INSTANCIAS_RECURSOS");
+    kernel_config.recursos = config_get_array_value(kernel_config_file, "RECURSOS");
+    kernel_config.instancias_recursos = config_get_array_value(kernel_config_file, "INSTANCIAS_RECURSOS");
 
     log_trace(kernel_logger, "config cargada en 'kernel_cofig_file'");
 }
@@ -94,8 +94,24 @@ void inicializarListasGlobales()
     listaBloqueados = list_create();
     listaEjecutando = list_create();
     listaFinalizados = list_create();
+    iniciar_listas_recursos(kernel_config.recursos);
 
     listaIO = list_create();
+}
+
+void iniciar_listas_recursos(char** recursos)
+{
+    int cantidad = string_array_size(recursos);
+    if (cantidad > MAX_RECURSOS) {
+        log_error(kernel_logger, "La cantidad de recursos en config excede el limite establecido por el programa");
+        exit(1);
+    }
+
+    for (int i = 0; i < cantidad; i++) {
+        lista_recurso[i] = list_create();
+    }
+
+    log_info(kernel_logger, "Se inician las listas de los recursos");
 }
 
 void iniciarSemaforos()
@@ -109,26 +125,44 @@ void iniciarSemaforos()
     sem_init(&proceso_en_ready, 0, 0);
     sem_init(&fin_ejecucion, 0, 1);
     sem_init(&grado_multiprog, 0, kernel_config.grado_max_multiprogramacion);
+    iniciar_semaforos_recursos(kernel_config.recursos, kernel_config.instancias_recursos);
+}
+
+void iniciar_semaforos_recursos(char** recursos, char** instancias_recursos)
+{
+    int cantidad_recursos = string_array_size(recursos);
+    int cantidad_instancias = string_array_size(instancias_recursos);
+
+    if (cantidad_instancias != cantidad_recursos) {
+        log_error(kernel_logger, "La cantidad de instancias de recursos es diferente a la cantidad de recursos en config");
+        exit(1);
+    }
+
+    for (int i = 0; i < cantidad_recursos; i++) {
+        sem_recurso[i] = (sem_t*)malloc(sizeof(sem_t)); // VER luego hay que eliminar los malloc
+        sem_init(sem_recurso[i], 0, atoi(instancias_recursos[i]));
+    }
+    log_info(kernel_logger, "Se inician los semaforos de los recursos");
 }
 
 void iniciar_conexiones_kernel()
 {
     if((memory_connection = crear_conexion(kernel_config.ip_memoria , kernel_config.puerto_memoria)) == -1) {
-        log_trace(kernel_logger, "No se pudo conectar al servidor de MEMORIA");
+        log_error(kernel_logger, "No se pudo conectar al servidor de MEMORIA");
         exit(2);
     }
     recibir_operacion(memory_connection);
     recibir_mensaje(memory_connection, kernel_logger);
 
     if((cpu_dispatch_connection = crear_conexion(kernel_config.ip_cpu , kernel_config.puerto_cpu)) == -1) {
-        log_trace(kernel_logger, "No se pudo conectar al servidor de CPU DISPATCH");
+        log_error(kernel_logger, "No se pudo conectar al servidor de CPU DISPATCH");
         exit(2);
     }
     recibir_operacion(cpu_dispatch_connection);
     recibir_mensaje(cpu_dispatch_connection, kernel_logger);
 
     if((file_system_connection = crear_conexion(kernel_config.ip_file_system , kernel_config.puerto_file_system)) == -1) {
-        log_trace(kernel_logger, "No se pudo conectar al servidor de FILE SYSTEM");
+        log_error(kernel_logger, "No se pudo conectar al servidor de FILE SYSTEM");
         exit(2);
     }
     recibir_operacion(file_system_connection);
@@ -137,10 +171,10 @@ void iniciar_conexiones_kernel()
 
 void iniciar_planificadores()
 {
-    pthread_create(&planificadorCP, NULL, (void *)planificar_sig_to_running, (void *)socket_cliente);
+    pthread_create(&planificadorCP, NULL, (void*)planificar_sig_to_running, (void*) (intptr_t)socket_cliente);
     pthread_detach(planificadorCP);
 
-    pthread_create(&hiloDispatch, NULL, (void*) manejar_dispatch, (void*)cpu_dispatch_connection);
+    pthread_create(&hiloDispatch, NULL, (void*)manejar_dispatch, (void*) (intptr_t)cpu_dispatch_connection);
     pthread_detach(hiloDispatch);
 }
 
@@ -259,18 +293,18 @@ char** parsearPorSaltosDeLinea(char* buffer)
 t_registro* crear_registros()
 {
     t_registro * nuevosRegistros = malloc(sizeof(t_registro));
-    strcpy(nuevosRegistros->AX , "HOLA");
-    strcpy(nuevosRegistros->BX , "CHAU");
-    strcpy(nuevosRegistros->CX , "TEST");
-    strcpy(nuevosRegistros->DX , "ABCD");
-	strcpy(nuevosRegistros->EAX , "PABLITOS");
-	strcpy(nuevosRegistros->EBX , "HERMANOS");
-	strcpy(nuevosRegistros->ECX , "12345678");
-	strcpy(nuevosRegistros->EDX , "87654321");
-	strcpy(nuevosRegistros->RAX , "PLISSTOPIMINPAIN");
-	strcpy(nuevosRegistros->RBX , "PLISSTOPIMINPAIN");
-	strcpy(nuevosRegistros->RCX , "PLISSTOPIMINPAIN");
-	strcpy(nuevosRegistros->RDX , "PLISSTOPIMINPAIN");
+    strncpy(nuevosRegistros->AX , "HOLA", 4);
+    strncpy(nuevosRegistros->BX , "CHAU", 4);
+    strncpy(nuevosRegistros->CX , "TEST", 4);
+    strncpy(nuevosRegistros->DX , "ABCD", 4);
+	strncpy(nuevosRegistros->EAX , "PABLITOS", 8);
+	strncpy(nuevosRegistros->EBX , "HERMANOS", 8);
+	strncpy(nuevosRegistros->ECX , "12345678", 8);
+	strncpy(nuevosRegistros->EDX , "87654321", 8);
+	strncpy(nuevosRegistros->RAX , "PLISSTOPIMINPAIN", 16);
+	strncpy(nuevosRegistros->RBX , "PLISSTOPIMINPAIN", 16);
+	strncpy(nuevosRegistros->RCX , "PLISSTOPIMINPAIN", 16);
+	strncpy(nuevosRegistros->RDX , "PLISSTOPIMINPAIN", 16);
     return nuevosRegistros;
 }
 
@@ -329,21 +363,21 @@ void planificar_sig_to_ready()
 {
     sem_wait(&grado_multiprog);
 
-    if (!list_is_empty(listaBloqueados) && list_any_satisfy(listaBloqueados, bloqueado_termino_io))
-    { // BLOCKED -> READY
+    // if (!list_is_empty(listaBloqueados) && list_any_satisfy(listaBloqueados, bloqueado_termino_io))
+    // { // BLOCKED -> READY
 
-        pthread_mutex_lock(&m_listaBloqueados);
-        t_pcb *pcb_a_ready = list_remove_by_condition(listaBloqueados, bloqueado_termino_io);
-        pthread_mutex_unlock(&m_listaBloqueados);
-        // PRESCENCIA=1
-        // pcb_a_ready->tabla_paginas = pedir_tabla_pags(pcb_a_ready, conexion_memoria); // TODO pedir_tabla_pags
+    //     pthread_mutex_lock(&m_listaBloqueados);
+    //     t_pcb *pcb_a_ready = list_remove_by_condition(listaBloqueados, bloqueado_termino_io);
+    //     pthread_mutex_unlock(&m_listaBloqueados);
+    //     // PRESCENCIA=1
+    //     // pcb_a_ready->tabla_paginas = pedir_tabla_pags(pcb_a_ready, conexion_memoria); // TODO pedir_tabla_pags
         
-        cambiar_estado_a(pcb_a_ready, READY, estadoActual(pcb_a_ready));
-        agregar_a_lista_con_sems(pcb_a_ready, listaReady, m_listaReady);
+    //     cambiar_estado_a(pcb_a_ready, READY, estadoActual(pcb_a_ready));
+    //     agregar_a_lista_con_sems(pcb_a_ready, listaReady, m_listaReady);
 
-        sem_post(&proceso_en_ready);
-    }
-    else if (!list_is_empty(listaNuevos)) // NEW -> READY
+    //     sem_post(&proceso_en_ready);
+    // }
+    if (!list_is_empty(listaNuevos)) // NEW -> READY
     {
         pthread_mutex_lock(&m_listaNuevos);
         t_pcb *pcb_a_ready = list_remove(listaNuevos, 0);
@@ -484,7 +518,7 @@ double calcularRR(t_pcb* pcb)
 {
     double tiempoEspera = (temporal_gettime(pcb->tiempo_llegada_ready)/1000);
     if (pcb->rafaga_ejecutada) {
-        log_trace(kernel_logger, "El proceso PID %d calcula RR CON CALCULO, rafaga e. de %d ms", pcb->id, pcb->rafaga_ejecutada);
+        log_trace(kernel_logger, "El proceso PID %d calcula RR CON CALCULO, rafaga e. de %ld ms", pcb->id, pcb->rafaga_ejecutada);
         double calculo = calculoEstimado(pcb);
         double valorRetorno = round(1 + (tiempoEspera/(calculo/1000)));
         pcb->calculoRR = valorRetorno;
