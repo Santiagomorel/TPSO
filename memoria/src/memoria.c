@@ -4,6 +4,7 @@ int main(int argc, char ** argv){
 
     log_memoria = log_create("./runlogs/memoria.log", "Memoria", 1, LOG_LEVEL_TRACE);
 
+/*Estructuras administrativas*/
 
     // ----------------------- levanto la configuracion de Memoria ----------------------- //
 
@@ -19,6 +20,7 @@ int main(int argc, char ** argv){
         exit(1);
     }
 
+
     // ----------------------- cargo la configuracion de memoria ----------------------- //
 
     log_trace(log_memoria, "cargo la configuracion de Memoria");
@@ -26,9 +28,10 @@ int main(int argc, char ** argv){
     load_config();
 
     MEMORIA_PRINCIPAL= malloc(memoria_config.tam_memoria);
-    
+/*Fin Estructuras Admin*/
+   
     // ----------------------- levanto el servidor de memoria ----------------------- //
-    
+
     socket_servidor_memoria = iniciar_servidor(memoria_config.puerto_escucha, log_memoria);
     log_trace(log_memoria, "Servidor Memoria listo para recibir al cliente");
     
@@ -122,18 +125,9 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL) {
                 enviar_tabla_segmentos(SOCKET_CLIENTE_KERNEL, TABLA_SEGMENTOS, log_memoria);
 
                 break;
-            // ---------LP entrante----------
-            // case INICIAR_PCB: 
-            // log_trace(log_memoria, "entro una consola y envio paquete a inciar PCB");                         //particularidad de c : "a label can only be part of a statement"
-            //     t_pcb* pcb_a_iniciar = iniciar_pcb(SOCKET_CLIENTE);
-            // log_trace(log_memoria, "pcb iniciado PID : %d", pcb_a_iniciar->id);
-            //         pthread_mutex_lock(&m_listaNuevos);
-            //     list_add(listaNuevos, pcb_a_iniciar);
-            //         pthread_mutex_unlock(&m_listaNuevos);
-            // log_trace(log_memoria, "log enlistado: %d", pcb_a_iniciar->id);
-
-            //     planificar_sig_to_ready();// usar esta funcion cada vez q se agregue un proceso a NEW o SUSPENDED-BLOCKED 
-            //     break;
+            
+            
+            case CREAR_SEG
 
             default:
                 //log_trace(log_memoria, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
@@ -214,6 +208,15 @@ void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM) {
 - Acceso a espacio de usuario: “PID: <PID> - Acción: <LEER / ESCRIBIR> - Dirección física: <DIRECCIÓN_FÍSICA> - Tamaño: <TAMAÑO> - Origen: <CPU / FS>”
 */
 
+
+
+t_list* generar_lista_huecos(){
+    t_list* lista_huecos = list_create();
+    t_hueco* nuevoHueco/*= calcularHueco(tabla de procesos o algo)*/;
+    list_add(lista_huecos, nuevoHueco);
+    return lista_huecos;
+}
+
 /* serializacion vieja
 void enviar_tabla_segmentos(){
     t_list* tabla_segmentos = list_create();
@@ -242,7 +245,6 @@ void* serializar_segmento(void* segmento)
 
     return magic;
 }*/
-//------------------------ SERIALIZACION CON MOREL -----------------------------
 
 t_segmento* crear_segmento(int id_seg, int base, int tamanio){
     t_segmento* unSegmento = malloc(sizeof(t_segmento));
@@ -254,6 +256,7 @@ t_segmento* crear_segmento(int id_seg, int base, int tamanio){
 
 void generar_tabla_segmentos(t_proceso* proceso){
 	t_list* nuevaTabla = list_create();
+    //le agregamos segmento base de prueba
 	t_segmento* nuevoElemento = crear_segmento(1,1,memoria_config.tam_segmento_0);
 
 	list_add(nuevaTabla, nuevoElemento);
@@ -281,6 +284,8 @@ void enviar_tabla_segmentos(int conexion, int codOP, t_log* logger) {
 
 	eliminar_paquete(paquete);
 }
+
+//------------------------ SERIALIZACION DE LA TABLA CON MOREL CON MOREL -----------------------------
 
 void agregar_tabla_a_paquete(t_paquete* paquete, t_proceso* proceso ,  t_log* logger){
 	t_list* tabla_segmentos = proceso->tabla_segmentos;

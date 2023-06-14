@@ -34,6 +34,13 @@ typedef struct{
 	t_list* tabla_segmentos; //
 }t_proceso;
 
+typedef struct{
+    int init_direc;
+    int tamanio;
+}t_hueco;
+
+
+t_list* generar_lista_huecos();
 void generar_tabla_segmentos();
 t_segmento* crear_segmento(int id_seg, int base, int tamanio);
 // void enviar_tabla_segmentos(int, t_log*);
