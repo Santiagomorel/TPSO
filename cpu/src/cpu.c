@@ -402,7 +402,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
         
 
         direccion_logica = atoi(instruction[2]);
-        direccion_fisica = traducir_direccion_logica(direccion_logica, ce);
+        direccion_fisica = traducir_direccion_logica(direccion_logica, ce, instruction[3]);
         
 
         enviar_ce_con_string_2_enteros(socket_kernel, ce, instruction[1], direccion_fisica, instruction[3], LEER_ARCHIVO);
@@ -413,7 +413,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
         log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s - %s", ce->id, instruction[0], instruction[1], instruction[2], instruction[3]);
            
         direccion_logica = atoi(instruction[2]);
-        direccion_fisica = traducir_direccion_logica(direccion_logica, ce);
+        direccion_fisica = traducir_direccion_logica(direccion_logica, ce, instruction[3]);
         
 
         enviar_ce_con_string_2_enteros(socket_kernel, ce, instruction[1], direccion_fisica, instruction[3], ESCRIBIR_ARCHIVO);          
@@ -451,7 +451,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
 
             //------------SI NO TENEMOS SEG FAULT EJECUTAMOS LO DEMAS ------------ //
             if(sigsegv != 1){
-                direccion_fisica = traducir_direccion_logica(logical_address_mov_in, ce);
+                direccion_fisica = traducir_direccion_logica(logical_address_mov_in, ce, sizeof(register_mov_in));
                 char* value = fetch_value_in_memory(direccion_fisica, ce);
 
                 store_value_in_register(register_mov_in, value);
@@ -482,8 +482,8 @@ void execute_process(contexto_ejecucion* ce){
     char* instruction = malloc(sizeof(char*));
     char** decoded_instruction = malloc(sizeof(char*));
 
-    log_trace(cpu_logger, "Por empezar check_interruption != 1 && end_process != 1 && input_ouput != 1 && wait == 0 && desalojo_por_yield != 1"); 
-    while(check_interruption != 1 && end_process != 1 && input_ouput != 1 && wait == 0 && desalojo_por_yield != 1 && signal_recurso != 2){
+    log_trace(cpu_logger, "Por empezar  end_process != 1 && input_ouput != 1 && wait == 0 && desalojo_por_yield != 1 && signal_recurso != 2 && sigsev != 1"); 
+    while(/*check_interruption != 1 && */end_process != 1 && input_ouput != 1 && wait == 0 && desalojo_por_yield != 1 && signal_recurso != 2 && sigsegv != 1){
         //Llega el ce y con el program counter buscas la instruccion que necesita
         instruction = string_duplicate(fetch_next_instruction_to_execute(ce));
         decoded_instruction = decode(instruction);
@@ -491,7 +491,7 @@ void execute_process(contexto_ejecucion* ce){
         log_trace(cpu_logger, "Por ejecutar la instruccion decodificada %s", decoded_instruction[0]);
         execute_instruction(decoded_instruction, ce);
 
-        if(page_fault != 1) {   // en caso de tener page fault no se actualiza program counter
+        if(sigsegv != 1) {   // en caso de tener seg fault no se actualiza program counter
             update_program_counter(ce);
         }
         
@@ -508,29 +508,30 @@ void execute_process(contexto_ejecucion* ce){
     imprimir_registros(ce->registros_cpu, cpu_logger); // para comprobar que los registros se guardaran bien
     if(end_process) {
         end_process = 0; // IMPORTANTE: Apagar el flag para que no rompa el proximo proceso que llegue
-        check_interruption = 0;
+        //check_interruption = 0;
         enviar_ce(socket_kernel, ce, SUCCESS, cpu_logger);
         liberar_ce(ce);
         log_trace(cpu_logger, "Enviamos paquete a dispatch: FIN PROCESO");
     } 
     else if(input_ouput) {
         input_ouput = 0;
-        check_interruption = 0;
+        //check_interruption = 0;
         log_trace(cpu_logger, "Tiempo: %s", tiempo);
  
     }
     
-    /*else if(sigsegv == 1){
+    else if(sigsegv == 1){
         sigsegv = 0;
-        check_interruption = 0;
-        log_info(cpu_logger, "Error: Segmentation Fault (SEG_FAULT), enviando para terminar proceso");
-        send_ce_package(socket_cpu, ce, SEG_FAULT); //FALTA SEG_FAULT EN UTILS.H
-    }*/
-    else if(check_interruption) {
+        //check_interruption = 0;
+        log_info(cpu_logger, "PID: %s - Error SEG_FAULT- Segmento: %s - Offset: %s - Tamaño: %s", ce->id,
+         id_segmento_con_segfault, desplazamiento_segfault, tamanio_segfault);
+        enviar_ce(socket_kernel, ce, SEG_FAULT, cpu_logger); 
+    }
+    /*else if(check_interruption) {
         check_interruption = 0;
         log_trace(cpu_logger, "Entro por check interrupt");
         enviar_ce(socket_kernel, ce, EJECUTAR_INTERRUPCION, cpu_logger); 
-    }else if(wait){
+    }*/else if(wait){
        
        
         if(wait == 1){  // Se bloquea por estar ocupado recurso
@@ -598,7 +599,7 @@ static t_symstruct lookuptable[] = {
 
 int keyfromstring(char *key) {
     int i;
-    for (i=0; i < 14; i++) {
+    for (i=0; i < 16; i++) {
         t_symstruct sym = lookuptable[i];
         if (strcmp(sym.key, key) == 0)
             return sym.val;
@@ -678,24 +679,29 @@ void enviar_ce_con_entero(int client_socket, contexto_ejecucion* ce, char* x, in
 /*---------------------------------- MMU ----------------------------------*/
 
 
-int traducir_direccion_logica(int logical_address, contexto_ejecucion* ce) {
+int traducir_direccion_logica(int logical_address, contexto_ejecucion* ce, int valor_a_sumar) {
 
 
-    int id_segmento = (int) floor(logical_address / atoi(cpu_config.tam_max_segmento));
-    int tamanio_segmento = logical_address % atoi(cpu_config.tam_max_segmento);
-     //Como se saca la base AVERIGUAR BIEN ESTO
+    int num_segmento = (int) floor(logical_address / atoi(cpu_config.tam_max_segmento));
+    int desplazamiento_segmento = logical_address % atoi(cpu_config.tam_max_segmento);
+
 
     t_list* segment_table_ce = ce->tabla_segmentos;
     
-    t_segmento* segment = list_get(segment_table_ce, id_segmento);
+    t_segmento* segment = list_get(segment_table_ce, num_segmento);
+    
   
 
-    if(tamanio_segmento >= segment-> tamanio_segmento ){
+    if(desplazamiento_segmento + valor_a_sumar >= segment-> tamanio_segmento ){
+
+        id_segmento_con_segfault = num_segmento;
+        desplazamiento_segfault = desplazamiento_segmento;
+        tamanio_segfault = segment ->tamanio_segmento;
 
         sigsegv = 1;
     }
    
-      return (segment->direccion_base + tamanio_segmento);
+      return (segment->direccion_base + desplazamiento_segmento);
 }
 
 char* fetch_value_in_memory(int physical_adress, contexto_ejecucion* ce){
@@ -726,10 +732,7 @@ char* fetch_value_in_memory(int physical_adress, contexto_ejecucion* ce){
     return value_received;
 }
 
-int calculate_physical_address(int base, int desplazamiento){
-    log_info(cpu_logger, "Calculando direccion fisica");
-    return base + desplazamiento;
-}
+
 
 void store_value_in_register(char* register_mov_in, char* value){
 
