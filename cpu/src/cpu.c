@@ -592,7 +592,6 @@ void enviar_ce_con_string(int client_socket, contexto_ejecucion* ce, char* param
 }
 
 
-
 void enviar_ce_con_dos_enteros(int client_socket, contexto_ejecucion* ce, char* x, char* y, int codOP){
     t_paquete* paquete = crear_paquete_op_code(codOP);
 

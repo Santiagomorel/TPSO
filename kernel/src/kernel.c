@@ -106,9 +106,10 @@ void iniciar_listas_recursos(char** recursos)
         log_error(kernel_logger, "La cantidad de recursos en config excede el limite establecido por el programa");
         exit(1);
     }
+    lista_recurso = list_create();
 
     for (int i = 0; i < cantidad; i++) {
-        lista_recurso[i] = list_create();
+        list_add(lista_recurso, list_create());
     }
 
     log_info(kernel_logger, "Se inician las listas de los recursos");
@@ -140,7 +141,7 @@ void iniciar_semaforos_recursos(char** recursos, char** instancias_recursos)
 
     for (int i = 0; i < cantidad_recursos; i++) {
         sem_recurso[i] = (sem_t*)malloc(sizeof(sem_t)); // VER luego hay que eliminar los malloc
-        sem_init(sem_recurso[i], 0, atoi(instancias_recursos[i]));
+        sem_init(sem_recurso[i], 0, atoi(instancias_recursos[i])); //sem_wait(sem_recurso[x])
     }
     log_info(kernel_logger, "Se inician los semaforos de los recursos");
 }
@@ -631,6 +632,7 @@ void manejar_dispatch()
         int cod_op = recibir_operacion(cpu_dispatch_connection);
         switch(cod_op){
             case SUCCESS:
+            case EXIT_RECURSO:
             case SEG_FAULT:
                 contexto_ejecucion* contexto_a_finalizar = recibir_ce(cpu_dispatch_connection);
                 pthread_mutex_lock(&m_listaEjecutando);
@@ -674,9 +676,36 @@ void manejar_dispatch()
                 liberar_ce(contexto_a_reencolar);
                 //eliminar(pcb_a_reencolar);
                 break;
+            case WAIT_RECURSO:
+                contexto_ejecucion* contexto_ejecuta_wait = recibir_ce(cpu_dispatch_connection);
+                char* recurso = recibir_string(cpu_dispatch_connection);
+                pthread_mutex_lock(&m_listaEjecutando);
+                    t_pcb * pcb_wait = (t_pcb *) list_get(listaEjecutando, 0);
+                    actualizar_pcb(pcb_wait, contexto_ejecuta_wait);
+                pthread_mutex_unlock(&m_listaEjecutando);
+                if(recurso_no_existe(recurso)){
+                    enviar_CodOp(cpu_dispatch_connection, NO_EXISTE_RECURSO);
+                }else{
+                    restar_instancia(id_recurso);
+                    if(tiene_instancia_wait(recurso)){
+                        // devolver LO_TENGO
+                    } else {
+                        // devolver NO_LO_TENGO
+                        // encolar en la lista del recurso
+                        // sacar_rafaga_ejecutada
+                        // recibir op
+                        // recibir contexto
+                        // actualizar contexto de proceso en la lista del recurso
+                        //
+                    }
+                }
+                break;
             //case BLOCK_por_PF:
             case -1:
                 break;
+            
+
+
 
             case BLOCK_IO:
                 log_trace(kernel_logger,"recibi io");
@@ -725,6 +754,27 @@ void manejar_dispatch()
             //     sem_post(&llego_io);// hilo!!!
         }
     }
+}
+
+int recurso_no_existe(char* recurso)
+{ // verifica si no existe el recurso
+    int cantidad = string_array_size(kernel_config.recursos);
+
+    for (int i = 0; i < cantidad; i++) {
+        if (strcmp(kernel_config.recursos[i], recurso) == 0){
+            id_recurso = i;
+            return 0;
+        }
+    }
+    return 1;
+}
+
+void restar_instancia(int recurso){ // resta 1 a la instancia
+
+}
+
+int tiene_instancia_wait(int recurso){ // devuelve 1 si instancia recurso es >= 0, 0 en otro caso
+
 }
 
 void actualizar_pcb(t_pcb* pcb, contexto_ejecucion* ce)

@@ -468,14 +468,14 @@ t_list *recibir_paquete_segmento(int socket)
 	return segmento;
 }
 
-contexto_ejecucion *recibir_ce(int socket_kernel)
+contexto_ejecucion *recibir_ce(int socket)
 {
 	contexto_ejecucion *nuevoCe = malloc(sizeof(contexto_ejecucion));
 	int size = 0;
 	char *buffer;
 	int desp = 0;
 
-	buffer = recibir_buffer(&size, socket_kernel);
+	buffer = recibir_buffer(&size, socket);
 
 	nuevoCe->id = leer_entero(buffer, &desp);
 	nuevoCe->instrucciones = leer_string_array(buffer, &desp); // hay que liberar antes de perder la referencia
@@ -484,6 +484,20 @@ contexto_ejecucion *recibir_ce(int socket_kernel)
 	// nuevoCe->tabla_segmentos = leer_tabla_segmentos(buffer, &desp);
 	free(buffer);
 	return nuevoCe;
+}
+
+char* recibir_string(int socket){
+	char* nuevoString = malloc(sizeof(char*));
+	int size = 0;
+	char *buffer;
+	int desp = 0;
+
+	buffer = recibir_buffer(&size, socket);
+
+	nuevoString = leer_string(buffer, &desp);
+
+	free(buffer);
+	return nuevoString;
 }
 
 t_paquete *agregar_tabla_segmentos_a_paquete(t_paquete *paquete, t_list *tabla)
@@ -495,6 +509,15 @@ void enviar_ce(int conexion, contexto_ejecucion *ce, int codOP, t_log *logger)
 	t_paquete *paquete = crear_paquete_op_code(codOP);
 
 	agregar_ce_a_paquete(paquete, ce, logger);
+
+	enviar_paquete(paquete, conexion);
+
+	eliminar_paquete(paquete);
+}
+
+void enviar_CodOp(int conexion, int codOP)
+{
+	t_paquete *paquete = crear_paquete_op_code(codOP);
 
 	enviar_paquete(paquete, conexion);
 

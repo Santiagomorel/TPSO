@@ -72,7 +72,7 @@ t_list* listaBloqueados;    // BLOCKED
 t_list* listaEjecutando;    // RUNNING (EXEC)
 t_list* listaFinalizados;   // EXIT   
 t_list* listaIO;
-t_list** lista_recurso[MAX_RECURSOS];
+t_list* lista_recurso; // lista que tiene listas de recursos
 
 // Variables de hilo de planificadores
 pthread_t planificadorCP;
@@ -132,7 +132,11 @@ void actualizar_pcb(t_pcb*, contexto_ejecucion*);
 void sacar_rafaga_ejecutada(t_pcb*);
 void iniciar_nueva_espera_ready(t_pcb*);
 
+// ------------------------------------//
 
+int recurso_no_existe(char*);
+void restar_instancia(int);
+int tiene_instancia_wait(int);
 // void end_program(int, t_log*, t_config*);
 
 
@@ -141,7 +145,7 @@ bool bloqueado_termino_io(t_pcb *);
 
 void destruirSemaforos();
 
-
+int id_recurso;
 
 
 #endif /* KERNEL_H_ */
