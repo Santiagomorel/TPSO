@@ -82,10 +82,7 @@ int main(int argc, char ** argv){
             break;
         }
     }*/
-    while (1)
-    {
-        //espera activa
-    }
+    sem_wait(&finModulo);
     
     free(MEMORIA_PRINCIPAL);
     end_program(socket_servidor_memoria, log_memoria, memoria_config_file);
@@ -127,12 +124,42 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL) {
                 break;
             
             
-            case CREAR_SEG
+            case CREATE_SEGMENT:
+                /*1. Que el segmento se cree exitosamente y que la memoria nos devuelva la base del nuevo segmento
+                  2. Que no se tenga más espacio disponible en la memoria y por lo tanto el proceso tenga que finalizar con error Out of Memory.
+                  3. Que se tenga el espacio disponible, pero que el mismo no se encuentre contiguo, por lo que se deba compactar, este caso lo vamos a analizar más en detalle,
+                    ya que involucra controlar las operaciones de File System que se estén ejecutando.*/
 
+                //resp_op codigo_respuesta_seg = crear_segmento() => lo debe agregar a la memoria, o no en caso que no pueda y retornar un codigo de respuesta
+                /*
+                if(codigo_respuesta_seg){
+                    
+                }*/
+
+                /
+                break;
+            
+
+            case DELETE_SEGMENT:
+                //Debe recibir el id del segmento que desea eliminar            
+                //tabla_segmentos_sin_segmento = borrar_segmento(id_segmento);
+                
+                /*Para realizar un DELETE_SEGMENT, el Kernel deberá enviarle a la Memoria el Id del segmento a eliminar y recibirá como respuesta de la Memoria la tabla de segmentos actualizada.
+                Nota: No se solicitará nunca la eliminación del segmento 0 o de un segmento inexistente.*/
+                break;
+
+
+
+            // se desconecta kernel
+            case -1:
+                log_warning(log_memoria, "se desconecto kernel");
+                sem_post(&finModulo);
+                break;
             default:
                 //log_trace(log_memoria, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
                 break;
         }
+
     }
 }
 void recibir_cpu(int SOCKET_CLIENTE_CPU) {
@@ -147,19 +174,8 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU) {
                 log_trace(log_memoria, "recibi el op_cod %d MENSAJE , codigoOperacion", codigoOperacion);
                 recibir_mensaje(SOCKET_CLIENTE_CPU, log_memoria);
                 break;
-            // ---------LP entrante----------
-            // case INICIAR_PCB: 
-            // log_trace(log_memoria, "entro una consola y envio paquete a inciar PCB");                         //particularidad de c : "a label can only be part of a statement"
-            //     t_pcb* pcb_a_iniciar = iniciar_pcb(SOCKET_CLIENTE);
-            // log_trace(log_memoria, "pcb iniciado PID : %d", pcb_a_iniciar->id);
-            //         pthread_mutex_lock(&m_listaNuevos);
-            //     list_add(listaNuevos, pcb_a_iniciar);
-            //         pthread_mutex_unlock(&m_listaNuevos);
-            // log_trace(log_memoria, "log enlistado: %d", pcb_a_iniciar->id);
 
-            //     planificar_sig_to_ready();// usar esta funcion cada vez q se agregue un proceso a NEW o SUSPENDED-BLOCKED 
-            //     break;
-
+            
             default:
                 //log_trace(log_memoria, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
                 break;
@@ -265,7 +281,6 @@ void generar_tabla_segmentos(t_proceso* proceso){
 }
 
 
-
 void enviar_tabla_segmentos(int conexion, int codOP, t_log* logger) {
 	t_paquete *paquete = crear_paquete_op_code(codOP);
     t_proceso* nuevoProceso;
@@ -334,4 +349,10 @@ t_list* leer_tabla_segmentos(char* buffer, int* desp){
 		list_add(nuevalista, nuevoElemento);
 	}
 	return nuevalista;
+}
+
+//semaforos
+
+void iniciar_semaforos(){
+    sem_init(&finModulo, 0, 0);
 }

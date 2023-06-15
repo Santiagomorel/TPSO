@@ -67,6 +67,12 @@ void recibir_kernel(int);
 void recibir_cpu(int);
 void recibir_fileSystem(int);
 
+//semaforos
+
+sem_t finModulo;
+
+void iniciar_semaforos();
+
 //void enviar_tabla_segmentos();
 //void* serializar_segmento(t_segmento* segmento);
 //void* serializar_segmento(void* segmento);
