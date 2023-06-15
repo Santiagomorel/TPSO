@@ -402,8 +402,8 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
         
 
         direccion_logica = atoi(instruction[2]);
-        segmento = traducir_direccion_logica(direccion_logica, ce);
-        direccion_fisica = calculate_physical_address(segmento ->direccion_base, segmento ->tamanio_segmento);
+        direccion_fisica = traducir_direccion_logica(direccion_logica, ce);
+        
 
         enviar_ce_con_string_2_enteros(socket_kernel, ce, instruction[1], direccion_fisica, instruction[3], LEER_ARCHIVO);
 
@@ -413,8 +413,8 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
         log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s - %s", ce->id, instruction[0], instruction[1], instruction[2], instruction[3]);
            
         direccion_logica = atoi(instruction[2]);
-        segmento = traducir_direccion_logica(direccion_logica, ce);
-        int direccion_fisica = calculate_physical_address(segmento ->direccion_base, segmento ->tamanio_segmento);
+        direccion_fisica = traducir_direccion_logica(direccion_logica, ce);
+        
 
         enviar_ce_con_string_2_enteros(socket_kernel, ce, instruction[1], direccion_fisica, instruction[3], ESCRIBIR_ARCHIVO);          
            
@@ -447,12 +447,12 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             char* register_mov_in = instruction[1];
             int logical_address_mov_in = atoi(instruction[2]);
 
-            segmento = traducir_direccion_logica(logical_address_mov_in, ce);
+            
 
             //------------SI NO TENEMOS SEG FAULT EJECUTAMOS LO DEMAS ------------ //
             if(sigsegv != 1){
-                direccion_fisica = calculate_physical_address(segmento ->direccion_base, segmento ->tamanio_segmento);
-                char* value = fetch_value_in_memory(direccion_fisica, ce, segmento);
+                direccion_fisica = traducir_direccion_logica(logical_address_mov_in, ce);
+                char* value = fetch_value_in_memory(direccion_fisica, ce);
 
                 store_value_in_register(register_mov_in, value);
                 log_info(cpu_logger, "PID: %d - Acción: LEER - Segmento: %d - Dirección Fisica: %d",
@@ -678,33 +678,31 @@ void enviar_ce_con_entero(int client_socket, contexto_ejecucion* ce, char* x, in
 /*---------------------------------- MMU ----------------------------------*/
 
 
-t_segmento* traducir_direccion_logica(int logical_address, contexto_ejecucion* ce) {
+int traducir_direccion_logica(int logical_address, contexto_ejecucion* ce) {
 
-    t_segmento* segmento_creado = malloc(sizeof(t_segmento));
 
-    segmento_creado ->id_segmento = (int) floor(logical_address / atoi(cpu_config.tam_max_segmento));
-    segmento_creado -> tamanio_segmento = logical_address % atoi(cpu_config.tam_max_segmento);
-    segmento_creado -> direccion_base; //Como se saca la base AVERIGUAR BIEN ESTO
+    int id_segmento = (int) floor(logical_address / atoi(cpu_config.tam_max_segmento));
+    int tamanio_segmento = logical_address % atoi(cpu_config.tam_max_segmento);
+     //Como se saca la base AVERIGUAR BIEN ESTO
 
     t_list* segment_table_ce = ce->tabla_segmentos;
     
-    t_segmento* segment = list_get(segment_table_ce, segmento_creado ->id_segmento);
-    
+    t_segmento* segment = list_get(segment_table_ce, id_segmento);
+  
 
-    if(segmento_creado ->tamanio_segmento >= segment-> tamanio_segmento ){
+    if(tamanio_segmento >= segment-> tamanio_segmento ){
 
         sigsegv = 1;
     }
    
-      return segmento_creado;
+      return (segment->direccion_base + tamanio_segmento);
 }
 
-char* fetch_value_in_memory(int physical_adress, contexto_ejecucion* ce, t_segmento* segmento){
+char* fetch_value_in_memory(int physical_adress, contexto_ejecucion* ce){
 
     t_paquete* package = crear_paquete_op_code(MOV_IN); 
     agregar_entero_a_paquete(package, physical_adress);
     agregar_ce_a_paquete(package,ce, cpu_logger);
-    agregar_entero_a_paquete(package, segmento ->id_segmento);
     enviar_paquete(package, conexion_cpu);
     eliminar_paquete(package);
     log_info(cpu_logger, "MOV IN enviado");    

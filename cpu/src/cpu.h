@@ -122,8 +122,8 @@ void execute_process(contexto_ejecucion* ce);
 
 
 
-t_segmento* traducir_direccion_logica(int logical_address, contexto_ejecucion* ce);
-char* fetch_value_in_memory(int physical_adress, contexto_ejecucion* ce, t_segmento* segmento);
+int traducir_direccion_logica(int logical_address, contexto_ejecucion* ce);
+char* fetch_value_in_memory(int physical_adress, contexto_ejecucion* ce);
 int calculate_physical_address(int base, int desplazamiento);
 void store_value_in_register(char* register_mov_in, char* value);
 
