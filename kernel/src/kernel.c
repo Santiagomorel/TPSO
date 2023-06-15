@@ -7,6 +7,7 @@ int main(int argc, char **argv)
     kernel_logger = init_logger("./runlogs/kernel.log", "KERNEL", 1, LOG_LEVEL_TRACE);
 
     // ----------------------- levanto y cargo la configuracion del kernel ----------------------- //
+    log_info(kernel_logger, "INICIA EL MODULO DE KERNEL");
 
     log_trace(kernel_logger, "levanto la configuracion del kernel");
     if (argc < 2)
@@ -31,29 +32,9 @@ int main(int argc, char **argv)
 
     iniciarSemaforos();
 
-
     // ----------------------- contecto el kernel con los servidores de MEMORIA - CPU (dispatch) - FILESYSTEM ----------------------- //
-
-    if((memory_connection = crear_conexion(kernel_config.ip_memoria , kernel_config.puerto_memoria)) == -1) {
-        log_trace(kernel_logger, "No se pudo conectar al servidor de MEMORIA");
-        exit(2);
-    }
-    recibir_operacion(memory_connection);
-    recibir_mensaje(memory_connection, kernel_logger);
-
-    if((cpu_dispatch_connection = crear_conexion(kernel_config.ip_cpu , kernel_config.puerto_cpu)) == -1) {
-        log_trace(kernel_logger, "No se pudo conectar al servidor de CPU DISPATCH");
-        exit(2);
-    }
-    recibir_operacion(cpu_dispatch_connection);
-    recibir_mensaje(cpu_dispatch_connection, kernel_logger);
-
-    if((file_system_connection = crear_conexion(kernel_config.ip_file_system , kernel_config.puerto_file_system)) == -1) {
-        log_trace(kernel_logger, "No se pudo conectar al servidor de FILE SYSTEM");
-        exit(2);
-    }
-    recibir_operacion(file_system_connection);
-    recibir_mensaje(file_system_connection, kernel_logger);
+    iniciar_conexiones_kernel();
+    
     // ----------------------- levanto el servidor del kernel ----------------------- //
 
     socket_servidor_kernel = iniciar_servidor(kernel_config.puerto_escucha, kernel_logger);
@@ -80,10 +61,9 @@ int main(int argc, char **argv)
     return EXIT_SUCCESS;
 }
 
-// ----------------------- Funciones Globales de Kernel ----------------------- //
+// ----------------------- Funciones de inicio de Kernel ----------------------- //
 
-
-void load_config(void)
+void load_config()
 {
 
     kernel_config.ip_memoria = config_get_string_value(kernel_config_file, "IP_MEMORIA");
@@ -106,6 +86,65 @@ void load_config(void)
 
     log_trace(kernel_logger, "config cargada en 'kernel_cofig_file'");
 }
+
+void inicializarListasGlobales()
+{
+    listaNuevos = list_create();
+    listaReady = list_create();
+    listaBloqueados = list_create();
+    listaEjecutando = list_create();
+    listaFinalizados = list_create();
+
+    listaIO = list_create();
+}
+
+void iniciarSemaforos()
+{
+    pthread_mutex_init(&m_listaNuevos, NULL);
+    pthread_mutex_init(&m_listaReady, NULL);
+    pthread_mutex_init(&m_listaFinalizados, NULL);
+    pthread_mutex_init(&m_listaBloqueados, NULL);
+    pthread_mutex_init(&m_listaEjecutando, NULL);
+    pthread_mutex_init(&m_contador_id, NULL);
+    sem_init(&proceso_en_ready, 0, 0);
+    sem_init(&fin_ejecucion, 0, 1);
+    sem_init(&grado_multiprog, 0, kernel_config.grado_max_multiprogramacion);
+}
+
+void iniciar_conexiones_kernel()
+{
+    if((memory_connection = crear_conexion(kernel_config.ip_memoria , kernel_config.puerto_memoria)) == -1) {
+        log_trace(kernel_logger, "No se pudo conectar al servidor de MEMORIA");
+        exit(2);
+    }
+    recibir_operacion(memory_connection);
+    recibir_mensaje(memory_connection, kernel_logger);
+
+    if((cpu_dispatch_connection = crear_conexion(kernel_config.ip_cpu , kernel_config.puerto_cpu)) == -1) {
+        log_trace(kernel_logger, "No se pudo conectar al servidor de CPU DISPATCH");
+        exit(2);
+    }
+    recibir_operacion(cpu_dispatch_connection);
+    recibir_mensaje(cpu_dispatch_connection, kernel_logger);
+
+    if((file_system_connection = crear_conexion(kernel_config.ip_file_system , kernel_config.puerto_file_system)) == -1) {
+        log_trace(kernel_logger, "No se pudo conectar al servidor de FILE SYSTEM");
+        exit(2);
+    }
+    recibir_operacion(file_system_connection);
+    recibir_mensaje(file_system_connection, kernel_logger);
+}
+
+void iniciar_planificadores()
+{
+    pthread_create(&planificadorCP, NULL, (void *)planificar_sig_to_running, (void *)socket_cliente);
+    pthread_detach(planificadorCP);
+
+    pthread_create(&hiloDispatch, NULL, (void*) manejar_dispatch, (void*)cpu_dispatch_connection);
+    pthread_detach(hiloDispatch);
+}
+
+// ----------------------- Funciones relacionadas con consola ----------------------- //
 
 void recibir_consola(int SOCKET_CLIENTE)
 {
@@ -139,7 +178,7 @@ void recibir_consola(int SOCKET_CLIENTE)
     }
 }
 
-t_pcb *iniciar_pcb(int socket)
+t_pcb* iniciar_pcb(int socket)
 {
     int size = 0;
 
@@ -149,7 +188,6 @@ t_pcb *iniciar_pcb(int socket)
     buffer = recibir_buffer(&size, socket);
 
     char *instrucciones = leer_string(buffer, &desp);
-    // int tamanio_proceso = leer_entero(buffer, &desp);        //TODO aca tengo que leer la cantidad de lineas de pseudocodigo
 
     t_pcb *nuevo_pcb = pcb_create(instrucciones, socket);
     free(instrucciones);
@@ -160,25 +198,33 @@ t_pcb *iniciar_pcb(int socket)
     return nuevo_pcb;
 }
 
-t_pcb *pcb_create(char *instrucciones, int socket_consola)
+t_pcb* pcb_create(char* instrucciones, int socket_consola)
 {
     log_trace(kernel_logger, "instrucciones en pcb create %s", instrucciones);
-    t_pcb *new_pcb = malloc(sizeof(t_pcb));
+    t_pcb* new_pcb = malloc(sizeof(t_pcb));
 
     generar_id(new_pcb);
-    new_pcb->estado_actual = NEW;
     new_pcb->instrucciones = separar_inst_en_lineas(instrucciones);
     new_pcb->program_counter = 0;
     new_pcb->registros_cpu = crear_registros();
-    // new_pcb->tabla_paginas = -1; // TODO de la conexion con memoria
-    new_pcb->estimacion_rafaga = kernel_config.estimacion_inicial; // ms
-    new_pcb->socket_consola = socket_consola;
     new_pcb->tabla_segmentos = list_create();
+    new_pcb->estimacion_rafaga = kernel_config.estimacion_inicial;
+    new_pcb->tiempo_llegada_ready = temporal_create();
+    // new_pcb->tabla_archivos_abiertos = ; // TODO tabla de archivos abiertos
+    
+    new_pcb->salida_ejecucion = temporal_create();
+    new_pcb->rafaga_ejecutada = 0;
+    
+    new_pcb->calculoRR = 1;
+    new_pcb->socket_consola = socket_consola;
+
+    new_pcb->estado_actual = NEW;
+    new_pcb->socket_consola = socket_consola;
 
     return new_pcb;
 }
 
-void generar_id(t_pcb *pcb)
+void generar_id(t_pcb* pcb)
 { // Con esta funcion le asignamos a un pcb su id, cuidando de no repetir el numero
     pthread_mutex_lock(&m_contador_id);
     pcb->id = contador_id;
@@ -186,7 +232,32 @@ void generar_id(t_pcb *pcb)
     pthread_mutex_unlock(&m_contador_id);
 }
 
-t_registro * crear_registros() {
+char** separar_inst_en_lineas(char* instrucciones)
+{
+    char **lineas = parsearPorSaltosDeLinea(instrucciones);
+
+    char **lineas_mejorado = string_array_new();
+    int i;
+
+    for (i = 0; i < string_array_size(lineas); i++)
+    {
+        char **instruccion = string_split(lineas[i], " "); // separo por espacios
+        //log_trace(kernel_logger, "Agrego la linea '%s' a las intrucciones del pcb", lineas[i]);
+        string_array_push(&lineas_mejorado, string_duplicate(lineas[i]));
+    }
+    string_array_destroy(lineas);
+    return lineas_mejorado;
+}
+
+char** parsearPorSaltosDeLinea(char* buffer)
+{
+    char **lineas = string_split(buffer, "\n");
+
+    return lineas;
+}
+
+t_registro* crear_registros()
+{
     t_registro * nuevosRegistros = malloc(sizeof(t_registro));
     strcpy(nuevosRegistros->AX , "HOLA");
     strcpy(nuevosRegistros->BX , "CHAU");
@@ -203,112 +274,59 @@ t_registro * crear_registros() {
     return nuevosRegistros;
 }
 
+// ----------------------- Funciones relacionadas con planificadores ----------------------- //
 
-char **separar_inst_en_lineas(char *instrucciones)
+void cambiar_estado_a(t_pcb* a_pcb, estados nuevo_estado, estados estado_anterior)
 {
-    char **lineas = parsearPorSaltosDeLinea(instrucciones);
+    a_pcb->estado_actual = nuevo_estado;
+    log_info(kernel_logger,"Cambio de Estado: PID: %d - Estado Anterior: %s - Estado Actual: %s", obtenerPid(a_pcb), obtenerEstado(estado_anterior), obtenerEstado(nuevo_estado));
+}
 
-    char **lineas_mejorado = string_array_new();
-    int i;
+int obtenerPid(t_pcb* pcb)
+{
+    return pcb->id;
+}
 
-    for (i = 0; i < string_array_size(lineas); i++)
+char* obtenerEstado(estados estado)
+{
+    switch(estado)
     {
-
-        char **instruccion = string_split(lineas[i], " "); // separo por espacios
-        log_trace(kernel_logger, "Agrego la linea '%s' a las intrucciones del pcb", lineas[i]);
-        // log_info(kernel_logger, "instruccion[0] es: %s y la instruccion[1] es:%s", instruccion[0], instruccion[1]);
-        string_array_push(&lineas_mejorado, string_duplicate(lineas[i]));
-    }
-    string_array_destroy(lineas);
-    return lineas_mejorado;
-}
-
-char **parsearPorSaltosDeLinea(char *buffer)
-{
-
-    char **lineas = string_split(buffer, "\n");
-
-    return lineas;
-}
-
-void inicializarListasGlobales(void)
-{
-
-    listaNuevos = list_create();
-    listaReady = list_create();
-    listaBloqueados = list_create();
-    listaEjecutando = list_create();
-    listaFinalizados = list_create();
-
-    listaIO = list_create();
-}
-
-void iniciar_planificadores()
-{
-    pthread_create(&planificadorCP, NULL, (void *)planificar_sig_to_running, (void *)socket_cliente);
-    pthread_detach(planificadorCP);
-
-    pthread_create(&hiloDispatch, NULL, (void*) manejar_dispatch, (void*)cpu_dispatch_connection);
-    pthread_detach(hiloDispatch);
-}
-
-void iniciarSemaforos()
-{
-    pthread_mutex_init(&m_listaNuevos, NULL);
-    pthread_mutex_init(&m_listaReady, NULL);
-    pthread_mutex_init(&m_listaFinalizados, NULL);
-    pthread_mutex_init(&m_listaBloqueados, NULL);
-    pthread_mutex_init(&m_listaEjecutando, NULL);
-    pthread_mutex_init(&m_contador_id, NULL);
-    sem_init(&proceso_en_ready, 0, 0);
-    sem_init(&grado_multiprog, 0, kernel_config.grado_max_multiprogramacion);
-}
-
-void destruirSemaforos()
-{
-    sem_destroy(&proceso_en_ready);
-}
-
-void planificar_sig_to_running(){
-
-    while(1){
-        sem_wait(&proceso_en_ready);
-        log_warning(kernel_logger, "Entra en la planificacion de READY RUNNING");
-        if(strcmp(kernel_config.algoritmo_planificacion, "FIFO") == 0) { // FIFO
-            //log_info(kernel_logger, "Cola Ready FIFO: %s", funcionQueMuestraPID()); // HACER // VER LOCALIZACION
-            pthread_mutex_lock(&m_listaReady);
-            t_pcb* pcb_a_ejecutar = list_remove(listaReady, 0);
-            pthread_mutex_unlock(&m_listaReady);
-
-            log_trace(kernel_logger, "agrego a RUNING y se lo paso a cpu para q ejecute!");
-
-            cambiar_estado_a(pcb_a_ejecutar, RUNNING, estadoActual(pcb_a_ejecutar));
-            agregar_a_lista_con_sems(pcb_a_ejecutar, listaEjecutando, m_listaEjecutando);
-            contexto_ejecucion * nuevoContexto = obtener_ce(pcb_a_ejecutar); // SOLUCIONADO!!! hay seg fault cuando intento acceder al pcb a ejecutar
-
-            log_warning(kernel_logger, "antes de mandar el contexto de ejecucion");
-            enviar_ce(cpu_dispatch_connection, nuevoContexto, EJECUTAR_CE, kernel_logger);
-        }
-        // else if (kernel_config.algoritmo_planificacion == "HRRN"){
-        //      pthread_mutex_lock(&m_listaReady);
-        //       //log_info(kernel_logger,"HRRN: Hay %d procesos listos para ejecutar",list_size(listaReady);
-        //     t_pcb* pcb_mayorRR = list_get_maximum(listaReady,(void*) mayorRRdeLista);
-        //     t_pcb* pcb_a_ejecutar = list_remove_element(listaReady, pcb_mayorRR);
-        //      pthread_mutex_unlock(&m_listaReady,pcb_mayorRR);
-        //     log_trace(kernel_logger, "agrego a RUNING y se lo paso a cpu para q ejecute!");
-
-        //     cambiar_estado_a(pcb_a_ejecutar, RUNNING, estadoActual(pcb_a_ejecutar));
-        //     agregar_a_lista_con_sems(pcb_a_ejecutar, listaEjecutando, m_listaEjecutando);
-
-        //     enviar_ce(cpu_dispatch_connection, pcb_a_ejecutar, EJECUTAR_PCB);
-
-        // }
-
+        case NEW:
+        return "NEW";
+        break;
+        case READY:
+        return "READY";
+        break;
+        case BLOCKED:
+        return "BLOCKED";
+        break;
+        case RUNNING:
+        return "RUNNING";
+        break;
+        case EXIT:
+        return "EXIT";
+        break;
+        default:
+        return "Error de estado";
     }
 }
+
+int estadoActual(t_pcb* pcb) //VER
+{
+    return pcb->estado_actual;
+}
+
+void agregar_a_lista_con_sems(t_pcb* pcb_a_agregar, t_list* lista, pthread_mutex_t m_sem)
+{
+    pthread_mutex_lock(&m_sem);
+    list_add(lista, pcb_a_agregar);
+    pthread_mutex_unlock(&m_sem);
+}
+
+// ----------------------- Funciones planificador to - ready ----------------------- //
+
 void planificar_sig_to_ready()
 {
-
     sem_wait(&grado_multiprog);
 
     if (!list_is_empty(listaBloqueados) && list_any_satisfy(listaBloqueados, bloqueado_termino_io))
@@ -344,80 +362,11 @@ void planificar_sig_to_ready()
         // log_error(kernel_logger, "info (tamanio de segmento) de la tabla de segmentos creada: %d, %d, %d", posibleSegmento->tamanio_segmento,posibleSegmento->id_segmento, posibleSegmento->direccion_base);
         cambiar_estado_a(pcb_a_ready, READY, estadoActual(pcb_a_ready));
         agregar_a_lista_con_sems(pcb_a_ready, listaReady, m_listaReady);
-
         sem_post(&proceso_en_ready);
     }
 }
 
-void enviar_Fin_consola(int socket)
-{
-
-    // pthread_mutex_lock(&mutexOk);
-
-    t_paquete *paquete;
-
-    paquete = crear_paquete_op_code(FIN_CONSOLA);
-
-    enviar_paquete(paquete, socket);
-
-    eliminar_paquete(paquete);
-
-    liberar_conexion(socket);
-}
-
-int estadoActual(t_pcb * pcb) //VER
-{
-    return pcb->estado_actual;
-}
-
-bool bloqueado_termino_io(t_pcb *pcb)
-{
-    return (pcb->estado_actual == BLOCKED); //VER aca antes era BLOCKED_READY
-}
-
-void cambiar_estado_a(t_pcb *a_pcb, estados nuevo_estado, estados estado_anterior)
-{
-    a_pcb->estado_actual = nuevo_estado;
-    log_info(kernel_logger,"Cambio de Estado: PID: %d - Estado Anterior: %s - Estado Actual: %s", obtenerPid(a_pcb), obtenerEstado(estado_anterior), obtenerEstado(nuevo_estado));
-}
-
-int obtenerPid(t_pcb * pcb)
-{
-    return pcb->id;
-}
-
-char * obtenerEstado(estados estado)
-{
-    switch(estado)
-    {
-        case NEW:
-        return "NEW";
-        break;
-        case READY:
-        return "READY";
-        break;
-        case BLOCKED:
-        return "BLOCKED";
-        break;
-        case RUNNING:
-        return "RUNNING";
-        break;
-        case EXIT:
-        return "EXIT";
-        break;
-        default:
-        return "Error de estado";
-    }
-}
-
-void agregar_a_lista_con_sems(t_pcb *pcb_a_agregar, t_list *lista, pthread_mutex_t m_sem)
-{
-    pthread_mutex_lock(&m_sem);
-    list_add(lista, pcb_a_agregar);
-    pthread_mutex_unlock(&m_sem);
-}
-
-void inicializar_estructuras(t_pcb *pcb)
+void inicializar_estructuras(t_pcb* pcb)
 {
     t_paquete *paquete = crear_paquete_op_code(INICIAR_ESTRUCTURAS);
     agregar_entero_a_paquete(paquete, pcb->id);
@@ -439,7 +388,137 @@ void pedir_tabla_segmentos() // MODIFICAR tipo de dato que devuelve
     //return recibir_paquete(memory_connection);
 }
 
-contexto_ejecucion * obtener_ce(t_pcb * pcb){ // PENSAR EN HACERLO EN   AMBOS SENTIDOS
+// ----------------------- Funciones planificador to - running ----------------------- //
+
+void planificar_sig_to_running()
+{
+    while(1){
+        sem_wait(&fin_ejecucion);
+        sem_wait(&proceso_en_ready);
+        log_trace(kernel_logger, "Entra en la planificacion de READY RUNNING");
+        if(strcmp(kernel_config.algoritmo_planificacion, "FIFO") == 0) { // FIFO
+            //log_info(kernel_logger, "Cola Ready FIFO: %s", funcionQueMuestraPID()); // HACER // VER LOCALIZACION
+            pthread_mutex_lock(&m_listaReady);
+            t_pcb* pcb_a_ejecutar = list_remove(listaReady, 0);
+            pthread_mutex_unlock(&m_listaReady);
+
+            funcion_agregar_running(pcb_a_ejecutar);
+        }
+        else if (strcmp(kernel_config.algoritmo_planificacion, "HRRN") == 0){ // HRRN
+            int tamanioLista = list_size(listaReady);
+            if(tamanioLista == 1){
+                log_trace(kernel_logger, "El tamanio de la lista de ready es 1, hago FIFO");
+                pthread_mutex_lock(&m_listaReady);
+                t_pcb* pcb_a_ejecutar = list_remove(listaReady, 0);
+                pthread_mutex_unlock(&m_listaReady);
+                funcion_agregar_running(pcb_a_ejecutar);
+            }else{
+                log_trace(kernel_logger, "El tamanio de la lista de ready es MAYOR");
+                t_pcb* pcb_a_ejecutar = list_get_maximum(listaReady,(void*) mayorRRdeLista);
+                setear_estimacion(pcb_a_ejecutar);
+                pthread_mutex_lock(&m_listaReady);
+                list_remove_element(listaReady, pcb_a_ejecutar);
+                pthread_mutex_unlock(&m_listaReady);
+                funcion_agregar_running(pcb_a_ejecutar);
+            }
+              //log_info(kernel_logger,"HRRN: Hay %d procesos listos para ejecutar",list_size(listaReady);
+        }
+    }
+}
+
+void funcion_agregar_running(t_pcb* pcb_a_ejecutar)
+{
+    iniciar_tiempo_ejecucion(pcb_a_ejecutar);
+    cambiar_estado_a(pcb_a_ejecutar, RUNNING, estadoActual(pcb_a_ejecutar));
+    agregar_a_lista_con_sems(pcb_a_ejecutar, listaEjecutando, m_listaEjecutando);
+    contexto_ejecucion * nuevoContexto = obtener_ce(pcb_a_ejecutar);
+    enviar_ce(cpu_dispatch_connection, nuevoContexto, EJECUTAR_CE, kernel_logger);
+    log_trace(kernel_logger, "Agrego un proceso a running y envio el contexto de ejecucion");
+}
+
+void iniciar_tiempo_ejecucion(t_pcb* pcb)
+{
+    temporal_destroy(pcb->salida_ejecucion);
+    pcb->salida_ejecucion = temporal_create();
+}
+
+void setear_estimacion(t_pcb* pcb)
+{
+    if(pcb->rafaga_ejecutada){
+        pcb->estimacion_rafaga = ((pcb->calculoRR)*1000);
+        pcb->calculoRR = 0;
+    }
+}
+
+// ----------------------- Funciones calculo HRRN ----------------------- //
+
+t_pcb* mayorRRdeLista(void* _pcb1, void* _pcb2)
+{
+        t_pcb* pcb1 = (t_pcb*)_pcb1;
+
+        t_pcb* pcb2 = (t_pcb*)_pcb2;
+
+        return mayorRR(pcb1,pcb2);
+}
+
+t_pcb* mayorRR(t_pcb* pcb1, t_pcb* pcb2)
+{
+    double RR_pcb1 = calcularRR(pcb1);
+
+    double RR_pcb2 = calcularRR(pcb2);
+
+    //log_info(logger,"Comparo pcb1 [%d] y pcb2[%d], RR_pcb1 [%d] y RR_pcb2 [%d] ",pcb1->pid, pcb2->pid,RR_pcb1,RR_pcb2 );
+
+    if (RR_pcb1 == RR_pcb2){
+        return mayor_prioridad_PID(pcb1,pcb2);
+    }
+    else if (RR_pcb1 > RR_pcb2) {
+        return pcb1;
+    }
+    else {
+        return pcb2;
+    }
+}
+
+double calcularRR(t_pcb* pcb)
+{
+    double tiempoEspera = (temporal_gettime(pcb->tiempo_llegada_ready)/1000);
+    if (pcb->rafaga_ejecutada) {
+        log_trace(kernel_logger, "El proceso PID %d calcula RR CON CALCULO, rafaga e. de %d ms", pcb->id, pcb->rafaga_ejecutada);
+        double calculo = calculoEstimado(pcb);
+        double valorRetorno = round(1 + (tiempoEspera/(calculo/1000)));
+        pcb->calculoRR = valorRetorno;
+        return valorRetorno;
+    } else {
+        log_trace(kernel_logger, "El proceso PID %d calcula RR ESTIMACION INICIAL", pcb->id);
+        double valorRetorno =  (1 + (tiempoEspera/(pcb->estimacion_rafaga/1000)));
+        return valorRetorno;
+    }
+}
+
+double calculoEstimado(t_pcb* pcb)
+{
+    double alfa = kernel_config.hrrn_alfa;
+
+    return ((alfa * pcb->estimacion_rafaga) + ( (1 - alfa) * pcb->rafaga_ejecutada));
+}
+
+t_pcb* mayor_prioridad_PID(t_pcb* pcb1, t_pcb* pcb2)
+{
+    if(pcb1->id < pcb2->id){
+        return pcb1;
+    } else {
+        return pcb2;
+    }
+}
+
+// ----------------------- Funciones planificador blocked ----------------------- //
+
+
+// ----------------------- Funciones CE ----------------------- //
+
+contexto_ejecucion* obtener_ce(t_pcb* pcb)
+{ // PENSAR EN HACERLO EN   AMBOS SENTIDOS
     contexto_ejecucion * nuevoContexto = malloc(sizeof(contexto_ejecucion));
     nuevoContexto->instrucciones = string_array_new();
     nuevoContexto->registros_cpu = malloc(sizeof(t_registro));
@@ -454,63 +533,32 @@ contexto_ejecucion * obtener_ce(t_pcb * pcb){ // PENSAR EN HACERLO EN   AMBOS SE
     // copiar_tabla_segmentos(pcb, nuevoContexto);    // FALTA HACER
     return nuevoContexto;
 }
-// //t_pcb* mayorRRdeLista ( void* _pcb1,void* _pcb2){
 
-//         t_pcb* pcb1 = (t_pcb*)_pcb1;
+void copiar_id_pcb_a_ce(t_pcb* pcb, contexto_ejecucion* ce)
+{
+    ce->id = pcb->id;
+}
 
-//         t_pcb* pcb2 = (t_pcb*)_pcb2;
-
-//         return mayorRR(pcb1,pcb2);
-
-//     };
-
-
-// time_t calculoRR (time_t tiempoEsperaEnReady,time_t duracionRealAnterior,time_t estimacionAnterior){
-
-//     return 1 +( ( (time(NULL) - tiempoEsperaEnReady) *1000) /calculoEstimado(duracionRealAnterior,estimacionAnterior) );
-
-// }
-
-// double calculoEstimado (time_t duracionRealAnterior,time_t estimacionAnterior){
-
-//     double alfa = kernel_config.hrrn_alfa;
-
-//     return (alfa * duracionRealAnterior) + ( (1 - alfa) * estimacionAnterior) ;
-
-// }
-
-// t_pcb* mayorRR (t_pcb* pcb1,t_pcb* pcb2){
-
-    // int RR_pcb1 = calculoRR(pcb1->instanteEstado,pcb1->duracionRealAnterior,pcb1->estimacionAnterior);
-
-    // int RR_pcb2 = calculoRR(pcb2->instanteEstado,pcb2->duracionRealAnterior,pcb2->estimacionAnterior);
-
-    // //log_info(logger,"Comparo pcb1 [%d] y pcb2[%d], RR_pcb1 [%d] y RR_pcb2 [%d] ",pcb1->pid, pcb2->pid,RR_pcb1,RR_pcb2 );
-
-    // if (RR_pcb1 >= RR_pcb2) return pcb1;
-
-    // else return pcb2;
-
-// }
-
-
-// recieve_handshake(socket_cliente);
-
-void copiar_instrucciones_pcb_a_ce(t_pcb * pcb, contexto_ejecucion * ce) { //copia instrucciones de la estructura 1 a la 2
+void copiar_instrucciones_pcb_a_ce(t_pcb* pcb, contexto_ejecucion* ce)
+{
     for (int i = 0; i < string_array_size(pcb->instrucciones); i++) {
         // log_trace(kernel_logger, "copio en ce %s", pcb->instrucciones[i]);
         string_array_push(&(ce->instrucciones), string_duplicate(pcb->instrucciones[i]));
     }
 }
 
-void copiar_instrucciones_ce_a_pcb(contexto_ejecucion * ce, t_pcb * pcb) { //copia instrucciones de la estructura 1 a la 2
-    for (int i = 0; i < string_array_size(ce->instrucciones); i++) {
-        // log_trace(kernel_logger, "copio en pcb %s", ce->instrucciones[i]);
-        string_array_push(&(pcb->instrucciones), string_duplicate(ce->instrucciones[i]));
-    }
+void copiar_PC_pcb_a_ce(t_pcb* pcb, contexto_ejecucion* ce)
+{
+    ce->program_counter = pcb->program_counter;
 }
 
-void copiar_registros_pcb_a_ce(t_pcb * pcb, contexto_ejecucion * ce) {
+void copiar_PC_ce_a_pcb(contexto_ejecucion* ce, t_pcb* pcb)
+{
+    pcb->program_counter = ce->program_counter;
+}
+
+void copiar_registros_pcb_a_ce(t_pcb* pcb, contexto_ejecucion* ce)
+{
     strcpy(ce->registros_cpu->AX , pcb->registros_cpu->AX);
     strcpy(ce->registros_cpu->BX , pcb->registros_cpu->BX);
     strcpy(ce->registros_cpu->CX , pcb->registros_cpu->CX);
@@ -525,7 +573,8 @@ void copiar_registros_pcb_a_ce(t_pcb * pcb, contexto_ejecucion * ce) {
 	strcpy(ce->registros_cpu->RDX , pcb->registros_cpu->RDX);
 }
 
-void copiar_registros_ce_a_pcb(contexto_ejecucion * ce, t_pcb * pcb) {
+void copiar_registros_ce_a_pcb(contexto_ejecucion* ce, t_pcb* pcb)
+{
     strcpy(pcb->registros_cpu->AX , ce->registros_cpu->AX);
     strcpy(pcb->registros_cpu->BX , ce->registros_cpu->BX);
     strcpy(pcb->registros_cpu->CX , ce->registros_cpu->CX);
@@ -540,39 +589,25 @@ void copiar_registros_ce_a_pcb(contexto_ejecucion * ce, t_pcb * pcb) {
 	strcpy(pcb->registros_cpu->RDX , ce->registros_cpu->RDX);
 }
 
-void copiar_id_pcb_a_ce(t_pcb* pcb, contexto_ejecucion* ce) {
-    ce->id = pcb->id;
-}
-
-void copiar_id_ce_a_pcb(contexto_ejecucion* ce, t_pcb* pcb) {
-    pcb->id = ce->id;
-}
-
-void copiar_PC_pcb_a_ce(t_pcb* pcb, contexto_ejecucion* ce) {
-    ce->program_counter = pcb->program_counter;
-}
-
-void copiar_PC_ce_a_pcb(contexto_ejecucion* ce, t_pcb* pcb) {
-    pcb->program_counter = ce->program_counter;
-}
-
-void manejar_dispatch(){
+// ----------------------- Funciones Dispatch Manager ----------------------- //
+void manejar_dispatch()
+{
     log_trace(kernel_logger, "Entre por manejar dispatch");
     while(1){
-
         int cod_op = recibir_operacion(cpu_dispatch_connection);
         switch(cod_op){
-
-            case FIN_PROCESO:
+            case SUCCESS:
+            case SEG_FAULT:
                 contexto_ejecucion* contexto_a_finalizar = recibir_ce(cpu_dispatch_connection);
                 pthread_mutex_lock(&m_listaEjecutando);
                     t_pcb * pcb_a_finalizar = (t_pcb *) list_remove(listaEjecutando, 0); // inicializar pcb y despues liberarlo
                     actualizar_pcb(pcb_a_finalizar, contexto_a_finalizar); //FALTA HACER VER
                 pthread_mutex_unlock(&m_listaEjecutando);
-                
+                cambiar_estado_a(pcb_a_finalizar, EXIT, estadoActual(pcb_a_finalizar));
+
                 //sem_post(&cpu_libre_para_ejecutar); // si es FIFO no se usa, esto no deberia provocar nada, revisar eso iguañ
                 sem_post(&grado_multiprog); // NUEVO grado_multiprog
-
+                sem_post(&fin_ejecucion);
                 //signal(liberar);
                 //paquete_fin_memoria(pcb_a_finalizar->id, pcb_a_finalizar->tabla_paginas);
                 //wait (liberado);
@@ -580,41 +615,42 @@ void manejar_dispatch(){
                 pthread_mutex_lock(&m_listaFinalizados);
                     list_add(listaFinalizados, pcb_a_finalizar);
                 pthread_mutex_unlock(&m_listaFinalizados);
-
-                log_trace(kernel_logger, "Finalizo proceso con id: %d", pcb_a_finalizar->id);
+                
+                log_info(kernel_logger, "Finaliza el proceso %d - Motivo: %s", pcb_a_finalizar->id, obtenerCodOP(cod_op));
                 enviar_Fin_consola(pcb_a_finalizar->socket_consola); 
                 liberar_ce(contexto_a_finalizar);
-                log_trace(kernel_logger, "el seg fault es por otra cosa");
                 //eliminar(pcb_a_finalizar);
 
                 break;
+            case DESALOJO_YIELD:
+                contexto_ejecucion* contexto_a_reencolar = recibir_ce(cpu_dispatch_connection);
+                pthread_mutex_lock(&m_listaEjecutando);
+                    t_pcb * pcb_a_reencolar = (t_pcb *) list_remove(listaEjecutando, 0); // inicializar pcb y despues liberarlo
+                    actualizar_pcb(pcb_a_reencolar, contexto_a_reencolar);
+                pthread_mutex_unlock(&m_listaEjecutando);
+                cambiar_estado_a(pcb_a_reencolar, READY, estadoActual(pcb_a_reencolar));
+                sacar_rafaga_ejecutada(pcb_a_reencolar); // hacer cada vez que sale de running
+                iniciar_nueva_espera_ready(pcb_a_reencolar); // hacer cada vez que se mete en la lista de ready
+                pthread_mutex_lock(&m_listaReady);
+                    list_add(listaReady, pcb_a_reencolar);
+                pthread_mutex_unlock(&m_listaReady);
+                sem_post(&proceso_en_ready);
+                sem_post(&fin_ejecucion);
 
+                liberar_ce(contexto_a_reencolar);
+                //eliminar(pcb_a_reencolar);
+                break;
             //case BLOCK_por_PF:
             case -1:
+                break;
+
+            case BLOCK_IO:
+                log_trace(kernel_logger,"recibi io");
                 break;
             default:
                 log_error(kernel_logger, "entro algo que no deberia");
                 break;
             //case BLOCK_por_ACCESO_A_MEM: (CREEMOS Q ES UN BLOCK IO )
-
-            // case DESALOJO_PCB: ; // solo si es SRT(con desalojo)
-
-            //     t_pcb* pcb_desalojado =  recibir_pcb(cpu_dispatch_connection, kernel_logger); //recibir_pcb_tiempo_ms(cpu_dispatch_connection, &tiempo_cpu_ms, kernel_logger);
-            //     printf("\n");
-            //     log_trace(kernel_logger, "Entro por desalojo un proceso de id: ", pcb_desalojado->id);
-
-            //     id_desalojado = pcb_desalojado->id; // artilugio para q no se calcule el sig_to_run hasta q no este el desalojado en ready
-
-            //         pthread_mutex_lock(&m_listaEjecutando);
-            //     list_remove(listaEjecutando, 0); // inicializar pcb y despues liberarlo
-            //         pthread_mutex_unlock(&m_listaEjecutando);
- 
-            //     // Deberiamos tener en cuenta el grado de multiprogramacion a la hora de devolver el proceso a ready //Lean: yo creo q no, cualquier cosa preguntame
-            //     agregar_a_lista_con_sems(pcb_desalojado, listaReady, m_listaReady);
-
-            //     sem_post(&proceso_en_ready);          // TODO IMPORTANTE revisar                
-            //     sem_post(&cpu_libre_para_ejecutar);  // si es FIFO no se usa, esto no deberia provocar nada, revisar eso iguañ
-            //     break;
 
             // case BLOCK_IO: ;
             //     int tiempo_io_ms = 0; // aca rompe carajoOOOOO, cuando recibe no tiene bien los parametros
@@ -657,9 +693,50 @@ void manejar_dispatch(){
     }
 }
 
+void actualizar_pcb(t_pcb* pcb, contexto_ejecucion* ce)
+{
+    copiar_PC_ce_a_pcb(ce, pcb);
+    copiar_registros_ce_a_pcb(ce, pcb);
+    //falta copiar la tabla de segmentos.
+}
 
-void actualizar_pcb(t_pcb* pcb, contexto_ejecucion* ce) {
+void enviar_Fin_consola(int socket)
+{
+    // pthread_mutex_lock(&mutexOk);
+    t_paquete *paquete;
+    paquete = crear_paquete_op_code(FIN_CONSOLA);
+    enviar_paquete(paquete, socket);
+    eliminar_paquete(paquete);
+    liberar_conexion(socket);
+}
 
+void sacar_rafaga_ejecutada(t_pcb* pcb)
+{
+    pcb->rafaga_ejecutada = temporal_gettime(pcb->salida_ejecucion);
+}
+
+void iniciar_nueva_espera_ready(t_pcb* pcb)
+{
+    temporal_destroy(pcb->tiempo_llegada_ready);
+    pcb->tiempo_llegada_ready = temporal_create();
+}
+
+
+
+// ----------------------- Funciones finales ----------------------- //
+
+void destruirSemaforos()
+{
+    sem_destroy(&proceso_en_ready);
+    sem_destroy(&fin_ejecucion);
+    sem_destroy(&grado_multiprog);
+}
+
+
+
+bool bloqueado_termino_io(t_pcb *pcb)
+{
+    return (pcb->estado_actual == BLOCKED); //VER aca antes era BLOCKED_READY
 }
 
 /*
@@ -682,22 +759,5 @@ Actualizar Puntero Archivo: PID: <PID> - Actualizar puntero Archivo: <NOMBRE ARC
 Truncar Archivo: PID: <PID> - Archivo: <NOMBRE ARCHIVO> - Tamaño: <TAMAÑO>
 Leer Archivo: PID: <PID> - Leer Archivo: <NOMBRE ARCHIVO> - Puntero <PUNTERO> - Dirección Memoria <DIRECCIÓN MEMORIA> - Tamaño <TAMAÑO>
 Escribir Archivo: PID: <PID> -  Escribir Archivo: <NOMBRE ARCHIVO> - Puntero <PUNTERO> - Dirección Memoria <DIRECCIÓN MEMORIA> - Tamaño <TAMAÑO>
-
-
-Orden de inicio de servidores: Memoria -> FileSystem/CPU (Ambos tienen que estar levantados) -> Kernel -> Consola
-
-Consola en multiples instancias va a: levantar su configuracion inicial -> conectarse con el servidor de kernel -> hacer un handshake -> mandar el paquete con el pseudocodigo ->
-recibir un mensaje de llegada de pseudocodigo -> esperar a otro mensaje como SUCCES - SEG_FAULT - OUT_OF_MEMORY -> finaliza el programa de consola
-
-kernel va a: levantar su configuracion inicial -> levantar el servidor -> conectarse con los servidores de CPU - Memoria - FileSystem ->
-recibir Multiplexando clientes consola -> hacer el hanshake -> recibir el archivo de pseudocodigo y enviar mensaje de buena llegada -> ejecutar el proceso ->
-enviar a consola el mensaje de finalizacion ya sea SUCCES - SEG_FAULT - OUT_OF_MEMORY
-
-Checkpoint 2
-Levanta el archivo de configuración - DONE
-Se conecta a CPU, Memoria y File System - ALMOST DONE
-Espera conexiones de las consolas - DONE
-Recibe de las consolas las instrucciones y arma el PCB - ALMOST ALMOST DONE
-Planificación de procesos con FIFO - REMAINS
 
 */

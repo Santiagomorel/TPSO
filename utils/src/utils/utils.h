@@ -21,6 +21,7 @@
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <math.h>
 #include <valgrind/valgrind.h>
 #include <readline/readline.h>
 #include <pthread.h>
@@ -52,12 +53,27 @@ typedef enum
 	EJECUTAR_CE, 			//  dispatch
 	EJECUTAR_INTERRUPCION,	// 	interrupt
 	// ------- enviadas por DIspatch: (CPU->kernel) --------
-	FIN_PROCESO,
+	SUCCESS,
+	EXIT_RECURSO,
+	SEG_FAULT,
 	DESALOJO_PCB,  			// TODO RUSO
 	BLOCK_IO,
+	BLOCK_WAIT,
 	WAIT_RECURSO,
 	DESALOJO_YIELD,
 	SIGNAL_RECURSO,
+	ABRIR_ARCHIVO,
+	CERRAR_ARCHIVO,
+	LEER_ARCHIVO,
+	ESCRIBIR_ARCHIVO,
+	ACTUALIZAR_PUNTERO,
+	MODIFICAR_TAMAÑO_ARCHIVO,
+	CREAR_SEGMENTO,
+	BORRAR_SEGMENTO,
+	// ------- KERNEL->CPU -----------
+	NO_EXISTE_RECURSO,
+	NO_LO_TENGO,
+	LO_TENGO,
 	// -------KERNEL->MEMORIA --------
 	ACCEDER_TP,
 	ACCEDER_EU,
@@ -72,6 +88,10 @@ typedef enum
 	PEDIDO_MARCO,	// 2do acceso
 	PEDIDO_VALOR,
 	WRITE,
+	MOV_IN,
+	MOV_IN_OK,
+	MOV_OUT,
+	MOV_OU_OK,
 	// -------MEMORIA --------
 	INICIAR_ESTRUCTURAS,
 	TABLA_SEGMENTOS,
@@ -79,6 +99,7 @@ typedef enum
 	INDICE_2, 	// 1er acceso mmu
 	MARCO,		// 2do acceso mmu
 	//PAGE_FAULT,
+	OUT_OF_MEMORY,
 	DIR_FISICA,
 	VALOR_A_RECIBIR,	
 
@@ -129,12 +150,14 @@ typedef struct {
     int program_counter;
 	t_registro* registros_cpu;
 	t_list* tabla_segmentos;
-	float estimacion_rafaga;
-    t_temporal tiempo_llegada_ready;
+	double estimacion_rafaga;
+    t_temporal* tiempo_llegada_ready;
 	t_list* tabla_archivos_abiertos; // [t_archivo_abierto]
 
-	t_temporal salida_ejecucion;
-	t_temporal llegada_ejecucion;
+	t_temporal* salida_ejecucion;
+	int64_t rafaga_ejecutada;
+
+	double calculoRR;
 
 	int socket_consola;
 	estados estado_actual;
@@ -170,6 +193,7 @@ t_paquete* crear_paquete_op_code(op_code codigo_op);
 t_paquete* crear_super_paquete(void);
 void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio);
 void agregar_entero_a_paquete(t_paquete* , int );
+void agregar_string_a_paquete(t_paquete *paquete, char* palabra);
 void agregar_array_string_a_paquete(t_paquete* paquete, char** arr);
 void agregar_registros_a_paquete(t_paquete* , t_registro*);
 void enviar_paquete(t_paquete* paquete, int socket_cliente);
@@ -211,4 +235,5 @@ void imprimir_tabla_segmentos(t_list* , t_log* );
 void liberar_ce(contexto_ejecucion* );
 //liberar registro -> 
 
+char* obtenerCodOP(int);
 #endif /* UTILS_H_ */
