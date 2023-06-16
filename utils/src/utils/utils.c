@@ -487,17 +487,14 @@ contexto_ejecucion *recibir_ce(int socket)
 }
 
 char* recibir_string(int socket){
-	char* nuevoString = malloc(sizeof(char*));
 	int size = 0;
 	char *buffer;
 	int desp = 0;
 
 	buffer = recibir_buffer(&size, socket);
-	
-	memcpy(nuevoString, buffer + (desp), sizeof(char*));
-	(desp) += sizeof(char*);
 
-	free(buffer);
+	char* nuevoString = leer_string(buffer, &desp);
+
 	return nuevoString;
 }
 
