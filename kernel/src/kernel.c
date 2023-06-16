@@ -91,7 +91,7 @@ int* convertirPunteroCaracterAEntero(char** punteroCaracteres)
 {
     int size = string_array_size(punteroCaracteres);
     cantidad_instancias = size;
-    int* intArray = (int*)malloc(size * sizeof(int));
+    int* intArray = (int*)malloc(size * sizeof(int)); // hacer free del intArray
 
         for (int i = 0; i < size; ++i) {
             intArray[i] = atoi(punteroCaracteres[i]);
@@ -119,6 +119,8 @@ void iniciar_listas_recursos(char** recursos)
         log_error(kernel_logger, "La cantidad de recursos en config excede el limite establecido por el programa");
         exit(1);
     }
+    
+    lista_recurso = (t_list**)malloc(cantidad_instancias * sizeof(t_list*));
 
     for (int i = 0; i < cantidad; i++) {
         lista_recurso[i] = list_create();
@@ -693,18 +695,23 @@ void manejar_dispatch()
                 //eliminar(pcb_a_reencolar);
                 break;
             case WAIT_RECURSO:
+                log_warning(kernel_logger, "recibo el recurso_wait");
                 contexto_ejecucion* contexto_ejecuta_wait = recibir_ce(cpu_dispatch_connection);
-                char* recurso = recibir_string(cpu_dispatch_connection);
+                log_warning(kernel_logger, "recibo bien el contexto");
+                char* recurso_wait = recibir_string(cpu_dispatch_connection);
+                log_warning(kernel_logger, "recibo el recurso_wait como %s", recurso_wait);
                 pthread_mutex_lock(&m_listaEjecutando);
                     t_pcb * pcb_wait = (t_pcb *) list_get(listaEjecutando, 0);
                     actualizar_pcb(pcb_wait, contexto_ejecuta_wait);
                 pthread_mutex_unlock(&m_listaEjecutando);
-                if(recurso_no_existe(recurso)){ // aca se genera el id_recurso
+                if(recurso_no_existe(recurso_wait)){
                     enviar_CodOp(cpu_dispatch_connection, NO_EXISTE_RECURSO);
                 }else{
+                    int id_recurso = obtener_id_recurso(recurso_wait);
                     restar_instancia(id_recurso);
                     if(tiene_instancia_wait(id_recurso)){
                         enviar_CodOp(cpu_dispatch_connection, LO_TENGO);
+                        sem_wait(sem_recurso[id_recurso]);
                     } else {
                         enviar_CodOp(cpu_dispatch_connection, NO_LO_TENGO);
                         recibir_operacion(cpu_dispatch_connection);
@@ -716,9 +723,33 @@ void manejar_dispatch()
                         cambiar_estado_a(pcb_bloqueado_en_recurso, BLOCKED, estadoActual(pcb_bloqueado_en_recurso));
                         sacar_rafaga_ejecutada(pcb_bloqueado_en_recurso); // hacer cada vez que sale de running
                         sem_post(&fin_ejecucion);
-                        bloqueo_proceso_en_recurso(pcb_bloqueado_en_recurso); // aca tengo que encolar en la lista correspondiente
+                        liberar_ce(contexto_bloqueado_en_recurso);
+                        liberar_ce(contexto_ejecuta_wait);
+                        bloqueo_proceso_en_recurso(pcb_bloqueado_en_recurso, id_recurso); // aca tengo que encolar en la lista correspondiente
                     }
                 }
+                free(recurso_wait);
+                break; 
+            case SIGNAL_RECURSO:
+                contexto_ejecucion* contexto_ejecuta_signal = recibir_ce(cpu_dispatch_connection);
+                char* recurso_signal = recibir_string(cpu_dispatch_connection);
+                if(recurso_no_existe(recurso_signal)){
+                    enviar_CodOp(cpu_dispatch_connection, NO_EXISTE_RECURSO);
+                }else {
+                    enviar_CodOp(cpu_dispatch_connection, LO_TENGO);
+                    int id_recurso = obtener_id_recurso(recurso_signal);
+                    sumar_instancia(id_recurso);
+                    pthread_mutex_lock(&m_listaEjecutando);
+                    t_pcb * pcb_signal = (t_pcb *) list_get(listaEjecutando, 0);
+                    actualizar_pcb(pcb_signal, contexto_ejecuta_signal);
+                    pthread_mutex_unlock(&m_listaEjecutando);
+                    sem_post(sem_recurso[id_recurso]);
+
+                    if(tiene_que_reencolar_bloq_recurso(id_recurso)){
+                        reencolar_bloqueo_por_recurso(id_recurso);
+                    }
+                }
+                free(recurso_signal); 
                 break;
             //case BLOCK_por_PF:
             case -1:
@@ -782,11 +813,46 @@ int recurso_no_existe(char* recurso)
 
     for (int i = 0; i < cantidad; i++) {
         if (strcmp(kernel_config.recursos[i], recurso) == 0){
-            id_recurso = i;
             return 0;
         }
     }
     return 1;
+}
+
+int obtener_id_recurso(char* recurso)
+{
+    int cantidad = string_array_size(kernel_config.recursos);
+
+    for (int i = 0; i < cantidad; i++) {
+        if (strcmp(kernel_config.recursos[i], recurso) == 0){
+            return i;
+        }
+    }
+}
+
+void reencolar_bloqueo_por_recurso(int id_recurso)
+{
+    sem_wait(sem_recurso[id_recurso]);
+    pthread_mutex_lock(m_listaRecurso[id_recurso]);
+        t_pcb * pcb_a_reencolar = (t_pcb *) list_remove(lista_recurso[id_recurso], 0); // inicializar pcb y despues liberarlo
+    pthread_mutex_unlock(m_listaRecurso[id_recurso]);
+    cambiar_estado_a(pcb_a_reencolar, READY, estadoActual(pcb_a_reencolar));
+    iniciar_nueva_espera_ready(pcb_a_reencolar); // hacer cada vez que se mete en la lista de ready
+    pthread_mutex_lock(&m_listaReady);
+        list_add(listaReady, pcb_a_reencolar);
+    pthread_mutex_unlock(&m_listaReady);
+    sem_post(&proceso_en_ready);
+}
+
+
+int tiene_que_reencolar_bloq_recurso(int id_recurso)
+{
+    return (kernel_config.instancias_recursos[id_recurso] < 0);
+}
+
+void sumar_instancia(int id_recurso)
+{
+    kernel_config.instancias_recursos[id_recurso] += 1;
 }
 
 void restar_instancia(int id_recurso){ // resta 1 a la instancia
@@ -797,7 +863,7 @@ int tiene_instancia_wait(int id_recurso){ // devuelve 1 si instancia recurso es 
     return (kernel_config.instancias_recursos[id_recurso] >= 0);
 }
 
-void bloqueo_proceso_en_recurso(t_pcb* pcb)
+void bloqueo_proceso_en_recurso(t_pcb* pcb, int id_recurso)
 {
     pthread_mutex_lock(m_listaRecurso[id_recurso]);
         list_add(lista_recurso[id_recurso], pcb);

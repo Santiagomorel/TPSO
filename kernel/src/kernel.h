@@ -140,9 +140,13 @@ void iniciar_nueva_espera_ready(t_pcb*);
 // ------------------------------------//
 
 int recurso_no_existe(char*);
+int obtener_id_recurso(char*);
+void reencolar_bloqueo_por_recurso(int );
+int tiene_que_reencolar_bloq_recurso(int );
+void sumar_instancia(int);
 void restar_instancia(int);
 int tiene_instancia_wait(int);
-void bloqueo_proceso_en_recurso(t_pcb* );
+void bloqueo_proceso_en_recurso(t_pcb*, int);
 // void end_program(int, t_log*, t_config*);
 
 
@@ -150,8 +154,6 @@ void enviar_Fin_consola(int);
 bool bloqueado_termino_io(t_pcb *);
 
 void destruirSemaforos();
-
-int id_recurso;
 
 
 #endif /* KERNEL_H_ */

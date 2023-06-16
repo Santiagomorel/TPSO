@@ -461,7 +461,7 @@ t_list *recibir_paquete_segmento(int socket)
 	int desp = 0;
 
 	buffer = recibir_buffer(&size, socket);
-
+	
 	t_list *segmento = leer_segmento(buffer, &desp);
 
 	free(buffer);
@@ -493,8 +493,9 @@ char* recibir_string(int socket){
 	int desp = 0;
 
 	buffer = recibir_buffer(&size, socket);
-
-	nuevoString = leer_string(buffer, &desp);
+	
+	memcpy(nuevoString, buffer + (desp), sizeof(char*));
+	(desp) += sizeof(char*);
 
 	free(buffer);
 	return nuevoString;
