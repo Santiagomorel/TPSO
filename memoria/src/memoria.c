@@ -27,7 +27,8 @@ int main(int argc, char ** argv){
     
     load_config();
 
-    MEMORIA_PRINCIPAL= malloc(memoria_config.tam_memoria);
+    iniciarSegmentacion();
+
 /*Fin Estructuras Admin*/
    
     // ----------------------- levanto el servidor de memoria ----------------------- //
@@ -92,11 +93,11 @@ int main(int argc, char ** argv){
 
 void load_config(void){
     memoria_config.puerto_escucha           = config_get_string_value(memoria_config_file, "PUERTO_ESCUCHA");
-    memoria_config.tam_memoria              = config_get_string_value(memoria_config_file, "TAM_MEMORIA");
+    memoria_config.tam_memoria              = config_get_int_value(memoria_config_file, "TAM_MEMORIA");
     memoria_config.tam_segmento_0            = config_get_int_value(memoria_config_file, "TAM_SEGMENTO_0");
-    memoria_config.cant_segmentos           = config_get_string_value(memoria_config_file, "CANT_SEGMENTOS");
-    memoria_config.retardo_memoria          = config_get_string_value(memoria_config_file, "RETARDO_MEMORIA");
-    memoria_config.retardo_compactacion     = config_get_string_value(memoria_config_file, "RETARDO_COMPACTACION");
+    memoria_config.cant_segmentos           = config_get_int_value(memoria_config_file, "CANT_SEGMENTOS");
+    memoria_config.retardo_memoria          = config_get_int_value(memoria_config_file, "RETARDO_MEMORIA");
+    memoria_config.retardo_compactacion     = config_get_int_value(memoria_config_file, "RETARDO_COMPACTACION");
     memoria_config.algoritmo_asignacion     = config_get_string_value(memoria_config_file, "ALGORITMO_ASIGNACION");
 }
 
@@ -136,7 +137,7 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL) {
                     
                 }*/
 
-                /
+                
                 break;
             
 
@@ -175,7 +176,18 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU) {
                 recibir_mensaje(SOCKET_CLIENTE_CPU, log_memoria);
                 break;
 
-            
+            case MOV_IN: //(Registro, Dirección Lógica): Lee el valor de memoria correspondiente a la Dirección Lógica y lo almacena en el Registro.
+                
+
+
+                //t_paquete* paquete_ok = crear_paquete_op_code(MOV_IN_OK);
+                //enviar_paquete(paquete_ok);
+                break;
+            case MOV_OUT: //(Dirección Lógica, Registro): Lee el valor del Registro y lo escribe en la dirección física de memoria obtenida a partir de la Dirección Lógica.
+
+
+                //t_paquete* paquete_ok = crear_paquete_op_code(MOV_OUT_OK);
+                //enviar_paquete(paquete_ok);
             default:
                 //log_trace(log_memoria, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
                 break;
@@ -193,18 +205,11 @@ void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM) {
                 log_trace(log_memoria, "recibi el op_cod %d MENSAJE , codigoOperacion", codigoOperacion);
                 
                 break;
-            // ---------LP entrante----------
-            // case INICIAR_PCB: 
-            // log_trace(log_memoria, "entro una consola y envio paquete a inciar PCB");                         //particularidad de c : "a label can only be part of a statement"
-            //     t_pcb* pcb_a_iniciar = iniciar_pcb(SOCKET_CLIENTE);
-            // log_trace(log_memoria, "pcb iniciado PID : %d", pcb_a_iniciar->id);
-            //         pthread_mutex_lock(&m_listaNuevos);
-            //     list_add(listaNuevos, pcb_a_iniciar);
-            //         pthread_mutex_unlock(&m_listaNuevos);
-            // log_trace(log_memoria, "log enlistado: %d", pcb_a_iniciar->id);
 
-            //     planificar_sig_to_ready();// usar esta funcion cada vez q se agregue un proceso a NEW o SUSPENDED-BLOCKED 
-            //     break;
+            //case CREATE_FILE:
+            //
+            //    break;
+            
 
             default:
                 log_trace(log_memoria, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
@@ -356,3 +361,117 @@ t_list* leer_tabla_segmentos(char* buffer, int* desp){
 void iniciar_semaforos(){
     sem_init(&finModulo, 0, 0);
 }
+
+//
+//  SEGMENTACION
+//
+
+int iniciarSegmentacion(void){
+    MEMORIA_PRINCIPAL= malloc(memoria_config.tam_memoria);
+
+    if(MEMORIA_PRINCIPAL == NULL){
+        //NO SE RESERVO LA MEMORIA
+        return 0;
+    }
+
+    //LISTAS
+    //tablaDeSegmentosDePatotas = list_create();
+    //tablaDeSegmentosDeTripulantes = list_create();
+
+    //BITARRAY
+    datos = asignarMemoriaBytes(memoria_config.tam_memoria); //LLENA LOS CAMPOS EN 0
+
+    if(datos == NULL){
+        //NO SE RESERVO LA MEMORIA
+        return 0;
+    }
+
+    int tamanio = bitsToBytes(memoria_config.tam_memoria);
+
+    bitMapSegment = bitarray_create_with_mode(datos,tamanio, MSB_FIRST);
+
+    return 1; //SI FALLA DEVUELVE 0
+}
+
+int puedoGuardar(int quieroGuardar){ //RECIBE CANT BYTES QUE QUIERO GUARDAR
+
+    int tamanioLibre = tamanioTotalDisponible();
+    log_info(log_memoria, "Hay %d espacio libre, quiero guardar %d", tamanioLibre, quieroGuardar);
+    if(quieroGuardar <= tamanioLibre){
+        return 1;
+    }else return 0; //DEVUELVE 1 SI HAY ESPACIO SUFICIENTE PARA GUARDAR LO QUE QUIERO GUARDAR
+
+    
+}
+
+
+int tamanioTotalDisponible(void){
+    
+    int contador = 0;
+    int desplazamiento = 0 ;
+
+    while (desplazamiento < memoria_config.tam_memoria){
+
+    	pthread_mutex_lock(&mutexBitMapSegment);
+        if((bitarray_test_bit(bitMapSegment, desplazamiento) == 0)){
+            contador ++;
+        }
+        pthread_mutex_unlock(&mutexBitMapSegment);
+        desplazamiento ++; 
+    }
+
+    return contador;
+}
+
+//BitArrays
+
+char* asignarMemoriaBits(int bits)//recibe bits asigna bytes
+{
+	char* aux;
+	int bytes;
+	bytes = bitsToBytes(bits);
+	//printf("BYTES: %d\n", bytes);
+	aux = malloc(bytes);
+	memset(aux,0,bytes);
+	return aux; 
+}
+
+char* asignarMemoriaBytes(int bytes){
+    char* aux;
+    aux = malloc(bytes);
+    memset(aux,0,bytes); // SETEA LOS BYTES EN 0
+    return aux;
+}
+
+int bitsToBytes(int bits){
+	int bytes;
+	if(bits < 8)
+		bytes = 1; 
+	else
+	{
+		double c = (double) bits;
+		bytes = ceil(c/8.0);
+	}
+	
+	return bytes;
+}
+
+//bitMaps
+
+
+
+
+//Comentarios viejos// => para borrar
+
+// ---------LP entrante----------
+            // case INICIAR_PCB: 
+            // log_trace(log_memoria, "entro una consola y envio paquete a inciar PCB");                         //particularidad de c : "a label can only be part of a statement"
+            //     t_pcb* pcb_a_iniciar = iniciar_pcb(SOCKET_CLIENTE);
+            // log_trace(log_memoria, "pcb iniciado PID : %d", pcb_a_iniciar->id);
+            //         pthread_mutex_lock(&m_listaNuevos);
+            //     list_add(listaNuevos, pcb_a_iniciar);
+            //         pthread_mutex_unlock(&m_listaNuevos);
+            // log_trace(log_memoria, "log enlistado: %d", pcb_a_iniciar->id);
+
+            //     planificar_sig_to_ready();// usar esta funcion cada vez q se agregue un proceso a NEW o SUSPENDED-BLOCKED 
+            //     break;

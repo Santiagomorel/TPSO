@@ -19,11 +19,11 @@
 typedef struct{
 
     char* puerto_escucha;
-    char* tam_memoria;
+    int tam_memoria;
     int tam_segmento_0;
-    char* cant_segmentos;
-    char* retardo_memoria;
-    char* retardo_compactacion;
+    int cant_segmentos;
+    int retardo_memoria;
+    int retardo_compactacion;
     char* algoritmo_asignacion;
 
 } Memoria_config;
@@ -31,13 +31,25 @@ Memoria_config memoria_config;
 
 typedef struct{
 	int id;
-	t_list* tabla_segmentos; //
+	t_list* tabla_segmentos;
 }t_proceso;
 
+//esta mal (casi seguro)
 typedef struct{
     int init_direc;
     int tamanio;
 }t_hueco;
+
+char* datos;
+
+t_bitarray* bitMapSegment;
+t_bitarray* unBitmap;
+
+
+int iniciarSegmentacion(void);
+char* asignarMemoriaBits(int bits);
+char* asignarMemoriaBytes(int bytes);
+int bitsToBytes(int bits);
 
 
 t_list* generar_lista_huecos();
@@ -70,6 +82,7 @@ void recibir_fileSystem(int);
 //semaforos
 
 sem_t finModulo;
+pthread_mutex_t mutexBitMapSegment;
 
 void iniciar_semaforos();
 
