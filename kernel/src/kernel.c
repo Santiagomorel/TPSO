@@ -82,9 +82,22 @@ void load_config()
     kernel_config.grado_max_multiprogramacion = config_get_int_value(kernel_config_file, "GRADO_MAX_MULTIPROGRAMACION");
 
     kernel_config.recursos = config_get_array_value(kernel_config_file, "RECURSOS");
-    kernel_config.instancias_recursos = config_get_array_value(kernel_config_file, "INSTANCIAS_RECURSOS");
+    kernel_config.instancias_recursos = convertirPunteroCaracterAEntero(config_get_array_value(kernel_config_file, "INSTANCIAS_RECURSOS"));
 
     log_trace(kernel_logger, "config cargada en 'kernel_cofig_file'");
+}
+
+int* convertirPunteroCaracterAEntero(char** punteroCaracteres)
+{
+    int size = string_array_size(punteroCaracteres);
+    cantidad_instancias = size;
+    int* intArray = (int*)malloc(size * sizeof(int));
+
+        for (int i = 0; i < size; ++i) {
+            intArray[i] = atoi(punteroCaracteres[i]);
+        }
+        
+    return intArray;
 }
 
 void inicializarListasGlobales()
@@ -106,10 +119,9 @@ void iniciar_listas_recursos(char** recursos)
         log_error(kernel_logger, "La cantidad de recursos en config excede el limite establecido por el programa");
         exit(1);
     }
-    lista_recurso = list_create();
 
     for (int i = 0; i < cantidad; i++) {
-        list_add(lista_recurso, list_create());
+        lista_recurso[i] = list_create();
     }
 
     log_info(kernel_logger, "Se inician las listas de los recursos");
@@ -129,10 +141,9 @@ void iniciarSemaforos()
     iniciar_semaforos_recursos(kernel_config.recursos, kernel_config.instancias_recursos);
 }
 
-void iniciar_semaforos_recursos(char** recursos, char** instancias_recursos)
+void iniciar_semaforos_recursos(char** recursos, int* instancias_recursos) // VER SI ES NECESARIO UTILIZARLOS
 {
     int cantidad_recursos = string_array_size(recursos);
-    int cantidad_instancias = string_array_size(instancias_recursos);
 
     if (cantidad_instancias != cantidad_recursos) {
         log_error(kernel_logger, "La cantidad de instancias de recursos es diferente a la cantidad de recursos en config");
@@ -140,8 +151,13 @@ void iniciar_semaforos_recursos(char** recursos, char** instancias_recursos)
     }
 
     for (int i = 0; i < cantidad_recursos; i++) {
+        m_listaRecurso[i] = (pthread_mutex_t*) malloc(sizeof(pthread_mutex_t)); // VER luego hay que eliminar los malloc
+        pthread_mutex_init(m_listaRecurso[i], NULL); //sem_wait(sem_recurso[x])
+    }
+
+    for (int i = 0; i < cantidad_recursos; i++) {
         sem_recurso[i] = (sem_t*)malloc(sizeof(sem_t)); // VER luego hay que eliminar los malloc
-        sem_init(sem_recurso[i], 0, atoi(instancias_recursos[i])); //sem_wait(sem_recurso[x])
+        sem_init(sem_recurso[i], 0, instancias_recursos[i]); //sem_wait(sem_recurso[x])
     }
     log_info(kernel_logger, "Se inician los semaforos de los recursos");
 }
@@ -683,20 +699,24 @@ void manejar_dispatch()
                     t_pcb * pcb_wait = (t_pcb *) list_get(listaEjecutando, 0);
                     actualizar_pcb(pcb_wait, contexto_ejecuta_wait);
                 pthread_mutex_unlock(&m_listaEjecutando);
-                if(recurso_no_existe(recurso)){
+                if(recurso_no_existe(recurso)){ // aca se genera el id_recurso
                     enviar_CodOp(cpu_dispatch_connection, NO_EXISTE_RECURSO);
                 }else{
                     restar_instancia(id_recurso);
-                    if(tiene_instancia_wait(recurso)){
-                        // devolver LO_TENGO
+                    if(tiene_instancia_wait(id_recurso)){
+                        enviar_CodOp(cpu_dispatch_connection, LO_TENGO);
                     } else {
-                        // devolver NO_LO_TENGO
-                        // encolar en la lista del recurso
-                        // sacar_rafaga_ejecutada
-                        // recibir op
-                        // recibir contexto
-                        // actualizar contexto de proceso en la lista del recurso
-                        //
+                        enviar_CodOp(cpu_dispatch_connection, NO_LO_TENGO);
+                        recibir_operacion(cpu_dispatch_connection);
+                        contexto_ejecucion* contexto_bloqueado_en_recurso= recibir_ce(cpu_dispatch_connection);
+                        pthread_mutex_lock(&m_listaEjecutando);
+                            t_pcb * pcb_bloqueado_en_recurso = (t_pcb *) list_remove(listaEjecutando, 0); // inicializar pcb y despues liberarlo
+                            actualizar_pcb(pcb_bloqueado_en_recurso, contexto_bloqueado_en_recurso);
+                        pthread_mutex_unlock(&m_listaEjecutando);
+                        cambiar_estado_a(pcb_bloqueado_en_recurso, BLOCKED, estadoActual(pcb_bloqueado_en_recurso));
+                        sacar_rafaga_ejecutada(pcb_bloqueado_en_recurso); // hacer cada vez que sale de running
+                        sem_post(&fin_ejecucion);
+                        bloqueo_proceso_en_recurso(pcb_bloqueado_en_recurso); // aca tengo que encolar en la lista correspondiente
                     }
                 }
                 break;
@@ -757,7 +777,7 @@ void manejar_dispatch()
 }
 
 int recurso_no_existe(char* recurso)
-{ // verifica si no existe el recurso
+{ // verifica si no existe el recurso - retorna 0 si existe - 1 si no existe
     int cantidad = string_array_size(kernel_config.recursos);
 
     for (int i = 0; i < cantidad; i++) {
@@ -769,12 +789,19 @@ int recurso_no_existe(char* recurso)
     return 1;
 }
 
-void restar_instancia(int recurso){ // resta 1 a la instancia
-
+void restar_instancia(int id_recurso){ // resta 1 a la instancia
+    kernel_config.instancias_recursos[id_recurso] -= 1;
 }
 
-int tiene_instancia_wait(int recurso){ // devuelve 1 si instancia recurso es >= 0, 0 en otro caso
+int tiene_instancia_wait(int id_recurso){ // devuelve 1 si instancia recurso es >= 0, 0 en otro caso
+    return (kernel_config.instancias_recursos[id_recurso] >= 0);
+}
 
+void bloqueo_proceso_en_recurso(t_pcb* pcb)
+{
+    pthread_mutex_lock(m_listaRecurso[id_recurso]);
+        list_add(lista_recurso[id_recurso], pcb);
+    pthread_mutex_unlock(m_listaRecurso[id_recurso]);
 }
 
 void actualizar_pcb(t_pcb* pcb, contexto_ejecucion* ce)

@@ -25,7 +25,7 @@ typedef struct{
     int grado_max_multiprogramacion;
 
     char** recursos;
-    char** instancias_recursos;
+    int* instancias_recursos;
 
     char* ip_kernel;
     char* puerto_kernel;
@@ -44,12 +44,16 @@ int memory_connection;
 int cpu_dispatch_connection;
 int file_system_connection;
 
+// Variables globales de recursos
+int cantidad_instancias;
+
 // Declaraciones de parte inicio
 void load_config();
+int* convertirPunteroCaracterAEntero(char** );
 void inicializarListasGlobales();
 void iniciar_listas_recursos(char**);
 void iniciarSemaforos();
-void iniciar_semaforos_recursos(char**, char**);
+void iniciar_semaforos_recursos(char**, int*);
 void iniciar_conexiones_kernel();
 void iniciar_planificadores();
 
@@ -60,6 +64,7 @@ pthread_mutex_t m_listaBloqueados;
 pthread_mutex_t m_listaEjecutando;
 pthread_mutex_t m_listaReady;
 pthread_mutex_t m_listaFinalizados;
+pthread_mutex_t* m_listaRecurso[MAX_RECURSOS];
 sem_t proceso_en_ready;
 sem_t fin_ejecucion;
 sem_t grado_multiprog;
@@ -72,7 +77,7 @@ t_list* listaBloqueados;    // BLOCKED
 t_list* listaEjecutando;    // RUNNING (EXEC)
 t_list* listaFinalizados;   // EXIT   
 t_list* listaIO;
-t_list* lista_recurso; // lista que tiene listas de recursos
+t_list** lista_recurso; // lista que tiene listas de recursos
 
 // Variables de hilo de planificadores
 pthread_t planificadorCP;
@@ -137,6 +142,7 @@ void iniciar_nueva_espera_ready(t_pcb*);
 int recurso_no_existe(char*);
 void restar_instancia(int);
 int tiene_instancia_wait(int);
+void bloqueo_proceso_en_recurso(t_pcb* );
 // void end_program(int, t_log*, t_config*);
 
 
