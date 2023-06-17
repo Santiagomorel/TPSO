@@ -539,6 +539,13 @@ void enviar_CodOp(int conexion, int codOP)
 	eliminar_paquete(paquete);
 }
 
+void enviar_paquete_entero(int conexion, int entero, int codOP){
+t_paquete * paquete = crear_paquete_op_code(codOP);
+agregar_entero_a_paquete(paquete, entero);
+enviar_paquete(paquete, conexion);
+eliminar_paquete(paquete);
+}
+
 void agregar_ce_a_paquete(t_paquete *paquete, contexto_ejecucion *ce, t_log *logger)
 {
 	log_trace(logger, "antes de agregar entero");

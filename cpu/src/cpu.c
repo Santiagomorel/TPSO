@@ -329,8 +329,12 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s", ce->id, instruction[0], instruction[1]);
 
             tiempo = instruction[1];
-            enviar_ce_con_entero(socket_kernel, ce, tiempo, BLOCK_IO);
+            
+            enviar_ce(socket_kernel,ce,BLOCK_IO,cpu_logger);       
             log_trace(cpu_logger, "%s", tiempo);
+            t_paquete* entero = crear_paquete();
+            agregar_a_paquete(entero,tiempo,sizeof(tiempo));
+            enviar_paquete(entero,socket_kernel);
             input_ouput = 1;
             break;
          case I_EXIT:

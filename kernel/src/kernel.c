@@ -759,6 +759,13 @@ void manejar_dispatch()
 
             case BLOCK_IO:
                 log_trace(kernel_logger,"recibi io");
+                contexto_ejecucion* contexto_IO = recibir_ce(cpu_dispatch_connection);
+                imprimir_ce(contexto_IO,kernel_logger);
+                log_trace(kernel_logger,"recibi ce");
+                char* tiempo_bloqueo = recibir_paquete(cpu_dispatch_connection);
+                log_trace(kernel_logger,"recibi entero: %s",tiempo_bloqueo);
+                int bloqueo = atoi(tiempo_bloqueo);
+
                 break;
             default:
                 log_error(kernel_logger, "entro algo que no deberia");

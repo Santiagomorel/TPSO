@@ -223,6 +223,7 @@ void enviar_paquete_entero(int , int , int );
 
 void enviar_ce(int, contexto_ejecucion *, int, t_log*);
 void enviar_CodOp(int, int);
+void enviar_paquete_entero(int, int, int);
 
 void agregar_ce_a_paquete(t_paquete *, contexto_ejecucion *, t_log*);
 contexto_ejecucion * obtener_ce(t_pcb * pcb);
