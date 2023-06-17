@@ -347,8 +347,11 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             log_trace(cpu_logger, "Por ejecutar instruccion WAIT");
             log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s ", ce->id, instruction[0], instruction[1]);
             // Si rompe crear una varible char* recurso, asignandole instruccion[1] y enviar el recurso en el execute process
-            
-            enviar_ce_con_string(socket_kernel, ce, instruction[1], WAIT_RECURSO);
+            char* recurso = instruction[1];
+
+            enviar_ce(socket_kernel, ce, WAIT_RECURSO, cpu_logger);
+            enviar_paquete_string(socket_kernel, recurso, STRING);
+            log_warning(cpu_logger, "ENVIO EL PAQUETE STRING Y ESPERO RESPUESTA");
 
             wait = recibir_respuesta_recurso();
             

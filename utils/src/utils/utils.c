@@ -339,7 +339,7 @@ float leer_float(char *buffer, int *desplazamiento) // Lee un float en base a un
 	return ret;
 }
 
-char *leer_string(char *buffer, int *desplazamiento) // Lee un string en base a un buffer y un desplazamiento, ambos se pasan por referencia
+char* leer_string(char *buffer, int *desplazamiento) // Lee un string en base a un buffer y un desplazamiento, ambos se pasan por referencia
 {
 	int tamanio = leer_entero(buffer, desplazamiento);
 	//printf("allocating / copying %d \n", tamanio);
@@ -486,16 +486,33 @@ contexto_ejecucion *recibir_ce(int socket)
 	return nuevoCe;
 }
 
-char* recibir_string(int socket){
+char* recibir_string(int socket, t_log* logger)
+{
 	int size = 0;
 	char *buffer;
 	int desp = 0;
-
+	log_warning(logger, "segfaultaca1");
 	buffer = recibir_buffer(&size, socket);
-
-	char* nuevoString = leer_string(buffer, &desp);
-
+	log_warning(logger, "segfaultaca2");
+	char* nuevoString = leer_string(buffer, &desp); // recibo el string
+	log_warning(logger, "segfaultaca3");
+	free(buffer);
 	return nuevoString;
+}
+
+void enviar_paquete_string(int conexion, char* string, int codOP)
+{
+	t_paquete * paquete = crear_paquete_op_code(codOP);
+	agregar_a_paquete(paquete, string, sizeof(char*));
+	enviar_paquete(paquete, conexion);
+	eliminar_paquete(paquete);
+}
+
+void enviar_paquete_entero(int conexion, int entero, int codOP){
+	t_paquete * paquete = crear_paquete_op_code(codOP);
+	agregar_entero_a_paquete(paquete, entero);
+	enviar_paquete(paquete, conexion);
+	eliminar_paquete(paquete);
 }
 
 t_paquete *agregar_tabla_segmentos_a_paquete(t_paquete *paquete, t_list *tabla)

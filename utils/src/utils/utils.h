@@ -49,6 +49,7 @@ typedef enum
 	MENSAJE,
 	PAQUETE,
 	INICIAR_PCB,
+	STRING,
 	//RECIBIR_PCB,
 	// -------  CPU->kernel --------
 	EJECUTAR_CE, 			//  dispatch
@@ -214,8 +215,11 @@ void loggear_estado(t_log* , int );
 
 t_list* recibir_paquete_segmento(int );
 contexto_ejecucion * recibir_ce(int );
-char* recibir_string(int);
+char* recibir_string(int, t_log*);
 t_paquete* agregar_tabla_segmentos_a_paquete(t_paquete * , t_list *);
+
+void enviar_paquete_string(int, char*, int);
+void enviar_paquete_entero(int , int , int );
 
 void enviar_ce(int, contexto_ejecucion *, int, t_log*);
 void enviar_CodOp(int, int);

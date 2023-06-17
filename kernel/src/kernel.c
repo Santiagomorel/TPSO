@@ -695,10 +695,9 @@ void manejar_dispatch()
                 //eliminar(pcb_a_reencolar);
                 break;
             case WAIT_RECURSO:
-                log_warning(kernel_logger, "recibo el recurso_wait");
                 contexto_ejecucion* contexto_ejecuta_wait = recibir_ce(cpu_dispatch_connection);
-                log_warning(kernel_logger, "recibo bien el contexto");
-                char* recurso_wait = recibir_string(cpu_dispatch_connection);
+                recibir_operacion(cpu_dispatch_connection);
+                char* recurso_wait = recibir_string(cpu_dispatch_connection, kernel_logger);
                 log_warning(kernel_logger, "recibo el recurso_wait como %s", recurso_wait);
                 pthread_mutex_lock(&m_listaEjecutando);
                     t_pcb * pcb_wait = (t_pcb *) list_get(listaEjecutando, 0);
@@ -732,7 +731,7 @@ void manejar_dispatch()
                 break; 
             case SIGNAL_RECURSO:
                 contexto_ejecucion* contexto_ejecuta_signal = recibir_ce(cpu_dispatch_connection);
-                char* recurso_signal = recibir_string(cpu_dispatch_connection);
+                char* recurso_signal = recibir_string(cpu_dispatch_connection, kernel_logger);
                 if(recurso_no_existe(recurso_signal)){
                     enviar_CodOp(cpu_dispatch_connection, NO_EXISTE_RECURSO);
                 }else {
