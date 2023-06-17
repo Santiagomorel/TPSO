@@ -56,7 +56,7 @@ typedef enum
 	EJECUTAR_INTERRUPCION,	// 	interrupt
 	// ------- enviadas por DIspatch: (CPU->kernel) --------
 	SUCCESS,
-	EXIT_RECURSO,
+	EXIT_ERROR_RECURSO,
 	SEG_FAULT,
 	DESALOJO_PCB,  			// TODO RUSO
 	BLOCK_IO,

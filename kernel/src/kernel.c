@@ -4,7 +4,7 @@ int main(int argc, char **argv)
 {
     // ----------------------- creo el log del kernel ----------------------- //
 
-    kernel_logger = init_logger("./runlogs/kernel.log", "KERNEL", 1, LOG_LEVEL_TRACE);
+    kernel_logger = init_logger("./runlogs/kernel.log", "KERNEL", 1, LOG_LEVEL_INFO);
 
     // ----------------------- levanto y cargo la configuracion del kernel ----------------------- //
     log_info(kernel_logger, "INICIA EL MODULO DE KERNEL");
@@ -650,7 +650,7 @@ void manejar_dispatch()
         int cod_op = recibir_operacion(cpu_dispatch_connection);
         switch(cod_op){
             case SUCCESS:
-            case EXIT_RECURSO:
+            case EXIT_ERROR_RECURSO:
             case SEG_FAULT:
                 contexto_ejecucion* contexto_a_finalizar = recibir_ce(cpu_dispatch_connection);
                 pthread_mutex_lock(&m_listaEjecutando);
@@ -665,7 +665,6 @@ void manejar_dispatch()
                 //signal(liberar);
                 //paquete_fin_memoria(pcb_a_finalizar->id, pcb_a_finalizar->tabla_paginas);
                 //wait (liberado);
-    
                 pthread_mutex_lock(&m_listaFinalizados);
                     list_add(listaFinalizados, pcb_a_finalizar);
                 pthread_mutex_unlock(&m_listaFinalizados);

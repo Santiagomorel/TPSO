@@ -506,7 +506,7 @@ void execute_process(contexto_ejecucion* ce){
             enviar_ce(socket_kernel, ce, BLOCK_WAIT, cpu_logger);
         }else{
             log_trace(cpu_logger, "No existe el recurso");
-            enviar_ce(socket_kernel, ce, EXIT_RECURSO, cpu_logger);
+            enviar_ce(socket_kernel, ce, EXIT_ERROR_RECURSO, cpu_logger);
         }
         wait = 0;
         liberar_ce(ce);
@@ -517,7 +517,7 @@ void execute_process(contexto_ejecucion* ce){
         liberar_ce(ce);
     }else if(signal_recurso){
         log_trace(cpu_logger, "No existe el recurso");
-        enviar_ce(socket_kernel, ce, EXIT_RECURSO, cpu_logger);
+        enviar_ce(socket_kernel, ce, EXIT_ERROR_RECURSO, cpu_logger);
         liberar_ce(ce);
     }
 }
