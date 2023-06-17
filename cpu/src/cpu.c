@@ -309,12 +309,12 @@ int desalojo_por_yield = 0;
 int signal_recurso = 0;
 int direccion_fisica = 0;
 int direccion_logica = 0;
-
+t_segmento* segmento;
 
 char* tiempo = "NONE";
 
 void execute_instruction(char** instruction, contexto_ejecucion* ce){
-    t_segmento* segmento;
+
 
      switch(keyfromstring(instruction[0])){
         case I_SET: 
@@ -440,18 +440,18 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
         enviar_ce_con_entero(socket_kernel, ce, instruction[1], BORRAR_SEGMENTO);
 
             break;
-        case I_MOV_IN:
+        case I_MOV_IN: //MOV_IN (Registro, Dirección Lógica)
             log_info(cpu_logger, "Instruccion MOV_IN ejecutada");
             log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s", ce->id, instruction[0], instruction[1], instruction[2]);
 
             char* register_mov_in = instruction[1];
             int logical_address_mov_in = atoi(instruction[2]);
 
-            
+            direccion_fisica = traducir_direccion_logica(logical_address_mov_in, ce, sizeof(register_mov_in));
 
             //------------SI NO TENEMOS SEG FAULT EJECUTAMOS LO DEMAS ------------ //
             if(sigsegv != 1){
-                direccion_fisica = traducir_direccion_logica(logical_address_mov_in, ce, sizeof(register_mov_in));
+                
                 char* value = fetch_value_in_memory(direccion_fisica, ce);
 
                 store_value_in_register(register_mov_in, value);
@@ -461,8 +461,41 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             }
 
             break;
-        case I_MOV_OUT:
+        case I_MOV_OUT: ///MOV_OUT (Dirección Lógica, Registro):
+            log_info(cpu_logger, "Ejecutando Instruccion MOV_OUT ");
+            log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s", ce->id, instruction[0], instruction[1], instruction[2]);
 
+            int logical_address_mov_out = atoi(instruction[1]);
+            char* register_mov_out = instruction[2]; 
+            
+            direccion_fisica = traducir_direccion_logica(logical_address_mov_out, ce, sizeof(register_mov_out));
+
+            if(sigsegv != 1){
+                 log_info(cpu_logger, "Recibimos una physical address valida!");
+                char* register_value_mov_out = encontrarValorDeRegistro(register_mov_out);
+                t_segmento* segment = list_get(ce->tabla_segmentos, segmento->id_segmento);
+                int segment_index = segment->id_segmento;
+
+                escribir_valor(direccion_fisica, register_value_mov_out, segment_index, ce->id);
+                int code_op = recibir_operacion(conexion_cpu); // Si ta todo ok prosigo, si no ta todo ok que hago?
+
+                if(code_op == MOV_OUT_OK) {  
+                log_info(cpu_logger,"Todo OK Prosiga");
+                
+                int size = 0;
+                int desp = 0;
+
+                void * buffer = recibir_buffer(&size, conexion_cpu);
+
+                    log_info(cpu_logger, "Leo buffer: %d", leer_entero(buffer, &desp));
+                    log_info(cpu_logger, "PID: %d - Acción: ESCRIBIR - Segmento: %d -  Dirección Fisica: %d",
+                        ce->id, segmento->id_segmento, direccion_fisica);
+
+    } else {
+        log_error(conexion_cpu, "CODIGO DE OPERACION INVALIDO");
+    }
+
+            }
 
             break;
         default:
@@ -483,7 +516,7 @@ void execute_process(contexto_ejecucion* ce){
     char** decoded_instruction = malloc(sizeof(char*));
 
     log_trace(cpu_logger, "Por empezar  end_process != 1 && input_ouput != 1 && wait == 0 && desalojo_por_yield != 1 && signal_recurso != 2 && sigsev != 1"); 
-    while(/*check_interruption != 1 && */end_process != 1 && input_ouput != 1 && wait == 0 && desalojo_por_yield != 1 && signal_recurso != 2 && sigsegv != 1){
+    while(end_process != 1 && input_ouput != 1 && wait == 0 && desalojo_por_yield != 1 && signal_recurso != 2 && sigsegv != 1){
         //Llega el ce y con el program counter buscas la instruccion que necesita
         instruction = string_duplicate(fetch_next_instruction_to_execute(ce));
         decoded_instruction = decode(instruction);
@@ -508,30 +541,23 @@ void execute_process(contexto_ejecucion* ce){
     imprimir_registros(ce->registros_cpu, cpu_logger); // para comprobar que los registros se guardaran bien
     if(end_process) {
         end_process = 0; // IMPORTANTE: Apagar el flag para que no rompa el proximo proceso que llegue
-        //check_interruption = 0;
         enviar_ce(socket_kernel, ce, SUCCESS, cpu_logger);
         liberar_ce(ce);
         log_trace(cpu_logger, "Enviamos paquete a dispatch: FIN PROCESO");
     } 
     else if(input_ouput) {
         input_ouput = 0;
-        //check_interruption = 0;
         log_trace(cpu_logger, "Tiempo: %s", tiempo);
  
     }
     
     else if(sigsegv == 1){
         sigsegv = 0;
-        //check_interruption = 0;
         log_info(cpu_logger, "PID: %s - Error SEG_FAULT- Segmento: %s - Offset: %s - Tamaño: %s", ce->id,
          id_segmento_con_segfault, desplazamiento_segfault, tamanio_segfault);
         enviar_ce(socket_kernel, ce, SEG_FAULT, cpu_logger); 
     }
-    /*else if(check_interruption) {
-        check_interruption = 0;
-        log_trace(cpu_logger, "Entro por check interrupt");
-        enviar_ce(socket_kernel, ce, EJECUTAR_INTERRUPCION, cpu_logger); 
-    }*/else if(wait){
+    else if(wait){
        
        
         if(wait == 1){  // Se bloquea por estar ocupado recurso
@@ -674,8 +700,33 @@ void enviar_ce_con_entero(int client_socket, contexto_ejecucion* ce, char* x, in
     eliminar_paquete(paquete);
 }
 
+/*---------------------------------- PARA MOV_OUT ----------------------------------*/
 
+char* encontrarValorDeRegistro(char* register_to_find_value){ //Es t_registro* o char* ?
+    if (strcmp(register_to_find_value, "AX") == 0) return registros->AX;
+    else if (strcmp(register_to_find_value, "BX") == 0) return registros->BX;
+    else if (strcmp(register_to_find_value, "CX") == 0) return registros->CX;
+    else if (strcmp(register_to_find_value, "DX") == 0) return registros->DX;
+    else if (strcmp(register_to_find_value, "EAX") == 0) return registros->EAX;
+    else if (strcmp(register_to_find_value, "EBX") == 0) return registros->EBX;
+    else if (strcmp(register_to_find_value, "ECX") == 0) return registros->ECX;
+    else if (strcmp(register_to_find_value, "EDX") == 0) return registros->EDX;
+    else if (strcmp(register_to_find_value, "RAX") == 0) return registros->RAX;
+    else if (strcmp(register_to_find_value, "RBX") == 0) return registros->RBX;
+    else if (strcmp(register_to_find_value, "RCX") == 0) return registros->RCX;
+    else if (strcmp(register_to_find_value, "RDX") == 0) return registros->RDX;
 
+    else return 0;
+}
+
+void escribir_valor(int physical_address, char* register_value_mov_out, int segment_index, int pid){
+    t_paquete* package = crear_paquete_op_code(MOV_OUT);
+    agregar_entero_a_paquete(package, physical_address);
+    agregar_string_a_paquete(package, register_value_mov_out);
+    agregar_entero_a_paquete(package, segment_index);
+    agregar_entero_a_paquete(package, pid);
+    enviar_paquete(package, conexion_cpu);
+}
 /*---------------------------------- MMU ----------------------------------*/
 
 
@@ -690,13 +741,16 @@ int traducir_direccion_logica(int logical_address, contexto_ejecucion* ce, int v
     
     t_segmento* segment = list_get(segment_table_ce, num_segmento);
     
-  
+    segmento->id_segmento = num_segmento;
+    segmento->tamanio_segmento = segment ->tamanio_segmento;
+    segmento->direccion_base = segment->direccion_base + desplazamiento_segmento;
 
     if(desplazamiento_segmento + valor_a_sumar >= segment-> tamanio_segmento ){
 
-        id_segmento_con_segfault = num_segmento;
         desplazamiento_segfault = desplazamiento_segmento;
-        tamanio_segfault = segment ->tamanio_segmento;
+        id_segmento_con_segfault = segmento->id_segmento;
+        tamanio_segfault = segmento->tamanio_segmento;   /* Esta linea y la anterior es porque hay que imprimir cual fue el 
+                                                            segmento que falló */
 
         sigsegv = 1;
     }
@@ -739,4 +793,13 @@ void store_value_in_register(char* register_mov_in, char* value){
     log_info(cpu_logger, "El registro %s quedara el valor: %d",register_mov_in ,value);
 
     add_value_to_register(register_mov_in, value);
+}
+
+/*---------------------------------- FUNCIONES EXTRAS ----------------------------------*/
+
+int read_int(char* buffer, int* desp) {
+	int ret;
+	memcpy(&ret, buffer + (*desp), sizeof(int));
+	(*desp)+=sizeof(int);
+	return ret;
 }

@@ -89,7 +89,7 @@ typedef enum
 	MOV_IN,
 	MOV_IN_OK,
 	MOV_OUT,
-	MOV_OU_OK,
+	MOV_OUT_OK,
 	// -------MEMORIA --------
 	INICIAR_ESTRUCTURAS,
 	TABLA_SEGMENTOS,
