@@ -360,6 +360,7 @@ t_list* leer_tabla_segmentos(char* buffer, int* desp){
 
 void iniciar_semaforos(){
     sem_init(&finModulo, 0, 0);
+    pthread_mutex_init(&mutexBitMapSegment, NULL);
 }
 
 //
@@ -458,7 +459,56 @@ int bitsToBytes(int bits){
 
 //bitMaps
 
+void ocuparBitMap(t_bitarray* segmentoBitMap, int base,int size){
+	
+	pthread_mutex_lock(&mutexBitMapSegment);
+	for(int i = 0; i < size; i++){
+		bitarray_set_bit(bitMapSegment, base + i); //REEMPLAZA LOS 0 POR 1, ASI SABEMOS QUE ESTA OCUPADO
+	}
+	pthread_mutex_unlock(&mutexBitMapSegment);
+}
 
+void liberarBitMap(t_bitarray* segmentoBitMap, int base, int size){
+	
+	pthread_mutex_lock(&mutexBitMapSegment);
+	for(int i = 0; i < size; i++){
+		bitarray_clean_bit(bitMapSegment, base + i); //REEMPLAZA LOS 1 POR 0, ASI SABEMOS QUE ESTA LIBRE
+	}
+	pthread_mutex_unlock(&mutexBitMapSegment);
+}
+
+int contarEspaciosLibresDesde(t_bitarray* bitmap, int i){ //CUENTA LOS 0 DEL BITMAP HASTA EL PRIMER 1 QUE ENCUENTRA
+
+    int contador = 0;
+
+    pthread_mutex_lock(&mutexBitMapSegment);
+
+    while((bitarray_test_bit(bitmap, i)==0 ) && (i < (config_valores.tamanio_memoria))) {
+
+        //MIENTRAS EL BITMAP EN ESA POSICION SEA 0 Y NO NOS PASEMOS DE LOS LIMITES DE LA MEMORIA
+        contador ++;
+        i++;
+    }
+
+    pthread_mutex_unlock(&mutexBitMapSegment);
+    return contador;
+}
+
+
+int contarEspaciosOcupadosDesde(t_bitarray*unBitmap, int i){ //CUENTA LOS 1 DEL BITMAP HASTA EL PRIMER 0 QUE ENCUENTRA
+    int contador =0;
+    
+    
+
+    while((bitarray_test_bit(unBitmap, i) == 1) && (i < config_valores.tamanio_memoria)){
+        //MIENTRAS EL BITMAP EN ESA POSICION SEA 1 Y NO NOS PASEMOS DE LOS LIMITES DE LA MEMORIA
+        contador++;
+        i++;
+    }
+
+    
+    return contador;
+}
 
 
 //Comentarios viejos// => para borrar

@@ -42,14 +42,22 @@ typedef struct{
 
 char* datos;
 
-t_bitarray* bitMapSegment;
-t_bitarray* unBitmap;
+
 
 
 int iniciarSegmentacion(void);
 char* asignarMemoriaBits(int bits);
 char* asignarMemoriaBytes(int bytes);
 int bitsToBytes(int bits);
+
+//bitMaps
+t_bitarray* bitMapSegment;
+t_bitarray* unBitmap;
+
+void ocuparBitMap(t_bitarray* segmentoBitMap, int base,int size);
+void liberarBitMap(t_bitarray* segmentoBitMap, int base, int size);
+int contarEspaciosLibresDesde(t_bitarray* bitmap, int i);
+int contarEspaciosOcupadosDesde(t_bitarray*unBitmap, int i);
 
 
 t_list* generar_lista_huecos();
