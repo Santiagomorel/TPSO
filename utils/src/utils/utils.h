@@ -218,7 +218,7 @@ contexto_ejecucion * recibir_ce(int );
 char* recibir_string(int, t_log*);
 t_paquete* agregar_tabla_segmentos_a_paquete(t_paquete * , t_list *);
 
-void enviar_paquete_string(int, char*, int);
+void enviar_paquete_string(int, char*, int, int);
 void enviar_paquete_entero(int , int , int );
 
 void enviar_ce(int, contexto_ejecucion *, int, t_log*);

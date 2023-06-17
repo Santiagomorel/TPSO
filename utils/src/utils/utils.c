@@ -491,19 +491,16 @@ char* recibir_string(int socket, t_log* logger)
 	int size = 0;
 	char *buffer;
 	int desp = 0;
-	log_warning(logger, "segfaultaca1");
 	buffer = recibir_buffer(&size, socket);
-	log_warning(logger, "segfaultaca2");
 	char* nuevoString = leer_string(buffer, &desp); // recibo el string
-	log_warning(logger, "segfaultaca3");
 	free(buffer);
 	return nuevoString;
 }
 
-void enviar_paquete_string(int conexion, char* string, int codOP)
+void enviar_paquete_string(int conexion, char* string, int codOP, int tamanio)
 {
 	t_paquete * paquete = crear_paquete_op_code(codOP);
-	agregar_a_paquete(paquete, string, sizeof(char*));
+	agregar_a_paquete(paquete, string, tamanio);
 	enviar_paquete(paquete, conexion);
 	eliminar_paquete(paquete);
 }
@@ -537,13 +534,6 @@ void enviar_CodOp(int conexion, int codOP)
 	enviar_paquete(paquete, conexion);
 
 	eliminar_paquete(paquete);
-}
-
-void enviar_paquete_entero(int conexion, int entero, int codOP){
-t_paquete * paquete = crear_paquete_op_code(codOP);
-agregar_entero_a_paquete(paquete, entero);
-enviar_paquete(paquete, conexion);
-eliminar_paquete(paquete);
 }
 
 void agregar_ce_a_paquete(t_paquete *paquete, contexto_ejecucion *ce, t_log *logger)
