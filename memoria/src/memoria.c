@@ -377,6 +377,7 @@ void iniciar_semaforos()
     sem_init(&finModulo, 0, 0);
     pthread_mutex_init(&mutexBitMapSegment, NULL);
     pthread_mutex_init(&mutexMemoria, NULL);
+    pthread_mutex_init(&mutexIdGlobal, NULL);
 }
 
 //
@@ -502,6 +503,53 @@ t_segmento* buscarSegmentoSegunTamanio(int size){
     return segmento;
 }
 
+t_list* buscarSegmentosDisponibles(){
+    
+    t_list* segmentos = list_create();
+    int base = 0;
+
+    //YA SABEMOS QUE HAY LUGAR, SINO NO HUBIESE     
+    
+    while(base < (memoria_config.tam_memoria)){
+        t_segmento* unSegmento = buscarUnLugarLibre(&base);
+        list_add(segmentos,unSegmento);
+    }
+
+    return segmentos;    
+}
+
+t_segmento* buscarUnLugarLibre(int* base){
+    t_segmento* unSegmento = malloc(sizeof(t_segmento));
+    int tamanio = 0;
+    
+    pthread_mutex_lock(&mutexBitMapSegment);
+    if(bitarray_test_bit(bitMapSegment, *base) == 1){ //SI EL PRIMERO ES UN UNO, VA A CONTAR CUANDOS ESTAN OCUPADOS DESDE ESE Y CAMBIA LA BASE	
+        int desplazamiento = contarEspaciosOcupadosDesde(bitMapSegment, *base); //CUENTA ESPACIOS OCUPADOS DESDE LA ABASE INDICADA
+        *base += desplazamiento; //
+    }
+    pthread_mutex_unlock(&mutexBitMapSegment);
+    // ACA YA LA BASE ESTA EN EL PRIMER 0 LIBRE
+    tamanio = contarEspaciosLibresDesde(bitMapSegment, *base);  //TAMANIO ES EL TAMANIO DEL SEGMENTO CON 0 LIBRES //ACA MUERE
+    
+    unSegmento->id_segmento = generarId();
+    unSegmento->direccion_base = *base;
+    unSegmento->tamanio_segmento = tamanio;
+    
+    //MUEVO LA BASE PARA BUSCAR EL SIGUIENTE SEGMENTO DESPUES
+    *base +=  tamanio;
+
+    return unSegmento;
+}
+
+int generarId(){
+	
+	pthread_mutex_lock(&mutexIdGlobal);
+	int t = idGlobal;
+	idGlobal++;
+	pthread_mutex_unlock(&mutexIdGlobal);
+	return t;
+}
+
 t_list* puedenGuardar(t_list* segmentos, int size){
    
     t_list* aux;
@@ -544,6 +592,31 @@ t_segmento* elegirSegCriterio(t_list* segmentos, int size){
     }
 
     return segmento;
+}
+
+t_segmento* segmentoBestFit(t_list* segmentos, int size){
+
+    t_segmento* segmento;
+
+    int igualTamanio(t_segmento* segmento){
+        return(segmento -> tamanio_segmento == size); //SEGMENTO QUE TENGA EL MISMO TAMANIO QUE LO QUE QUIERO GUARDAR
+    }
+    t_segmento* segmentoDeIgualTamanio = list_find(segmentos, (void*)igualTamanio); //ME DEVUELVE EL SEGMENTO DE MISMO TAMANIO
+
+    if(segmentoDeIgualTamanio != NULL){
+        segmento = segmentoDeIgualTamanio; 
+    }else{      //SI NO ENCONTRE UN SEGMENTO DEL MISMO TAMANIO
+        segmento = list_get_minimum(segmentos, (void*)segmentoMenorTamanio); //ME DEVUELVE EL SEGMENTO DE MENOR TAMANIO DONDE ENTRE LO QUE QUIERO GUARDAR
+    }
+    return segmento;
+}
+
+t_segmento* segmentoMenorTamanio(t_segmento* segmento, t_segmento* otroSegmento){ //TODO aca estaban sin asterisco
+
+    if(segmento->tamanio_segmento < otroSegmento->tamanio_segmento){
+        return segmento;
+    }else
+        return otroSegmento; 
 }
 
 // BitArrays
