@@ -372,7 +372,7 @@ int estadoActual(t_pcb* pcb) //VER
 void agregar_a_lista_con_sems(t_pcb* pcb_a_agregar, t_list* lista, pthread_mutex_t m_sem)
 {
     pthread_mutex_lock(&m_sem);
-    list_add(lista, pcb_a_agregar);
+    agregar_lista_ready_con_log(lista,pcb_a_agregar,kernel_config.algoritmo_planificacion);
     pthread_mutex_unlock(&m_sem);
 }
 
@@ -685,7 +685,7 @@ void manejar_dispatch()
                 sacar_rafaga_ejecutada(pcb_a_reencolar); // hacer cada vez que sale de running
                 iniciar_nueva_espera_ready(pcb_a_reencolar); // hacer cada vez que se mete en la lista de ready
                 pthread_mutex_lock(&m_listaReady);
-                    list_add(listaReady, pcb_a_reencolar);
+                agregar_lista_ready_con_log(listaReady, pcb_a_reencolar,kernel_config.algoritmo_planificacion);
                 pthread_mutex_unlock(&m_listaReady);
                 sem_post(&proceso_en_ready);
                 sem_post(&fin_ejecucion);
@@ -773,7 +773,7 @@ void manejar_dispatch()
                 sleep(bloqueo);
                 iniciar_nueva_espera_ready(pcb_IO); // hacer cada vez que se mete en la lista de ready
                 pthread_mutex_lock(&m_listaReady);
-                    list_add(listaReady, pcb_IO);
+                agregar_lista_ready_con_log(listaReady, pcb_IO,kernel_config.algoritmo_planificacion);
                 pthread_mutex_unlock(&m_listaReady);
                 sem_post(&proceso_en_ready);
                 liberar_ce(contexto_IO);
@@ -857,7 +857,7 @@ void reencolar_bloqueo_por_recurso(int id_recurso)
     cambiar_estado_a(pcb_a_reencolar, READY, estadoActual(pcb_a_reencolar));
     iniciar_nueva_espera_ready(pcb_a_reencolar); // hacer cada vez que se mete en la lista de ready
     pthread_mutex_lock(&m_listaReady);
-        list_add(listaReady, pcb_a_reencolar);
+    agregar_lista_ready_con_log(listaReady, pcb_a_reencolar,kernel_config.algoritmo_planificacion);
     pthread_mutex_unlock(&m_listaReady);
     sem_post(&proceso_en_ready);
 }
@@ -916,6 +916,22 @@ void iniciar_nueva_espera_ready(t_pcb* pcb)
     pcb->tiempo_llegada_ready = temporal_create();
 }
 
+void agregar_lista_ready_con_log(t_list* listaready,t_pcb* pcb_a_encolar,char* algoritmo){
+    list_add(listaready,pcb_a_encolar);
+
+     t_list* lista_pids= list_create();
+     lista_pids=list_map(listaReady,(void*)obtenerPid);
+     char* string_pids = string_new();
+
+     for(int i=0;i<list_size(lista_pids);i++){
+        string_append(&string_pids,(char*)list_get(lista_pids,i));
+     }
+
+    log_trace(kernel_logger,"Cola Ready %s : [%s]",algoritmo,string_pids);
+
+    list_destroy(lista_pids);
+    
+}
 
 
 // ----------------------- Funciones finales ----------------------- //

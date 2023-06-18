@@ -147,6 +147,7 @@ void sumar_instancia(int);
 void restar_instancia(int);
 int tiene_instancia_wait(int);
 void bloqueo_proceso_en_recurso(t_pcb*, int);
+void agregar_lista_ready_con_log(t_list*,t_pcb*,char*);
 // void end_program(int, t_log*, t_config*);
 
 
