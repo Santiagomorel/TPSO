@@ -46,6 +46,15 @@ char* datos;
 
 
 int iniciarSegmentacion(void);
+
+// GuardarEnMemoria
+t_segmento *guardarElemento(void *elemento, int size);
+void guardarEnMemoria(void *elemento, t_segmento *segmento, int size);
+void ocuparMemoria(void *elemento, int base, int size);
+
+//bitArrays
+
+//asignarBits/Bytes
 char* asignarMemoriaBits(int bits);
 char* asignarMemoriaBytes(int bytes);
 int bitsToBytes(int bits);
@@ -91,6 +100,7 @@ void recibir_fileSystem(int);
 
 sem_t finModulo;
 pthread_mutex_t mutexBitMapSegment;
+pthread_mutex_t mutexMemoria;
 
 void iniciar_semaforos();
 
