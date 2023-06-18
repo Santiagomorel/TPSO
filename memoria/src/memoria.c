@@ -385,7 +385,7 @@ void iniciar_semaforos()
 
 int iniciarSegmentacion(void)
 {
-    MEMORIA_PRINCIPAL = malloc(memoria_config.tam_memoria);
+    MEMORIA_PRINCIPAL = malloc(memoria_config.tam_memoria); // el acrhivo de config de ejemplo es 4096 = 2¹²
 
     if (MEMORIA_PRINCIPAL == NULL)
     {
@@ -455,7 +455,6 @@ t_segmento *guardarElemento(void *elemento, int size)
     t_segmento *aux;
 
     aux = buscarSegmentoSegunTamanio(size); // BUSCA UN SEGMENTO LIBRE PARA GUARDAR LAS TAREAS
-    // falta agregar buscarSegmentoSegunTamanio
     guardarEnMemoria(elemento, aux, size);
 
     unSegmento->id_segmento = aux->id_segmento;
@@ -465,6 +464,54 @@ t_segmento *guardarElemento(void *elemento, int size)
     free(aux);
 
     return unSegmento; // DEVUELVE EL SEGMENTO QUE FUE GUARDADO
+}
+
+t_segmento* buscarSegmentoSegunTamanio(int size){ 
+
+    t_segmento* segmento;
+    t_list* todosLosSegLibres;
+
+    todosLosSegLibres =  buscarSegmentosDisponibles(); //PONE TODOS LOS SEGMENTOS VACIOS EN UNA LISTA 
+
+    t_list* segmentosCandidatos;
+    segmentosCandidatos = puedenGuardar( todosLosSegLibres , size); //ME DEVUELVE LOS SEGMENTOS QUE EL TIENEN ESPACIO NECESARIO PARA GUARDAR
+    //log_info(logger,"Hay %d segmentos candidatos", list_size(segmentosCandidatos));
+    if(list_is_empty(segmentosCandidatos)){
+        log_info(log_memoria,"No hay espacio suficiente para guardar, se debe compactar");
+        //compactacion(); Descomentar cuando se tenga compactacion
+        //segmento = buscarSegmentoSegunTamanio(size);
+    }else if(list_size(segmentosCandidatos)== 1){
+        segmento = list_get(segmentosCandidatos, 0);
+    }else{
+        segmento = elegirSegCriterio(segmentosCandidatos, size); //SI EN LA LISTA HAY MAS DE UN SEGMENTO VA A ELEGIR EN QUE SEGMENTO LO VA A GUARDAR SEGUN EL CRITERIO
+        
+
+    }
+    
+    int mismoId(t_segmento* unSegmento){
+        return (unSegmento->id_segmento == segmento->id_segmento);
+    }
+    
+    list_remove_by_condition(todosLosSegLibres, (void*)mismoId); //Saco el segmento de la lista asi las puedo eliminar
+    
+	//list_destroy(todosLosSegLibres);
+	//list_destroy(segmentosCandidatos);
+	eliminarLista(todosLosSegLibres);
+	list_destroy(segmentosCandidatos);
+    
+    return segmento;
+}
+
+t_list* puedenGuardar(t_list* segmentos, int size){
+   
+    t_list* aux;
+
+    int puedoGuardarSeg(t_segmento* segmento){
+        return(segmento->tamanio_segmento >= size);
+    }
+    aux= list_filter(segmentos, (void*)puedoGuardarSeg);
+
+    return aux;
 }
 
 void guardarEnMemoria(void *elemento, t_segmento *segmento, int size)
@@ -527,7 +574,7 @@ int bitsToBytes(int bits){
     else
     {
         double c = (double)bits;
-        bytes = ceil(c / 8.0);//problema con ceil
+        bytes = ceil(c / 8.0);
     }
 
     return bytes;
@@ -589,6 +636,21 @@ int contarEspaciosOcupadosDesde(t_bitarray *unBitmap, int i)
 
     return contador;
 }
+
+
+//listas => puede ir en el utils
+void eliminarLista(t_list* lista){
+	
+	list_destroy_and_destroy_elements(lista, (void*)eliminarAlgo);
+	
+
+}
+void eliminarAlgo(void* algo){
+	
+	free(algo);
+	
+}
+
 
 // Comentarios viejos// => para borrar
 

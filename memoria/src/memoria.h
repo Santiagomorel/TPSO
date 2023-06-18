@@ -53,7 +53,7 @@ t_segmento *guardarElemento(void *elemento, int size);
 t_segmento* buscarSegmentoSegunTamanio(int size);
 void guardarEnMemoria(void *elemento, t_segmento *segmento, int size);
 void ocuparMemoria(void *elemento, int base, int size);
-
+t_list* puedenGuardar(t_list* segmentos, int size);
 
 //bitArrays
 
@@ -109,6 +109,11 @@ pthread_mutex_t mutexBitMapSegment;
 pthread_mutex_t mutexMemoria;
 
 void iniciar_semaforos();
+
+
+//listas
+void eliminarLista(t_list* lista);
+void eliminarAlgo(void* algo);
 
 //void enviar_tabla_segmentos();
 //void* serializar_segmento(t_segmento* segmento);
