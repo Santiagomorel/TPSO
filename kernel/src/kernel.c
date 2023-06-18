@@ -712,6 +712,7 @@ void manejar_dispatch()
                         //     t_pcb * pcb_wait = (t_pcb *) list_get(listaEjecutando, 0);
                         //     actualizar_pcb(pcb_wait, contexto_ejecuta_wait);
                         // pthread_mutex_unlock(&m_listaEjecutando);
+                        log_trace(kernel_logger,"PID: %d-- Wait: %s, - Instancias:%d",,recurso_wait,);//aca necesito el PID y las instancias no las
                     } else {
                         enviar_CodOp(cpu_dispatch_connection, NO_LO_TENGO);
                         recibir_operacion(cpu_dispatch_connection);
@@ -725,6 +726,7 @@ void manejar_dispatch()
                         sem_post(&fin_ejecucion);
                         liberar_ce(contexto_bloqueado_en_recurso);
                         bloqueo_proceso_en_recurso(pcb_bloqueado_en_recurso, id_recurso); // aca tengo que encolar en la lista correspondiente
+                        log_trace(kernel_logger,"“PID:%d - Bloqueado por: %s",contexto_bloqueado_en_recurso->id,); //necesito el recurso bloqueado
                     }
                 }
                 break; 
@@ -747,6 +749,8 @@ void manejar_dispatch()
                     if(tiene_que_reencolar_bloq_recurso(id_recurso)){
                         reencolar_bloqueo_por_recurso(id_recurso);
                     }
+                log_trace(kernel_logger,"PID: %d-- Signal: %s, - Instancias:%d",contexto_IO->id,recurso_wait,);//aca necesito el PID y las instancias no las tengo
+
                 }
                 break;
             //case BLOCK_por_PF:
@@ -761,7 +765,7 @@ void manejar_dispatch()
                 char* tiempo_bloqueo = recibir_string(cpu_dispatch_connection, kernel_logger);
                 recibir_operacion(cpu_dispatch_connection);
                 contexto_ejecucion* contexto_IO = recibir_ce(cpu_dispatch_connection);
-                log_trace(kernel_logger,"recibi entero: %s",tiempo_bloqueo);
+                log_trace(kernel_logger,"PID: %d- Ejecuta IO: %s",contexto_IO->id,tiempo_bloqueo);
                 int bloqueo = atoi(tiempo_bloqueo);
                 pthread_mutex_lock(&m_listaEjecutando);
                     t_pcb * pcb_IO = (t_pcb *) list_remove(listaEjecutando, 0); // inicializar pcb y despues liberarlo
