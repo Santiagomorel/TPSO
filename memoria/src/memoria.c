@@ -455,7 +455,7 @@ t_segmento *guardarElemento(void *elemento, int size)
     t_segmento *aux;
 
     aux = buscarSegmentoSegunTamanio(size); // BUSCA UN SEGMENTO LIBRE PARA GUARDAR LAS TAREAS
-
+    // falta agregar buscarSegmentoSegunTamanio
     guardarEnMemoria(elemento, aux, size);
 
     unSegmento->id_segmento = aux->id_segmento;
@@ -479,6 +479,24 @@ void ocuparMemoria(void *elemento, int base, int size)
     pthread_mutex_lock(&mutexMemoria);
     memcpy(MEMORIA_PRINCIPAL + base, elemento, size);
     pthread_mutex_unlock(&mutexMemoria);
+}
+
+
+//Criterio de asignacio
+t_segmento* elegirSegCriterio(t_list* segmentos, int size){
+
+    t_segmento* segmento;
+    
+    log_info(log_memoria,"Elijo segun %s", memoria_config.algoritmo_asignacion);
+    
+    if(strcmp(memoria_config.algoritmo_asignacion,"FIRST") == 0){//NO ENTRA LA CONCHA DE SU MADRE
+        segmento = list_get(segmentos,0); //FIRST FIT DEVUELVE EL PRIMER SEGMENTO DONDE PUEDE GUARDARSE
+    }else if(strcmp(memoria_config.algoritmo_asignacion,"BEST") == 0){
+    	log_info(log_memoria,"Entre por BEST");
+        segmento = segmentoBestFit(segmentos, size); // => Falta agregar la funcion
+    }
+
+    return segmento;
 }
 
 // BitArrays
@@ -509,7 +527,7 @@ int bitsToBytes(int bits){
     else
     {
         double c = (double)bits;
-        bytes = ceil(c / 8.0);
+        bytes = ceil(c / 8.0);//problema con ceil
     }
 
     return bytes;
@@ -562,7 +580,7 @@ int contarEspaciosOcupadosDesde(t_bitarray *unBitmap, int i)
 { // CUENTA LOS 1 DEL BITMAP HASTA EL PRIMER 0 QUE ENCUENTRA
     int contador = 0;
 
-    while ((bitarray_test_bit(unBitmap, i) == 1) && (i < config_valores.tamanio_memoria))
+    while ((bitarray_test_bit(unBitmap, i) == 1) && (i < memoria_config.tam_memoria))
     {
         // MIENTRAS EL BITMAP EN ESA POSICION SEA 1 Y NO NOS PASEMOS DE LOS LIMITES DE LA MEMORIA
         contador++;
