@@ -101,6 +101,8 @@ int obtenerPid(t_pcb*);
 char* obtenerEstado(estados);
 int estadoActual(t_pcb*);
 void agregar_a_lista_con_sems(t_pcb*, t_list*, pthread_mutex_t);
+void agregar_lista_ready_con_log(t_list*, t_pcb*, char*);
+
 
 // Declaraciones de planificador to - ready
 void planificar_sig_to_ready();
@@ -134,31 +136,37 @@ void copiar_registros_ce_a_pcb(contexto_ejecucion*, t_pcb*);
 // Declaraciones Dispatch Manager
 void manejar_dispatch();
 void actualizar_pcb(t_pcb*, contexto_ejecucion*);
+void enviar_Fin_consola(int);
+
+// Declaraciones DESALOJO_YIELD
 void sacar_rafaga_ejecutada(t_pcb*);
 void iniciar_nueva_espera_ready(t_pcb*);
 
-// ------------------------------------//
-
+// Declaraciones manejo de recursos
 int recurso_no_existe(char*);
 int obtener_id_recurso(char*);
-void reencolar_bloqueo_por_recurso(int );
-int tiene_que_reencolar_bloq_recurso(int );
-void sumar_instancia(int);
+int id_proceso_en_lista(t_list*);
+int obtener_instancias_recurso(int);
 void restar_instancia(int);
+void sumar_instancia(int);
+
+// Declaraciones WAIT_RECURSO
 int tiene_instancia_wait(int);
 void bloqueo_proceso_en_recurso(t_pcb*, int);
-void agregar_lista_ready_con_log(t_list*,t_pcb*,char*);
+
+// Declaraciones SIGNAL_RECURSO
+int tiene_que_reencolar_bloq_recurso(int);
+void reencolar_bloqueo_por_recurso(int);
+
+//
+// ------------------------------------//
+
 // void end_program(int, t_log*, t_config*);
 
-
-void enviar_Fin_consola(int);
-bool bloqueado_termino_io(t_pcb *);
-
+// Declaraciones finales
 void destruirSemaforos();
 
 
-int id_proceso_en_lista(t_list* );
-int obtener_instancias_recurso(int );
 
 
 #endif /* KERNEL_H_ */
