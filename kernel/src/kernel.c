@@ -695,14 +695,13 @@ void manejar_dispatch()
                 break;
             case WAIT_RECURSO:
                 char* recurso_wait = recibir_string(cpu_dispatch_connection, kernel_logger);
-                log_warning(kernel_logger, "recibo el recurso_wait como %s", recurso_wait);
-
                 if(recurso_no_existe(recurso_wait)){
                     enviar_CodOp(cpu_dispatch_connection, NO_EXISTE_RECURSO);
                 }
                 else {
                     int id_recurso = obtener_id_recurso(recurso_wait);
                     restar_instancia(id_recurso);
+                    log_info(kernel_logger, "PID: [%d] - Wait: [%s] - Instancias: [%d]", id_proceso_en_lista(listaEjecutando), recurso_wait, obtener_instancias_recurso(id_recurso));
                     if(tiene_instancia_wait(id_recurso)){
                         enviar_CodOp(cpu_dispatch_connection, LO_TENGO);
                         sem_wait(sem_recurso[id_recurso]);
@@ -737,10 +736,11 @@ void manejar_dispatch()
                 if(recurso_no_existe(recurso_signal)){
                     enviar_CodOp(cpu_dispatch_connection, NO_EXISTE_RECURSO);
                 }else {
-                    int id_recurso = obtener_id_recurso(recurso_wait);
+                    int id_recurso = obtener_id_recurso(recurso_signal);
                     enviar_CodOp(cpu_dispatch_connection, LO_TENGO);
                     // int id_recurso = obtener_id_recurso(recurso_signal);
                     sumar_instancia(id_recurso);
+                    log_info(kernel_logger, "PID: [%d] - Signal: [%s] - Instancias: [%d]", id_proceso_en_lista(listaEjecutando), recurso_signal, obtener_instancias_recurso(id_recurso));
                     // pthread_mutex_lock(&m_listaEjecutando);
                     // t_pcb * pcb_signal = (t_pcb *) list_get(listaEjecutando, 0);
                     // actualizar_pcb(pcb_signal, contexto_ejecuta_signal);
@@ -788,46 +788,15 @@ void manejar_dispatch()
                 log_error(kernel_logger, "entro algo que no deberia");
                 break;
             //case BLOCK_por_ACCESO_A_MEM: (CREEMOS Q ES UN BLOCK IO )
-
-            // case BLOCK_IO: ;
-            //     int tiempo_io_ms = 0; // aca rompe carajoOOOOO, cuando recibe no tiene bien los parametros
-            //     t_pcb* pcb_desalojadoIO = recibir_pcb_tiempo_ms(cpu_dispatch_connection, &tiempo_io_ms, kernel_logger);
-            //     log_trace(kernel_logger, "el tiempo a bloquear es: %d", tiempo_io_ms);
-
-            //         pthread_mutex_lock(&m_listaEjecutando);
-            //     list_remove(listaEjecutando, 0); // inicializar pcb y despues liberarlo
-            //         pthread_mutex_unlock(&m_listaEjecutando);
-                
-            //     sem_post(&cpu_libre_para_ejecutar); // el mas importante jiji
-                
-            //     pcb_desalojadoIO->rafaga_anterior = pcb_desalojadoIO->sumatoria_rafaga; // Cambiamos T(n-1) -> T(n)
-            //     pcb_desalojadoIO->sumatoria_rafaga = 0; // Reseteamos valor de sumatoria 
-
-            //     pcb_desalojadoIO->estimacion_rafaga = estimacion_proxima_rafaga(pcb_desalojadoIO); // EST(n-1) paso a ser EST(n) // TO DO REVISAR ESTO
-            //     pcb_desalojadoIO->estimacion_fija = pcb_desalojadoIO->estimacion_rafaga;
-                       
-            //     Retorno_io* nodo_io = malloc(sizeof(Retorno_io)); 
-
-            //     nodo_io->pcb = pcb_desalojadoIO;
-            //     nodo_io->tiempo_io_ms = tiempo_io_ms;
-            //     struct timeval llegada;
-            //     gettimeofday(&llegada, NULL);                
-            //     nodo_io->llegada = llegada.tv_sec;
-                
-                
-            //        pthread_mutex_unlock(&m_io);
-            //     list_add(listaIO, nodo_io);
-            //        pthread_mutex_unlock(&m_io);
-
-            //     pthread_t hilo_suspension;
-            //             //pthread_create(&hiloDispatch, NULL, (void*) manejar_dispatch, (void*)cpu_dispatch_connection);
-            //             pthread_create(&hilo_suspension, NULL, (void*)  timer_suspension, (void*) pcb_desalojadoIO   );
-            //             pthread_detach(hilo_suspension);
-
-                
-            //     sem_post(&llego_io);// hilo!!!
         }
     }
+}
+
+int id_proceso_en_lista(t_list* lista)
+{
+    t_pcb * pcb = (t_pcb* ) list_get(lista, 0);
+    log_error(kernel_logger, "puedo obtener el pcb");
+    return obtenerPid(pcb);
 }
 
 int recurso_no_existe(char* recurso)
@@ -841,6 +810,11 @@ int recurso_no_existe(char* recurso)
         log_warning(kernel_logger, "%s",kernel_config.recursos[i]);
     }
     return 1;
+}
+
+int obtener_instancias_recurso(int id_recurso)
+{
+    return kernel_config.instancias_recursos[id_recurso];
 }
 
 int obtener_id_recurso(char* recurso)

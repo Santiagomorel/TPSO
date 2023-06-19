@@ -157,4 +157,8 @@ bool bloqueado_termino_io(t_pcb *);
 void destruirSemaforos();
 
 
+int id_proceso_en_lista(t_list* );
+int obtener_instancias_recurso(int );
+
+
 #endif /* KERNEL_H_ */
