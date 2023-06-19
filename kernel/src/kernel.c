@@ -218,7 +218,7 @@ void recibir_consola(int SOCKET_CLIENTE)
         pthread_mutex_lock(&m_listaNuevos);
         list_add(listaNuevos, pcb_a_iniciar);
         pthread_mutex_unlock(&m_listaNuevos);
-        log_info(kernel_logger, "Se crea el proceso %d en NEW", pcb_a_iniciar->id);
+        log_info(kernel_logger, "Se crea el proceso [%d] en [NEW]", pcb_a_iniciar->id);
 
         enviar_mensaje("Llego el paquete", SOCKET_CLIENTE);
 
@@ -332,7 +332,7 @@ t_registro* crear_registros()
 void cambiar_estado_a(t_pcb* a_pcb, estados nuevo_estado, estados estado_anterior)
 {
     a_pcb->estado_actual = nuevo_estado;
-    log_info(kernel_logger,"Cambio de Estado: PID: %d - Estado Anterior: %s - Estado Actual: %s", obtenerPid(a_pcb), obtenerEstado(estado_anterior), obtenerEstado(nuevo_estado));
+    log_info(kernel_logger,"Cambio de Estado: PID: [%d] - Estado Anterior: [%s] - Estado Actual: [%s]", obtenerPid(a_pcb), obtenerEstado(estado_anterior), obtenerEstado(nuevo_estado));
 }
 
 int obtenerPid(t_pcb* pcb)
@@ -669,7 +669,7 @@ void manejar_dispatch()
                     list_add(listaFinalizados, pcb_a_finalizar);
                 pthread_mutex_unlock(&m_listaFinalizados);
                 
-                log_info(kernel_logger, "Finaliza el proceso %d - Motivo: %s", pcb_a_finalizar->id, obtenerCodOP(cod_op));
+                log_info(kernel_logger, "Finaliza el proceso [%d] - Motivo: [%s]", pcb_a_finalizar->id, obtenerCodOP(cod_op));
                 enviar_Fin_consola(pcb_a_finalizar->socket_consola); 
                 liberar_ce(contexto_a_finalizar);
                 //eliminar(pcb_a_finalizar);
@@ -712,7 +712,7 @@ void manejar_dispatch()
                         //     t_pcb * pcb_wait = (t_pcb *) list_get(listaEjecutando, 0);
                         //     actualizar_pcb(pcb_wait, contexto_ejecuta_wait);
                         // pthread_mutex_unlock(&m_listaEjecutando);
-                        log_trace(kernel_logger,"PID: %d-- Wait: %s, - Instancias:%d",,recurso_wait,);//aca necesito el PID y las instancias no las
+                        // log_trace(kernel_logger,"PID: %d-- Wait: %s, - Instancias:%d",,recurso_wait,);//aca necesito el PID y las instancias no las
                     } else {
                         enviar_CodOp(cpu_dispatch_connection, NO_LO_TENGO);
                         recibir_operacion(cpu_dispatch_connection);
@@ -722,11 +722,11 @@ void manejar_dispatch()
                             actualizar_pcb(pcb_bloqueado_en_recurso, contexto_bloqueado_en_recurso);
                         pthread_mutex_unlock(&m_listaEjecutando);
                         cambiar_estado_a(pcb_bloqueado_en_recurso, BLOCKED, estadoActual(pcb_bloqueado_en_recurso));
+                        log_info(kernel_logger, "PID: [%d] - Bloqueado por: [%s]",pcb_bloqueado_en_recurso->id, recurso_wait);
                         sacar_rafaga_ejecutada(pcb_bloqueado_en_recurso); // hacer cada vez que sale de running
                         sem_post(&fin_ejecucion);
                         liberar_ce(contexto_bloqueado_en_recurso);
                         bloqueo_proceso_en_recurso(pcb_bloqueado_en_recurso, id_recurso); // aca tengo que encolar en la lista correspondiente
-                        log_trace(kernel_logger,"“PID:%d - Bloqueado por: %s",contexto_bloqueado_en_recurso->id,); //necesito el recurso bloqueado
                     }
                 }
                 break; 
@@ -749,7 +749,7 @@ void manejar_dispatch()
                     if(tiene_que_reencolar_bloq_recurso(id_recurso)){
                         reencolar_bloqueo_por_recurso(id_recurso);
                     }
-                log_trace(kernel_logger,"PID: %d-- Signal: %s, - Instancias:%d",contexto_IO->id,recurso_wait,);//aca necesito el PID y las instancias no las tengo
+                // log_trace(kernel_logger,"PID: %d-- Signal: %s, - Instancias:%d",contexto_IO->id,recurso_wait,);//aca necesito el PID y las instancias no las tengo
 
                 }
                 break;
@@ -765,16 +765,18 @@ void manejar_dispatch()
                 char* tiempo_bloqueo = recibir_string(cpu_dispatch_connection, kernel_logger);
                 recibir_operacion(cpu_dispatch_connection);
                 contexto_ejecucion* contexto_IO = recibir_ce(cpu_dispatch_connection);
-                log_trace(kernel_logger,"PID: %d- Ejecuta IO: %s",contexto_IO->id,tiempo_bloqueo);
                 int bloqueo = atoi(tiempo_bloqueo);
                 pthread_mutex_lock(&m_listaEjecutando);
                     t_pcb * pcb_IO = (t_pcb *) list_remove(listaEjecutando, 0); // inicializar pcb y despues liberarlo
                     actualizar_pcb(pcb_IO, contexto_IO);
                 pthread_mutex_unlock(&m_listaEjecutando);
-                cambiar_estado_a(pcb_IO, READY, estadoActual(pcb_IO));
+                cambiar_estado_a(pcb_IO, BLOCKED, estadoActual(pcb_IO));
                 sacar_rafaga_ejecutada(pcb_IO); // hacer cada vez que sale de running
                 sem_post(&fin_ejecucion);
+                log_info(kernel_logger, "PID: [%d] - Bloqueado por: [IO]",pcb_IO->id);
+                log_info(kernel_logger,"PID: [%d] - Ejecuta IO: [%d]",pcb_IO->id, bloqueo);
                 sleep(bloqueo);
+                cambiar_estado_a(pcb_IO, READY, estadoActual(pcb_IO));
                 iniciar_nueva_espera_ready(pcb_IO); // hacer cada vez que se mete en la lista de ready
                 pthread_mutex_lock(&m_listaReady);
                 agregar_lista_ready_con_log(listaReady, pcb_IO,kernel_config.algoritmo_planificacion);
@@ -923,21 +925,24 @@ void iniciar_nueva_espera_ready(t_pcb* pcb)
 void agregar_lista_ready_con_log(t_list* listaready,t_pcb* pcb_a_encolar,char* algoritmo){
     list_add(listaready,pcb_a_encolar);
 
-     t_list* lista_pids= list_create();
-     lista_pids=list_map(listaReady,(void*)obtenerPid);
-     char* string_pids = string_new();
+    t_list* lista_pids= list_create();
+    lista_pids=list_map(listaReady,(void*)obtenerPid); // t_list con enteros
+    char* string_pids = string_new();
 
-     for(int i=0;i<list_size(lista_pids);i++){
-        string_append(&string_pids,(char*)list_get(lista_pids,i));
-     }
+    int tamanio = list_size(lista_pids);
 
-    log_trace(kernel_logger,"Cola Ready %s : [%s]",algoritmo,string_pids);
+    for(int i = 0; i < tamanio; i++){
+        char* string_a_agregar = strcat(string_itoa(list_get(lista_pids,i)), " ");
+        string_append(&string_pids,string_a_agregar);
+    }
+
+    log_info(kernel_logger,"Cola Ready [%s] : [%s]", algoritmo, string_pids);
 
     list_destroy(lista_pids);
     
 }
 
-
+// funcion dar string -> Id + ID + ID
 // ----------------------- Funciones finales ----------------------- //
 
 void destruirSemaforos()
@@ -974,5 +979,9 @@ Actualizar Puntero Archivo: PID: <PID> - Actualizar puntero Archivo: <NOMBRE ARC
 Truncar Archivo: PID: <PID> - Archivo: <NOMBRE ARCHIVO> - Tamaño: <TAMAÑO>
 Leer Archivo: PID: <PID> - Leer Archivo: <NOMBRE ARCHIVO> - Puntero <PUNTERO> - Dirección Memoria <DIRECCIÓN MEMORIA> - Tamaño <TAMAÑO>
 Escribir Archivo: PID: <PID> -  Escribir Archivo: <NOMBRE ARCHIVO> - Puntero <PUNTERO> - Dirección Memoria <DIRECCIÓN MEMORIA> - Tamaño <TAMAÑO>
+
+
+TODO:
+PID: <PID> - Bloqueado por: <NOMBRE_ARCHIVO>
 
 */
