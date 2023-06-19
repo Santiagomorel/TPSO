@@ -930,16 +930,28 @@ void agregar_lista_ready_con_log(t_list* listaready,t_pcb* pcb_a_encolar,char* a
     char* string_pids = string_new();
 
     int tamanio = list_size(lista_pids);
+    if(tamanio >0){
 
-    for(int i = 0; i < tamanio; i++){
+    char* ultimo_string_a_agregar = string_itoa(list_get(lista_pids,(tamanio -1)));
+
+    for(int i = 0; i < (tamanio-1); i++){
         char* string_a_agregar = strcat(string_itoa(list_get(lista_pids,i)), " ");
         string_append(&string_pids,string_a_agregar);
     }
 
+    string_append(&string_pids,ultimo_string_a_agregar);
+
     log_info(kernel_logger,"Cola Ready [%s] : [%s]", algoritmo, string_pids);
 
     list_destroy(lista_pids);
-    
+    }
+    //char* ultimo_string_a_agregar = string_itoa(list_get(lista_pids,(tamanio -1)));
+    //string_append(&string_pids,ultimo_string_a_agregar);
+    else{
+    log_info(kernel_logger,"Cola Ready [%s] : [%s]", algoritmo, string_pids);
+
+    list_destroy(lista_pids);
+    }
 }
 
 // funcion dar string -> Id + ID + ID
