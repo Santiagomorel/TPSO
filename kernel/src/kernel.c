@@ -674,9 +674,10 @@ void manejar_dispatch()
     while(1){
         int cod_op = recibir_operacion(cpu_dispatch_connection);
         switch(cod_op){
-            case SUCCESS:
             case EXIT_ERROR_RECURSO:
             case SEG_FAULT:
+                // recuperacion de waits pedidos - archivos
+            case SUCCESS:
                 // TODO es probable que necesite liberar las instancias en memoria y en file system antes de encolar en EXIT
                 contexto_ejecucion* contexto_a_finalizar = recibir_ce(cpu_dispatch_connection);
 
