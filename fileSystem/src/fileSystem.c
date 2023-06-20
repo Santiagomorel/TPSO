@@ -3,7 +3,7 @@
 int main(int argc, char ** argv)
 {
     // ----------------------- creo el log del filesystem ----------------------- //
-    filesystem_logger = log_create("./runlogs/filesystem.log", "KERNEL", 1, LOG_LEVEL_TRACE);
+    filesystem_logger = log_create("./runlogs/filesystem.log", "FILESYSTEM", 1, LOG_LEVEL_TRACE);
 
     // ----------------------- levanto la configuracion del filesystem ----------------------- //
 
@@ -23,9 +23,6 @@ int main(int argc, char ** argv)
     log_info(filesystem_logger, "cargo la configuracion del filesystem");
     
     load_config();
-    armar_superbloque();
-    armar_bitmap();
-    armar_bloques();
     log_info(filesystem_logger, "%s", filesystem_config.ip_memoria);
     log_info(filesystem_logger, "%s", filesystem_config.puerto_memoria);
 
@@ -43,6 +40,10 @@ int main(int argc, char ** argv)
     log_trace(filesystem_logger, "esperando cliente kernel ");
     socket_cliente_filesystem_kernel = esperar_cliente(socket_servidor_filesystem, filesystem_logger);
     log_trace(filesystem_logger, "me entro un kernel con este socket: %d", socket_cliente_filesystem_kernel); 
+
+    // armar_superbloque();
+    // armar_bitmap();
+    // armar_bloques();
 
     
     pthread_t atiende_kernel;
@@ -62,19 +63,35 @@ int main(int argc, char ** argv)
 }   
 
 
+int pertenece(const int lista[],char* archivo , int longitud) {
+                    for (int i = 0; i < longitud; i++) {
+                        if (lista[i] == archivo) {
+                            return 1;
+                        }
+                    }
+                    return 0;
+                    }
+
+
 void recibir_kernel(int SOCKET_CLIENTE_KERNEL) {
     enviar_mensaje("recibido kernel", SOCKET_CLIENTE_KERNEL);
     while(1){
     int codigoOperacion = recibir_operacion(SOCKET_CLIENTE_KERNEL);
+    char* archivo = recibir_string(SOCKET_CLIENTE_KERNEL, filesystem_logger);
     switch(codigoOperacion)
         {
-            case MENSAJE_G:
-                log_trace(filesystem_logger, "recibi el op_cod %d MENSAJE , De", codigoOperacion);
-                break;
 
-            case F_OPEN:
-                log_trace(filesystem_logger, "recibi el op_cod %d F_OPEN , De", codigoOperacion);
-                enviar_mensaje("envio del F_OPEN", SOCKET_CLIENTE_KERNEL);
+            case F_OPEN: 
+                int longitud = sizeof lista_fcb / sizeof lista_fcb[0];
+                int existe = pertenece(lista_fcb,archivo,longitud);
+                if (existe = 1 ){
+                    enviar_codOp(SOCKET_CLIENTE_KERNEL, OK);
+                }else{
+                    crear_fcb(archivo);
+                    enviar_mensaje("No tiene FCB, por ende se creo un FCB", SOCKET_CLIENTE_KERNEL);
+                    //hacer que sean log trace
+                }
+
                 break;
 
             case F_CLOSE:
@@ -98,6 +115,7 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL) {
                 break;
 
             case F_TRUNCATE:
+
                 log_trace(filesystem_logger, "recibi el op_cod %d F_TRUNCATE , De", codigoOperacion);
                 enviar_mensaje("envio del F_TRUNCATE", SOCKET_CLIENTE_KERNEL);
                 break;
@@ -130,29 +148,75 @@ void end_program(int socket, t_log* log, t_config* config){
     liberar_conexion(socket);
 }
 
-void armar_superbloque(){
+void crear_superbloque(){
+
+
     superbloque = malloc(sizeof(t_superbloque));
+
+    char* ruta;
+    strcpy(ruta, "../fs/superbloque.dat");
+
     superbloque -> block_size = 64 ;
     superbloque -> block_count = 65536;
     log_trace(filesystem_logger, "levanto superbloque ");
 }
 
-void armar_bitmap(){
-    bitmap = malloc(sizeof(t_bitarray));
-    bitmap -> size = (superbloque -> block_count  / 8 );
+void crear_bitmap(){
+
+    bitmap = malloc(superbloque-> block_count / 8 );
+
+    char* ruta;
+    strcpy(ruta, "../fs/bitmap.dat");
+
     log_trace(filesystem_logger, "levanto bitmap ");
 }
 
-void armar_bloques(){
-    archivo_bloques = malloc(sizeof(t_list));
+void crear_archivo_bloque(){
+    archivo_bloques = malloc(sizeof(superbloque-> block_count * superbloque-> block_size));
+
+    char* ruta;
+    strcpy(ruta, "../fs/bloque.dat");
+
+    // config_save(archivo_bloques);
+
     archivo_bloques = list_create();
     log_trace(filesystem_logger, "levanto archivo bloques ");
-    //list_add(archivo_bloques, bloque);
-    // filesystem_archivo_bloques -> elements_count = (superbloque -> );
+    // list_add(archivo_bloques, bloque);
 }
  
+
+
+void crear_fcb(char* archivo){
+
+    char* ruta;
+    strcpy(ruta, "../fs/");
+    strcat(ruta, archivo);
+    
+    FCB = malloc(sizeof(FileSystem_FCB));
+     
+    FCB -> nombre_archivo = archivo;
+    FCB -> tamanio_archivo = 0;
+    FCB -> puntero_directo = 0;
+    FCB -> puntero_indirecto = 0;
+
+    list_add(lista_fcb, FCB);
+
+    // config_save(FCB);
+
+    return FCB;
+
+}
+
+
 
 // hacer la t list, pasa por parametro blocksize
 // hacer el t_bitarray pasa por parametro la cantidad de bloques
 // crear el bitarray con funcion create...
 // cambiar los valores de los int de los nuevos structs
+
+
+//El único que ya debe venir creado de antemano es el archivo de superbloque, 
+//el resto les recomendaría hacer el chequeo de si ya existen o no (y, en caso de no existir, crearlos), 
+//más que nada por comodidad si hace falta limpiar el FS actual y cambiar la configuración del superbloque entre pruebas.
+
+
