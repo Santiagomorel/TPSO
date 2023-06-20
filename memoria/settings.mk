@@ -1,5 +1,5 @@
 # Libraries
-LIBS=utils commons pthread
+LIBS=utils commons pthread m
 
 
 # Custom libraries' paths

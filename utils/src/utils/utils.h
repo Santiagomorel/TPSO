@@ -66,6 +66,8 @@ typedef enum
 	SIGNAL_RECURSO,
 	ABRIR_ARCHIVO,
 	CERRAR_ARCHIVO,
+	LEER_ARCHIVO,
+	ESCRIBIR_ARCHIVO,
 	ACTUALIZAR_PUNTERO,
 	MODIFICAR_TAMAÑO_ARCHIVO,
 	CREAR_SEGMENTO,
@@ -79,6 +81,8 @@ typedef enum
 	ACCEDER_EU,
 	INICIAR_PROCESO,
 	SUSPENDER_PROCESO,
+	CREATE_SEGMENT,
+	DELETE_SEGMENT,
 	//  CPU->MEMORIA
 	ENVIAR_CONFIG, 			//siendo el cpu le pido a la mem que me pase la configuracion para traducir las direcciones
 	//MMU
@@ -86,6 +90,10 @@ typedef enum
 	PEDIDO_MARCO,	// 2do acceso
 	PEDIDO_VALOR,
 	WRITE,
+	MOV_IN,
+	MOV_IN_OK,
+	MOV_OUT,
+	MOV_OU_OK,
 	// -------MEMORIA --------
 	INICIAR_ESTRUCTURAS,
 	TABLA_SEGMENTOS,

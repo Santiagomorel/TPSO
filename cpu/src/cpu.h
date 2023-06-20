@@ -66,9 +66,9 @@ void save_context_ce(contexto_ejecucion* ce);
 void add_value_to_register(char* registerToModify, char* valueToAdd);
 void enviar_ce_con_string(int client_socket, contexto_ejecucion* ce, char* parameter, int codOP);
 void enviar_ce_con_string_entero(int client_socket, contexto_ejecucion* ce, char* parameter, char* x, int codOP);
-
 void enviar_ce_con_dos_enteros(int client_socket, contexto_ejecucion* ce, char* x, char* y, int codOP);
 void enviar_ce_con_entero(int client_socket, contexto_ejecucion* ce, char* parameter, int codOP);
+void enviar_ce_con_string_2_enteros(int client_socket, contexto_ejecucion* ce, char* parameter, char* x, char* y, int codOP);
 
 
 /*------------------- INSTRUCCIONES --------------------*/
@@ -88,6 +88,8 @@ void enviar_ce_con_entero(int client_socket, contexto_ejecucion* ce, char* param
 #define I_F_TRUNCATE 12
 #define I_CREATE_SEGMENT 13
 #define I_DELETE_SEGMENT 14
+#define I_MOV_IN 15
+#define I_MOV_OUT 16
 
 
 
@@ -113,5 +115,14 @@ char** decode(char* linea);
 void execute_instruction(char** instruccion_a_ejecutar, contexto_ejecucion* ce);
 void update_program_counter(contexto_ejecucion* ce);
 void execute_process(contexto_ejecucion* ce);
+
+/*-------------- MMU --------------------*/
+
+
+
+int traducir_direccion_logica(int logical_address, contexto_ejecucion* ce);
+char* fetch_value_in_memory(int physical_adress, contexto_ejecucion* ce);
+int calculate_physical_address(int base, int desplazamiento);
+void store_value_in_register(char* register_mov_in, char* value);
 
 #endif

@@ -307,11 +307,14 @@ int check_interruption = 0;
 int wait = 0;
 int desalojo_por_yield = 0;
 int signal_recurso = 0;
+int direccion_fisica = 0;
+int direccion_logica = 0;
 
 
 char* tiempo = "NONE";
 
 void execute_instruction(char** instruction, contexto_ejecucion* ce){
+    t_segmento* segmento;
 
      switch(keyfromstring(instruction[0])){
         case I_SET: 
@@ -393,11 +396,26 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             break;
         case I_F_READ:
         log_trace(cpu_logger, "Por ejecutar instruccion F_READ");
-        log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s", ce->id, instruction[0], instruction[1], instruction[2]);
+        log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s - %s", ce->id, instruction[0], instruction[1], instruction[2], instruction[3]);
+        
+
+        direccion_logica = atoi(instruction[2]);
+        direccion_fisica = traducir_direccion_logica(direccion_logica, ce);
+        
+
+        enviar_ce_con_string_2_enteros(socket_kernel, ce, instruction[1], direccion_fisica, instruction[3], LEER_ARCHIVO);
+
             break;
         case I_F_WRITE:
         log_trace(cpu_logger, "Por ejecutar instruccion F_WRITE");
-        log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s", ce->id, instruction[0], instruction[1], instruction[2]);
+        log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s - %s", ce->id, instruction[0], instruction[1], instruction[2], instruction[3]);
+           
+        direccion_logica = atoi(instruction[2]);
+        direccion_fisica = traducir_direccion_logica(direccion_logica, ce);
+        
+
+        enviar_ce_con_string_2_enteros(socket_kernel, ce, instruction[1], direccion_fisica, instruction[3], ESCRIBIR_ARCHIVO);          
+           
             break;
         case I_F_TRUNCATE:
         log_trace(cpu_logger, "Por ejecutar instruccion F_TRUNCATE");
@@ -418,6 +436,31 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
         log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s", ce->id, instruction[0], instruction[1]);
 
         enviar_ce_con_entero(socket_kernel, ce, instruction[1], BORRAR_SEGMENTO);
+
+            break;
+        case I_MOV_IN:
+            log_info(cpu_logger, "Instruccion MOV_IN ejecutada");
+            log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s", ce->id, instruction[0], instruction[1], instruction[2]);
+
+            char* register_mov_in = instruction[1];
+            int logical_address_mov_in = atoi(instruction[2]);
+
+            
+
+            //------------SI NO TENEMOS SEG FAULT EJECUTAMOS LO DEMAS ------------ //
+            if(sigsegv != 1){
+                direccion_fisica = traducir_direccion_logica(logical_address_mov_in, ce);
+                char* value = fetch_value_in_memory(direccion_fisica, ce);
+
+                store_value_in_register(register_mov_in, value);
+                log_info(cpu_logger, "PID: %d - Acción: LEER - Segmento: %d - Dirección Fisica: %d",
+                        ce->id, segmento->id_segmento, direccion_fisica);
+                    log_info(cpu_logger,"YA GUARDE VALOR EN REGISTRO!!");
+            }
+
+            break;
+        case I_MOV_OUT:
+
 
             break;
         default:
@@ -476,20 +519,7 @@ void execute_process(contexto_ejecucion* ce){
         enviar_ce(socket_kernel, ce, BLOCK_IO, cpu_logger);
         liberar_ce(ce);
     }
-    /*else if(page_fault) {
-        page_fault = 0;
-        check_interruption = 0;
-        log_info(cpu_logger, "OCURRIO UN PAGE FAULT, ENVIANDO A KERNEL PARA QUE SOLUCIONE");
-        
-        // subirle ce , 
-        t_paquete* package = create_package(PAGE_FAULT); // FALTA PAGE_FAULT
-        add_ce_to_package(package, ce);
-        add_int_to_package(package, numeroSegmentoGlobalPageFault);
-        add_int_to_package(package, numeroPaginaGlobalPageFault);
-        send_package(package, socket_cpu);
-        delete_package(package);
-        //send_ce_package(socket_kernel, ce, REQUEST_PAGE_FAULT); //Este codigo de operacion?
-    }*/
+    
     /*else if(sigsegv == 1){
         sigsegv = 0;
         check_interruption = 0;
@@ -555,7 +585,9 @@ static t_symstruct lookuptable[] = {
     { "F_WRITE", I_F_WRITE },
     { "F_TRUNCATE",I_F_TRUNCATE},
     { "CREATE_SEGMENT", I_CREATE_SEGMENT },
-    { "DELETE_SEGMENT", I_DELETE_SEGMENT }
+    { "DELETE_SEGMENT", I_DELETE_SEGMENT },
+    { "MOV_IN", I_MOV_IN },
+    { "MOV_OUT", I_MOV_OUT }
 };
 
 int keyfromstring(char *key) {
@@ -608,6 +640,18 @@ void enviar_ce_con_string_entero(int client_socket, contexto_ejecucion* ce, char
     
 }
 
+void enviar_ce_con_string_2_enteros(int client_socket, contexto_ejecucion* ce, char* parameter, char* x, char* y, int codOP){
+    t_paquete* paquete = crear_paquete_op_code(codOP);
+
+    agregar_ce_a_paquete(paquete, ce, cpu_logger);
+    agregar_string_a_paquete(paquete, parameter); 
+    agregar_entero_a_paquete(paquete, atoi(x));
+    agregar_entero_a_paquete(paquete, atoi(y));
+    enviar_paquete(paquete, client_socket);
+    eliminar_paquete(paquete);
+    
+}
+
 
 
 
@@ -620,4 +664,69 @@ void enviar_ce_con_entero(int client_socket, contexto_ejecucion* ce, char* x, in
     agregar_entero_a_paquete(paquete, atoi(x));
     enviar_paquete(paquete, client_socket);
     eliminar_paquete(paquete);
+}
+
+
+
+/*---------------------------------- MMU ----------------------------------*/
+
+
+int traducir_direccion_logica(int logical_address, contexto_ejecucion* ce) {
+
+
+    int id_segmento = (int) floor(logical_address / atoi(cpu_config.tam_max_segmento));
+    int tamanio_segmento = logical_address % atoi(cpu_config.tam_max_segmento);
+     //Como se saca la base AVERIGUAR BIEN ESTO
+
+    t_list* segment_table_ce = ce->tabla_segmentos;
+    
+    t_segmento* segment = list_get(segment_table_ce, id_segmento);
+  
+
+    if(tamanio_segmento >= segment-> tamanio_segmento ){
+
+        sigsegv = 1;
+    }
+   
+      return (segment->direccion_base + tamanio_segmento);
+}
+
+char* fetch_value_in_memory(int physical_adress, contexto_ejecucion* ce){
+
+    t_paquete* package = crear_paquete_op_code(MOV_IN); 
+    agregar_entero_a_paquete(package, physical_adress);
+    agregar_ce_a_paquete(package,ce, cpu_logger);
+    enviar_paquete(package, conexion_cpu);
+    eliminar_paquete(package);
+    log_info(cpu_logger, "MOV IN enviado");    
+
+    int code_op = recibir_operacion(conexion_cpu);
+    log_info(cpu_logger, "CODIGO OPERACION RECIBIDO EN CPU: %d", code_op);
+    
+
+    char* value_received;    
+    int size = 0, desp = 0;
+
+    if(code_op == MOV_IN_OK) {  
+        log_info(cpu_logger,"ENTRE CARAJO");
+        void* buffer = recibir_buffer(&size, conexion_cpu);
+        value_received = leer_string(buffer, &desp); //AVERIGUAR BIEN ESTO
+        log_info(conexion_cpu, "EL VALOR DEL REGISTRO RECIBIDO ES: %d", value_received);
+    } else {
+        log_error(conexion_cpu, "CODIGO DE OPERACION INVALIDO");
+    }
+
+    return value_received;
+}
+
+int calculate_physical_address(int base, int desplazamiento){
+    log_info(cpu_logger, "Calculando direccion fisica");
+    return base + desplazamiento;
+}
+
+void store_value_in_register(char* register_mov_in, char* value){
+
+    log_info(cpu_logger, "El registro %s quedara el valor: %d",register_mov_in ,value);
+
+    add_value_to_register(register_mov_in, value);
 }
