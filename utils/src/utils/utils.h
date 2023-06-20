@@ -81,6 +81,7 @@ typedef enum
 	SUSPENDER_PROCESO,
 	CREATE_SEGMENT,
 	DELETE_SEGMENT,
+	COMPACTAR,
 	//  CPU->MEMORIA
 	ENVIAR_CONFIG, 			//siendo el cpu le pido a la mem que me pase la configuracion para traducir las direcciones
 	//MMU
