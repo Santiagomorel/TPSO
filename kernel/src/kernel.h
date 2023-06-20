@@ -107,7 +107,7 @@ void agregar_lista_ready_con_log(t_list*, t_pcb*, char*);
 // Declaraciones de planificador to - ready
 void planificar_sig_to_ready();
 void inicializar_estructuras(t_pcb*);
-void pedir_tabla_segmentos(); //MODIFICAR cuando este implementado a (t_list *)
+t_list* pedir_tabla_segmentos();
 
 // Declaraciones de planificador to - running
 void planificar_sig_to_running();

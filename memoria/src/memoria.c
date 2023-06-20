@@ -120,12 +120,15 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
         int codigoOperacion = recibir_operacion(SOCKET_CLIENTE_KERNEL);
         switch (codigoOperacion)
         {
-        case INICIAR_ESTRUCTURAS:
+            case INICIAR_ESTRUCTURAS:
+                int id_inicio_estructura = recibir_entero(SOCKET_CLIENTE_KERNEL, log_memoria);
+
+                crear_proceso_en_memoria(id_inicio_estructura);
+
                 log_trace(log_memoria, "recibi el op_cod %d INICIAR_ESTRUCTURAS", codigoOperacion);
                 log_trace(log_memoria, "creando paquete con tabla de segmentos base");
                 
-                enviar_mensaje("enviado nueva tabla de segmentos", SOCKET_CLIENTE_KERNEL);
-                //enviar_tabla_segmentos(SOCKET_CLIENTE_KERNEL, TABLA_SEGMENTOS, log_memoria);
+                enviar_tabla_segmentos(SOCKET_CLIENTE_KERNEL, TABLA_SEGMENTOS, log_memoria);
 
             // enviar_mensaje("enviado nueva tabla de segmentos", SOCKET_CLIENTE_KERNEL);
             enviar_tabla_segmentos(SOCKET_CLIENTE_KERNEL, TABLA_SEGMENTOS, log_memoria);
@@ -288,21 +291,19 @@ t_segmento *crear_segmento(int id_seg, int base, int tamanio)
     return unSegmento;
 }
 
-void generar_tabla_segmentos(t_proceso *proceso)
-{
-    t_list *nuevaTabla = list_create();
-    // le agregamos segmento base de prueba
-    t_segmento *nuevoElemento = crear_segmento(1, 1, memoria_config.tam_segmento_0);
+void generar_tabla_segmentos(t_proceso* proceso){
+	t_list* nuevaTabla = list_create();
+	t_segmento* nuevoElemento = crear_segmento(0,0,memoria_config.tam_segmento_0);
 
     list_add(nuevaTabla, nuevoElemento);
     proceso->tabla_segmentos = nuevaTabla;
     // return nuevaTabla;
 }
 
-void enviar_tabla_segmentos(int conexion, int codOP, t_log *logger)
-{
-    t_paquete *paquete = crear_paquete_op_code(codOP);
-    t_proceso *nuevoProceso;
+
+
+void enviar_tabla_segmentos(int conexion, int codOP, t_log* logger) {
+	t_paquete* paquete = crear_paquete_op_code(codOP);
 
     generar_tabla_segmentos(nuevoProceso);
 
@@ -742,3 +743,21 @@ void eliminarAlgo(void* algo){
 
 //     planificar_sig_to_ready();// usar esta funcion cada vez q se agregue un proceso a NEW o SUSPENDED-BLOCKED
 //     break;
+t_list* leer_tabla_segmentos(char* buffer, int* desp){
+	t_list* nuevalista = list_create();
+	int tamanio = leer_entero(buffer, desp);
+	for(int i=0; i<tamanio; i++){
+		int id_segmento = leer_entero(buffer, desp);
+		int direccion_base = leer_entero(buffer, desp);
+		int tamanio_segmento = leer_entero(buffer, desp);
+		t_segmento* nuevoElemento = crear_segmento(id_segmento, direccion_base, tamanio_segmento);
+		list_add(nuevalista, nuevoElemento);
+	}
+	return nuevalista;
+}
+
+void crear_proceso_en_memoria(int id_proceso){
+    t_proceso* nuevoProceso = malloc(sizeof(t_proceso));
+    
+
+}

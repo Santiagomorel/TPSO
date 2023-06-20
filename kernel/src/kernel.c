@@ -385,10 +385,10 @@ void agregar_lista_ready_con_log(t_list* listaready,t_pcb* pcb_a_encolar,char* a
 
     int tamanio = list_size(lista_pids);
     if (tamanio >0) {
-        char* ultimo_string_a_agregar = string_itoa(list_get(lista_pids, (tamanio - 1)));
+        char* ultimo_string_a_agregar = string_itoa((int) list_get(lista_pids, (tamanio - 1)));
 
         for(int i = 0; i < (tamanio - 1); i++){
-            char* string_a_agregar = strcat(string_itoa(list_get(lista_pids, i)), " ");
+            char* string_a_agregar = strcat(string_itoa((int) list_get(lista_pids, i)), " ");
             string_append(&string_pids, string_a_agregar);
         }
 
@@ -421,14 +421,14 @@ void planificar_sig_to_ready() //TODO
         log_trace(kernel_logger, "Inicializamos estructuras del pcb en memoria");
         inicializar_estructuras(pcb_a_ready);
 
-        /*t_list *nuevo_segmento =*/ pedir_tabla_segmentos();
-        // t_segmento * primerSegmentoNuevo = list_get(nuevo_segmento,0);
-        // log_error(kernel_logger, "info de la tabla de segmentos pedida: %d, %d, %d", primerSegmentoNuevo->tamanio_segmento,primerSegmentoNuevo->id_segmento, primerSegmentoNuevo->direccion_base);
+        t_list* nuevo_segmento = pedir_tabla_segmentos();
+        t_segmento * primerSegmentoNuevo = list_get(nuevo_segmento,0);
+        log_error(kernel_logger, "info de la tabla de segmentos pedida: %d, %d, %d", primerSegmentoNuevo->tamanio_segmento,primerSegmentoNuevo->id_segmento, primerSegmentoNuevo->direccion_base);
 
-        // list_add_all(pcb_a_ready->tabla_segmentos, nuevo_segmento);
+        list_add_all(pcb_a_ready->tabla_segmentos, nuevo_segmento);
 
-        // t_segmento * posibleSegmento = list_get(pcb_a_ready->tabla_segmentos, 0);
-        // log_error(kernel_logger, "info (tamanio de segmento) de la tabla de segmentos creada: %d, %d, %d", posibleSegmento->tamanio_segmento,posibleSegmento->id_segmento, posibleSegmento->direccion_base);
+        t_segmento * posibleSegmento = list_get(pcb_a_ready->tabla_segmentos, 0);
+        log_error(kernel_logger, "info (tamanio de segmento) de la tabla de segmentos creada: %d, %d, %d", posibleSegmento->tamanio_segmento,posibleSegmento->id_segmento, posibleSegmento->direccion_base);
         cambiar_estado_a(pcb_a_ready, READY, estadoActual(pcb_a_ready));
         agregar_a_lista_con_sems(pcb_a_ready, listaReady, m_listaReady);
         sem_post(&proceso_en_ready);
@@ -445,16 +445,14 @@ void inicializar_estructuras(t_pcb* pcb)
     eliminar_paquete(paquete);
 }
 
-void pedir_tabla_segmentos() // MODIFICAR tipo de dato que devuelve
+t_list* pedir_tabla_segmentos()
 {
     int codigoOperacion = recibir_operacion(memory_connection);
-    if (codigoOperacion != TABLA_SEGMENTOS) //TABLA_SEGMENTOS MODIFICAR cuando tengamos la tabla de segmentos
+    if (codigoOperacion != TABLA_SEGMENTOS)
     {
-        log_trace(kernel_logger, "llego otra cosa q no era un tabla pags :c");
+        log_error(kernel_logger, "Perdir tabla de segmentos no recibio una Tabla");
     }
-    
-    recibir_mensaje(memory_connection, kernel_logger);
-    //return recibir_paquete(memory_connection);
+    return recibir_paquete(memory_connection);
 }
 
 // ----------------------- Funciones planificador to - running ----------------------- //
@@ -533,7 +531,7 @@ t_pcb* mayorRR(t_pcb* pcb1, t_pcb* pcb2) // Retorna el mayor Response Ratio entr
 
     double RR_pcb2 = calcularRR(pcb2);
 
-    log_trace(kernel_logger,"Comparo pcb1 [%d] y pcb2 [%d], RR_pcb1 [%ld] y RR_pcb2 [%ld] ", pcb1->pid, pcb2->pid, RR_pcb1, RR_pcb2);
+    log_trace(kernel_logger,"Comparo pcb1 [%d] y pcb2 [%d], RR_pcb1 [%ld] y RR_pcb2 [%ld] ", pcb1->id, pcb2->id, RR_pcb1, RR_pcb2);
 
     if (RR_pcb1 == RR_pcb2){
         return mayor_prioridad_PID(pcb1,pcb2);

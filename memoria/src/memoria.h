@@ -123,6 +123,7 @@ void iniciar_semaforos();
 //listas
 void eliminarLista(t_list* lista);
 void eliminarAlgo(void* algo);
+void crear_proceso_en_memoria(int);
 
 //void enviar_tabla_segmentos();
 //void* serializar_segmento(t_segmento* segmento);

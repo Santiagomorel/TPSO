@@ -497,6 +497,17 @@ char* recibir_string(int socket, t_log* logger)
 	return nuevoString;
 }
 
+int recibir_entero(int socket, t_log* logger)
+{
+	int size = 0;
+	char *buffer;
+	int desp = 0;
+	buffer = recibir_buffer(&size, socket);
+	int nuevoEntero = leer_entero(buffer, &desp); // recibo el entero
+	free(buffer);
+	return nuevoEntero;
+}
+
 void enviar_paquete_string(int conexion, char* string, int codOP, int tamanio)
 {
 	t_paquete * paquete = crear_paquete_op_code(codOP);
