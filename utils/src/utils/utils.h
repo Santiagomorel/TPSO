@@ -4,6 +4,7 @@
 /*    Includes generales    */
 
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <sys/socket.h>
@@ -21,6 +22,7 @@
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <math.h>
 #include <valgrind/valgrind.h>
 #include <readline/readline.h>
 #include <pthread.h>
@@ -47,22 +49,43 @@ typedef enum
 	MENSAJE,
 	PAQUETE,
 	INICIAR_PCB,
+	STRING,
 	//RECIBIR_PCB,
 	// -------  CPU->kernel --------
 	EJECUTAR_CE, 			//  dispatch
 	EJECUTAR_INTERRUPCION,	// 	interrupt
 	// ------- enviadas por DIspatch: (CPU->kernel) --------
-	FIN_PROCESO,
+	SUCCESS,
+	EXIT_ERROR_RECURSO,
+	SEG_FAULT,
 	DESALOJO_PCB,  			// TODO RUSO
 	BLOCK_IO,
+	BLOCK_WAIT,
 	WAIT_RECURSO,
+	EJECUTO_WAIT,
 	DESALOJO_YIELD,
 	SIGNAL_RECURSO,
+	EJECUTO_SIGNAL,
+	ABRIR_ARCHIVO,
+	CERRAR_ARCHIVO,
+	LEER_ARCHIVO,
+	ESCRIBIR_ARCHIVO,
+	ACTUALIZAR_PUNTERO,
+	MODIFICAR_TAMAÑO_ARCHIVO,
+	CREAR_SEGMENTO,
+	BORRAR_SEGMENTO,
+	// ------- KERNEL->CPU -----------
+	NO_EXISTE_RECURSO,
+	NO_LO_TENGO,
+	LO_TENGO,
 	// -------KERNEL->MEMORIA --------
 	ACCEDER_TP,
 	ACCEDER_EU,
 	INICIAR_PROCESO,
 	SUSPENDER_PROCESO,
+	CREATE_SEGMENT,
+	DELETE_SEGMENT,
+	COMPACTAR,
 	//  CPU->MEMORIA
 	ENVIAR_CONFIG, 			//siendo el cpu le pido a la mem que me pase la configuracion para traducir las direcciones
 	//MMU
@@ -70,6 +93,10 @@ typedef enum
 	PEDIDO_MARCO,	// 2do acceso
 	PEDIDO_VALOR,
 	WRITE,
+	MOV_IN,
+	MOV_IN_OK,
+	MOV_OUT,
+	MOV_OUT_OK,
 	// -------MEMORIA --------
 	INICIAR_ESTRUCTURAS,
 	TABLA_SEGMENTOS,
@@ -77,6 +104,7 @@ typedef enum
 	INDICE_2, 	// 1er acceso mmu
 	MARCO,		// 2do acceso mmu
 	//PAGE_FAULT,
+	OUT_OF_MEMORY,
 	DIR_FISICA,
 	VALOR_A_RECIBIR,	
 
@@ -127,15 +155,19 @@ typedef struct {
     int program_counter;
 	t_registro* registros_cpu;
 	t_list* tabla_segmentos;
-	float estimacion_rafaga;
-    t_temporal tiempo_llegada_ready;
-	t_list* tabla_archivos_abiertos; // [t_archivo_abierto]
+	double estimacion_rafaga;
+    t_temporal* tiempo_llegada_ready;
+	t_list* tabla_archivos_abiertos;
 
-	t_temporal salida_ejecucion;
-	t_temporal llegada_ejecucion;
+	t_temporal* salida_ejecucion;
+	int64_t rafaga_ejecutada;
+
+	double calculoRR;
 
 	int socket_consola;
 	estados estado_actual;
+
+	t_list* recursos_pedidos;
 } t_pcb;
 
 typedef struct
@@ -150,6 +182,10 @@ typedef struct
 	t_buffer* buffer;
 } t_paquete;
 
+typedef struct{
+	int id;
+	t_list* tabla_segmentos;
+}t_proceso;
 
 typedef struct {
 	int id;
@@ -168,6 +204,7 @@ t_paquete* crear_paquete_op_code(op_code codigo_op);
 t_paquete* crear_super_paquete(void);
 void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio);
 void agregar_entero_a_paquete(t_paquete* , int );
+void agregar_string_a_paquete(t_paquete *paquete, char* palabra);
 void agregar_array_string_a_paquete(t_paquete* paquete, char** arr);
 void agregar_registros_a_paquete(t_paquete* , t_registro*);
 void enviar_paquete(t_paquete* paquete, int socket_cliente);
@@ -195,13 +232,34 @@ void loggear_estado(t_log* , int );
 
 t_list* recibir_paquete_segmento(int );
 contexto_ejecucion * recibir_ce(int );
-t_paquete* agregar_tabla_segmentos_a_paquete(t_paquete * , t_list *);
+char* recibir_string(int, t_log*);
+int recibir_entero(int, t_log*);
+
+void enviar_paquete_string(int, char*, int, int);
+void enviar_paquete_entero(int , int , int );
 
 void enviar_ce(int, contexto_ejecucion *, int, t_log*);
+void enviar_CodOp(int, int);
+void enviar_paquete_entero(int, int, int);
 
 void agregar_ce_a_paquete(t_paquete *, contexto_ejecucion *, t_log*);
 contexto_ejecucion * obtener_ce(t_pcb * pcb);
 
 void imprimir_ce(contexto_ejecucion* , t_log*);
 void imprimir_registros(t_registro* , t_log*);
+void imprimir_tabla_segmentos(t_list* , t_log* );
+
+void liberar_ce(contexto_ejecucion* );
+//liberar registro -> 
+
+char* obtenerCodOP(int);
+
+t_proceso* recibir_tabla_segmentos_como_proceso(int, t_log*);
+t_list* recibir_tabla_segmentos(int);
+t_list* leer_tabla_segmentos(char*, int*);
+
+t_segmento* crear_segmento(int, int, int);
+
+
+void agregar_tabla_segmentos_a_paquete(t_paquete*, t_list*);
 #endif /* UTILS_H_ */

@@ -121,7 +121,7 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL) {
                 break;
 
             default:
-                log_trace(filesystem_logger, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
+                // log_trace(filesystem_logger, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
                 break;
         }
 }

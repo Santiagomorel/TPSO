@@ -70,7 +70,7 @@ void recibir_mensaje(int socket_cliente, t_log *logger)
 {
 	int size;
 	char *buffer = recibir_buffer(&size, socket_cliente);
-	log_info(logger, "Me llego el mensaje %s", buffer);
+	log_trace(logger, "Me llego el mensaje %s", buffer);
 	free(buffer);
 }
 
@@ -223,6 +223,13 @@ void agregar_entero_a_paquete(t_paquete *paquete, int x)
 	paquete->buffer->size += sizeof(int);
 }
 
+void agregar_string_a_paquete(t_paquete *paquete, char* palabra)
+{
+	paquete->buffer->stream = realloc(paquete->buffer->stream, paquete->buffer->size + sizeof(char*));
+	memcpy(paquete->buffer->stream + paquete->buffer->size, &palabra, sizeof(char*));
+	paquete->buffer->size += sizeof(char*);
+}
+
 
 void agregar_array_string_a_paquete(t_paquete* paquete, char** arr)
 {
@@ -311,7 +318,7 @@ t_log *init_logger(char *file, char *process_name, bool is_active_console, t_log
 int leer_entero(char *buffer, int *desplazamiento) // Lee un entero en base a un buffer y un desplazamiento, ambos se pasan por referencia
 {
 	int ret;
-	memcpy(&ret, buffer + (*desplazamiento), sizeof(int));
+	memcpy(&ret, buffer + (*desplazamiento), sizeof(int)); // copia dentro de ret lo que tiene el buffer con un size de int
 	(*desplazamiento) += sizeof(int);
 	return ret;
 }
@@ -332,10 +339,10 @@ float leer_float(char *buffer, int *desplazamiento) // Lee un float en base a un
 	return ret;
 }
 
-char *leer_string(char *buffer, int *desplazamiento) // Lee un string en base a un buffer y un desplazamiento, ambos se pasan por referencia
+char* leer_string(char *buffer, int *desplazamiento) // Lee un string en base a un buffer y un desplazamiento, ambos se pasan por referencia
 {
 	int tamanio = leer_entero(buffer, desplazamiento);
-	printf("allocating / copying %d \n", tamanio);
+	//printf("allocating / copying %d \n", tamanio);
 
 	char *valor = malloc(tamanio);
 	memcpy(valor, buffer + (*desplazamiento), tamanio);
@@ -446,7 +453,7 @@ void loggear_estado(t_log *logger, int estado)
 	free(string_estado);
 }
 
-t_list *recibir_paquete_segmento(int socket)
+t_list* recibir_paquete_segmento(int socket)
 { // usar desp de recibir el COD_OP
 
 	int size;
@@ -454,33 +461,66 @@ t_list *recibir_paquete_segmento(int socket)
 	int desp = 0;
 
 	buffer = recibir_buffer(&size, socket);
-
+	
 	t_list *segmento = leer_segmento(buffer, &desp);
 
 	free(buffer);
 	return segmento;
 }
 
-contexto_ejecucion *recibir_ce(int socket_kernel)
+contexto_ejecucion *recibir_ce(int socket)
 {
 	contexto_ejecucion *nuevoCe = malloc(sizeof(contexto_ejecucion));
 	int size = 0;
 	char *buffer;
 	int desp = 0;
 
-	buffer = recibir_buffer(&size, socket_kernel);
+	buffer = recibir_buffer(&size, socket);
 
 	nuevoCe->id = leer_entero(buffer, &desp);
-	nuevoCe->instrucciones = leer_string_array(buffer, &desp);
+	nuevoCe->instrucciones = leer_string_array(buffer, &desp); // hay que liberar antes de perder la referencia
 	nuevoCe->program_counter = leer_entero(buffer, &desp);
-	nuevoCe->registros_cpu = leer_registros(buffer, &desp);
-	// nuevoCe->tabla_segmentos = leer_tabla_segmentos(buffer, &desp);
+	nuevoCe->registros_cpu = leer_registros(buffer, &desp); // hay que liberar antes de perder la referencia
+	nuevoCe->tabla_segmentos = leer_tabla_segmentos(buffer, &desp);
 	free(buffer);
 	return nuevoCe;
 }
 
-t_paquete *agregar_tabla_segmentos_a_paquete(t_paquete *paquete, t_list *tabla)
-{ // le saque el tamanio tabla porque creo que con sizeof t_list se soluciona
+char* recibir_string(int socket, t_log* logger)
+{
+	int size = 0;
+	char *buffer;
+	int desp = 0;
+	buffer = recibir_buffer(&size, socket);
+	char* nuevoString = leer_string(buffer, &desp); // recibo el string
+	free(buffer);
+	return nuevoString;
+}
+
+int recibir_entero(int socket, t_log* logger)
+{
+	int size = 0;
+	char *buffer;
+	int desp = 0;
+	buffer = recibir_buffer(&size, socket);
+	int nuevoEntero = leer_entero(buffer, &desp); // recibo el entero
+	free(buffer);
+	return nuevoEntero;
+}
+
+void enviar_paquete_string(int conexion, char* string, int codOP, int tamanio)
+{
+	t_paquete * paquete = crear_paquete_op_code(codOP);
+	agregar_a_paquete(paquete, string, tamanio);
+	enviar_paquete(paquete, conexion);
+	eliminar_paquete(paquete);
+}
+
+void enviar_paquete_entero(int conexion, int entero, int codOP){
+	t_paquete * paquete = crear_paquete_op_code(codOP);
+	agregar_entero_a_paquete(paquete, entero);
+	enviar_paquete(paquete, conexion);
+	eliminar_paquete(paquete);
 }
 
 void enviar_ce(int conexion, contexto_ejecucion *ce, int codOP, t_log *logger)
@@ -494,19 +534,43 @@ void enviar_ce(int conexion, contexto_ejecucion *ce, int codOP, t_log *logger)
 	eliminar_paquete(paquete);
 }
 
+void enviar_CodOp(int conexion, int codOP)
+{
+	t_paquete *paquete = crear_paquete_op_code(codOP);
+
+	enviar_paquete(paquete, conexion);
+
+	eliminar_paquete(paquete);
+}
+
 void agregar_ce_a_paquete(t_paquete *paquete, contexto_ejecucion *ce, t_log *logger)
 {
-	log_warning(logger, "antes de agregar entero");
 	agregar_entero_a_paquete(paquete, ce->id);
-	log_warning(logger, "despues de agregar entero");
-	agregar_array_string_a_paquete(paquete, ce->instrucciones);
-	log_warning(logger, "despues de agregar array de strings");
-	agregar_entero_a_paquete(paquete, ce->program_counter);
-	log_warning(logger, "despues de agregar program counter");
-	agregar_registros_a_paquete(paquete, ce->registros_cpu);
-	log_warning(logger, "despues de agregar program counter"); // crear la funcion para mandar los registros.
+	log_trace(logger, "agrego id");
 
-	// agregar_tabla_segmentos_a_paquete(paquete, ce->tabla_segmentos); MODIFICAR
+	agregar_array_string_a_paquete(paquete, ce->instrucciones);
+	log_trace(logger, "agrego instrucciones");
+
+	agregar_entero_a_paquete(paquete, ce->program_counter);
+	log_trace(logger, "agrego program counter");
+
+	agregar_registros_a_paquete(paquete, ce->registros_cpu);
+	log_trace(logger, "agrego registros"); // crear la funcion para mandar los registros.
+
+	agregar_tabla_segmentos_a_paquete(paquete, ce->tabla_segmentos);
+	log_trace(logger, "agrego tabla de segmentos");
+}
+
+void agregar_tabla_segmentos_a_paquete(t_paquete* paquete, t_list* tabla_segmentos)
+{
+    int tamanio = list_size(tabla_segmentos);
+	agregar_entero_a_paquete(paquete, tamanio);
+    for (int i = 0; i < tamanio; i++)
+    {
+        agregar_entero_a_paquete(paquete, (((t_segmento *)list_get(tabla_segmentos, i))->id_segmento));
+        agregar_entero_a_paquete(paquete, (((t_segmento *)list_get(tabla_segmentos, i))->direccion_base));
+        agregar_entero_a_paquete(paquete, (((t_segmento *)list_get(tabla_segmentos, i))->tamanio_segmento));
+    }
 }
 
 void imprimir_ce(contexto_ejecucion* ce, t_log* logger) {
@@ -516,7 +580,7 @@ void imprimir_ce(contexto_ejecucion* ce, t_log* logger) {
     }
 	log_trace(logger, "El PC del CE es %d", ce->program_counter);
 	imprimir_registros(ce->registros_cpu, logger);
-	//imprimir_tabla_segmentos
+	imprimir_tabla_segmentos(ce->tabla_segmentos, logger);
 }
 
 void imprimir_registros(t_registro* registros , t_log* logger) {
@@ -532,4 +596,96 @@ void imprimir_registros(t_registro* registros , t_log* logger) {
 	log_trace(logger, "El registro RBX es %.*s",16,registros->RBX);
 	log_trace(logger, "El registro RCX es %.*s",16,registros->RCX);
 	log_trace(logger, "El registro RDX es %.*s",16,registros->RDX);
+}
+
+void imprimir_tabla_segmentos(t_list* tabla_segmentos, t_log* logger){
+	int tamanio = list_size(tabla_segmentos);
+	for(int i=0; i<tamanio; i++){
+		log_trace(logger, "id_segmento es: %d", (((t_segmento*)list_get(tabla_segmentos, i))->id_segmento));
+		log_trace(logger, "direccion_base es: %d", (((t_segmento*)list_get(tabla_segmentos, i))->direccion_base));
+		log_trace(logger, "tamanio_segmento es: %d", (((t_segmento*)list_get(tabla_segmentos, i))->tamanio_segmento));
+	}
+}
+
+void liberar_ce(contexto_ejecucion* ce){
+	//free(ce->id); // seg fault por tratar de hacer un free a un int
+	free(ce->instrucciones); // probablemente tengamos tambien que liberar las instrucciones 1 a 1 (me da paja)
+	//free(ce->program_counter); // seg fault por tratar de hacer un free a un int
+	free(ce->registros_cpu);
+	//liberar_tabla(ce->tabla_segmentos); falta hacer
+}
+
+char* obtenerCodOP(int cop){
+	switch (cop)
+	{
+	case SUCCESS:
+		return "SUCCESS";
+		break;
+	case SEG_FAULT:
+		return "SEG_FAULT";
+		break;
+	case OUT_OF_MEMORY:
+		return "OUT_OF_MEMORY";
+		break;
+	case EXIT_ERROR_RECURSO:
+		return "EXIT_ERROR_RECURSO";
+		break;
+	default:
+		break;
+	}
+}
+
+t_proceso* recibir_tabla_segmentos_como_proceso(int socket, t_log *logger)
+{
+    t_proceso *nuevoProceso = malloc(sizeof(t_proceso));
+    int size = 0;
+    char *buffer;
+    int desp = 0;
+
+    buffer = recibir_buffer(&size, socket);
+    log_warning(logger, "Antes de leer el entero");
+    nuevoProceso->id = leer_entero(buffer, &desp);
+    log_warning(logger, "despues de leer un entero");
+    nuevoProceso->tabla_segmentos = leer_tabla_segmentos(buffer, &desp);
+    log_warning(logger, "despues de leer la tabla de segmentos");
+    free(buffer);
+
+    return nuevoProceso;
+}
+
+t_list* recibir_tabla_segmentos(int socket)
+{
+    int size = 0;
+    char *buffer;
+    int desp = 0;
+
+    buffer = recibir_buffer(&size, socket);
+    
+	t_list* nuevaTablaSegmentos = leer_tabla_segmentos(buffer, &desp);
+
+    return nuevaTablaSegmentos;
+}
+
+t_list* leer_tabla_segmentos(char *buffer, int *desp)
+{
+    t_list *nuevalista = list_create();
+    int tamanio = leer_entero(buffer, desp);
+    for (int i = 0; i < tamanio; i++)
+    {
+        int id_segmento = leer_entero(buffer, desp);
+        int direccion_base = leer_entero(buffer, desp);
+        int tamanio_segmento = leer_entero(buffer, desp);
+        t_segmento *nuevoElemento = crear_segmento(id_segmento, direccion_base, tamanio_segmento);
+        list_add(nuevalista, nuevoElemento);
+    }
+    return nuevalista;
+}
+
+t_segmento *crear_segmento(int id_seg, int base, int tamanio)
+{
+    t_segmento *unSegmento = malloc(sizeof(t_segmento));
+    unSegmento->id_segmento = id_seg;
+    unSegmento->direccion_base = base;
+    unSegmento->tamanio_segmento = tamanio;
+    return unSegmento;
 }

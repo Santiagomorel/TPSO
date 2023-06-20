@@ -5,10 +5,8 @@
 
 #define IP_KERNEL "127.0.0.1"
 #define PUERTO_KERNEL ""
-
-// void start_kernel(void);
-void load_config(void);
-// void end_program(int, t_log*, t_config*);
+#define MAX_RECURSOS 20
+// Variables y structs globales
 typedef struct{
 
     char* ip_memoria;
@@ -26,8 +24,8 @@ typedef struct{
 
     int grado_max_multiprogramacion;
 
-    char* recursos;
-    char* instancias_recursos;
+    char** recursos;
+    int* instancias_recursos;
 
     char* ip_kernel;
     char* puerto_kernel;
@@ -46,64 +44,131 @@ int memory_connection;
 int cpu_dispatch_connection;
 int file_system_connection;
 
-void recibir_consola(int);
-t_pcb* iniciar_pcb(int );
-t_pcb* pcb_create(char* , int );
-void generar_id(t_pcb* );
-t_registro * crear_registros(void);
-char** separar_inst_en_lineas(char* );
-char** parsearPorSaltosDeLinea(char* );
-void enviar_Fin_consola(int);
-bool bloqueado_termino_io(t_pcb *);
-char * obtenerEstado(estados);
-int obtenerPid(t_pcb *);
-//t_pcb* mayorRR (t_pcb*,t_pcb*);
-// t_pcb* mayorRRdeLista ( void*,void*);
-// double calculoEstimado (time_t,time_t);
-// time_t calculoRR (time_t,time_t,time_t );
+// Variables globales de recursos
+int cantidad_instancias;
 
+// Declaraciones de parte inicio
+void load_config();
+int* convertirPunteroCaracterAEntero(char** );
+void inicializarListasGlobales();
+void iniciar_listas_recursos(char**);
+void iniciarSemaforos();
+void iniciar_semaforos_recursos(char**, int*);
+void iniciar_conexiones_kernel();
+void iniciar_planificadores();
 
-void agregar_a_lista_con_sems(t_pcb *, t_list *, pthread_mutex_t );
-
-
-int contador_id = 60;
-
-// Semaforos
-sem_t proceso_en_ready;
-sem_t grado_multiprog;
+// Variables de semaforos
 pthread_mutex_t m_contador_id;
 pthread_mutex_t m_listaNuevos;
 pthread_mutex_t m_listaBloqueados;
 pthread_mutex_t m_listaEjecutando;
 pthread_mutex_t m_listaReady;
-pthread_t planificadorCP;
-// void iterator(char*);
+pthread_mutex_t m_listaFinalizados;
+pthread_mutex_t* m_listaRecurso[MAX_RECURSOS];
+sem_t proceso_en_ready;
+sem_t fin_ejecucion;
+sem_t grado_multiprog;
+sem_t* sem_recurso[MAX_RECURSOS];
 
-void inicializarListasGlobales(void );
-void iniciarSemaforos();
-void destruirSemaforos();
-void planificar_sig_to_ready();
-void planificar_sig_to_running();
-void iniciar_planificadores();
-
-void pedir_tabla_segmentos(void ); //MODIFICAR cuando este implementado a (t_list *)
-void inicializar_estructuras(t_pcb *);
-void cambiar_estado_a(t_pcb *, estados , estados );
-
-contexto_ejecucion * obtener_ce(t_pcb *);
-void copiar_registros_pcb_a_ce(t_pcb*, contexto_ejecucion*);
-void copiar_registros_ce_a_pcb(contexto_ejecucion*, t_pcb*);
-void copiar_instrucciones_pcb_a_ce(t_pcb *, contexto_ejecucion *);
-void copiar_instrucciones_ce_a_pcb(contexto_ejecucion *, t_pcb *);
-void copiar_id_pcb_a_ce(t_pcb* , contexto_ejecucion* );
-void copiar_id_ce_a_pcb(contexto_ejecucion* , t_pcb* );
-void copiar_PC_pcb_a_ce(t_pcb* , contexto_ejecucion* );
-void copiar_PC_ce_a_pcb(contexto_ejecucion* , t_pcb* );
-// Listas de estados de tipo de planificacion
+// Variables de listas
 t_list* listaNuevos;        // NEW
 t_list* listaReady;         // READY
 t_list* listaBloqueados;    // BLOCKED
 t_list* listaEjecutando;    // RUNNING (EXEC)
 t_list* listaFinalizados;   // EXIT   
 t_list* listaIO;
+t_list** lista_recurso; // lista que tiene listas de recursos
+
+// Variables de hilo de planificadores
+pthread_t planificadorCP;
+pthread_t hiloDispatch;
+
+// Declaraciones de parte consola
+void recibir_consola(int);
+t_pcb* iniciar_pcb(int);
+t_pcb* pcb_create(char*, int);
+void generar_id(t_pcb*);
+char** separar_inst_en_lineas(char*);
+char** parsearPorSaltosDeLinea(char*);
+t_registro* crear_registros();
+
+// Variables de parte consola
+int contador_id = 60;
+
+// Declaraciones de parte planificadores
+void cambiar_estado_a(t_pcb*, estados, estados);
+int obtenerPid(t_pcb*);
+char* obtenerEstado(estados);
+int estadoActual(t_pcb*);
+void agregar_a_lista_con_sems(t_pcb*, t_list*, pthread_mutex_t);
+void agregar_lista_ready_con_log(t_list*, t_pcb*, char*);
+
+
+// Declaraciones de planificador to - ready
+void planificar_sig_to_ready();
+void inicializar_estructuras(t_pcb*);
+t_list* pedir_tabla_segmentos();
+
+// Declaraciones de planificador to - running
+void planificar_sig_to_running();
+void funcion_agregar_running(t_pcb*);
+void iniciar_tiempo_ejecucion(t_pcb*);
+void setear_estimacion(t_pcb*);
+
+// Declaraciones calculo HRRN
+t_pcb* mayorRRdeLista(void*, void*);
+t_pcb* mayorRR(t_pcb*, t_pcb*);
+double calcularRR(t_pcb*);
+double calculoEstimado(t_pcb*);
+t_pcb* mayor_prioridad_PID(t_pcb*, t_pcb*);
+
+// Declaraciones de planificador blocked
+
+// Declaraciones CE (contexto de ejecucion)
+contexto_ejecucion* obtener_ce(t_pcb*);
+void copiar_id_pcb_a_ce(t_pcb*, contexto_ejecucion*);
+void copiar_instrucciones_pcb_a_ce(t_pcb*, contexto_ejecucion*);
+void copiar_PC_pcb_a_ce(t_pcb*, contexto_ejecucion*);
+void copiar_PC_ce_a_pcb(contexto_ejecucion*, t_pcb*);
+void copiar_registros_pcb_a_ce(t_pcb*, contexto_ejecucion*);
+void copiar_registros_ce_a_pcb(contexto_ejecucion*, t_pcb*);
+void copiar_tabla_segmentos_pcb_a_ce(t_pcb*, contexto_ejecucion*);
+
+
+// Declaraciones Dispatch Manager
+void manejar_dispatch();
+void actualizar_pcb(t_pcb*, contexto_ejecucion*);
+void enviar_Fin_consola(int);
+
+// Declaraciones DESALOJO_YIELD
+void sacar_rafaga_ejecutada(t_pcb*);
+void iniciar_nueva_espera_ready(t_pcb*);
+
+// Declaraciones manejo de recursos
+int recurso_no_existe(char*);
+int obtener_id_recurso(char*);
+int id_proceso_en_lista(t_list*);
+int obtener_instancias_recurso(int);
+void restar_instancia(int);
+void sumar_instancia(int);
+
+// Declaraciones WAIT_RECURSO
+int tiene_instancia_wait(int);
+void bloqueo_proceso_en_recurso(t_pcb*, int);
+
+// Declaraciones SIGNAL_RECURSO
+int tiene_que_reencolar_bloq_recurso(int);
+void reencolar_bloqueo_por_recurso(int);
+
+//
+// ------------------------------------//
+
+// void end_program(int, t_log*, t_config*);
+
+// Declaraciones finales
+void destruirSemaforos();
+
+
+
+
 #endif /* KERNEL_H_ */
