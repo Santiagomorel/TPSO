@@ -38,24 +38,6 @@ void process_dispatch();
 
 /*-------------- REGISTROS ------------*/
 
-/*
-typedef enum{
-    AX,
-    BX,
-    CX,
-    DX,
-    EAX,
-    EBX,
-    ECX,
-    EDX,
-    RAX,
-    RBX,
-    RCX,
-    RDX
-}registros;
-*/
-
-
 t_registro* registros;
 
 #define REQUEST 0
@@ -99,10 +81,10 @@ int keyfromstring(char *key);
 
 
 int check_interruption;
-int page_fault;
 int sigsegv;
-int numeroSegmentoGlobalPageFault;
-int numeroPaginaGlobalPageFault;
+int id_segmento_con_segfault;
+int desplazamiento_segfault;
+int tamanio_segfault;
 pthread_mutex_t m_execute_instruct;
 int recibir_respuesta_recurso();
 
@@ -120,9 +102,12 @@ void execute_process(contexto_ejecucion* ce);
 
 
 
-int traducir_direccion_logica(int logical_address, contexto_ejecucion* ce);
+int traducir_direccion_logica(int logical_address, contexto_ejecucion* ce, int valor_a_sumar);
 char* fetch_value_in_memory(int physical_adress, contexto_ejecucion* ce);
-int calculate_physical_address(int base, int desplazamiento);
 void store_value_in_register(char* register_mov_in, char* value);
+char* encontrarValorDeRegistro(char* register_to_find_value);
+void escribir_valor(int physical_address, char* register_value_mov_out, int segment_index, int pid);
+
+int read_int(char* buffer, int* desp);
 
 #endif
