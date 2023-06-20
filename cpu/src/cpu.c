@@ -582,7 +582,7 @@ void execute_process(contexto_ejecucion* ce){
 
         if(signal_recurso == 3){
         log_trace(cpu_logger, "No existe el recurso");
-        enviar_ce(socket_kernel, ce, EXIT_RECURSO, cpu_logger);
+        enviar_ce(socket_kernel, ce, EXIT_ERROR_RECURSO, cpu_logger);
     }else{
         log_trace(cpu_logger, "Tengo el recurso"); // Prueba
         enviar_ce(socket_kernel, ce, EJECUTO_SIGNAL, cpu_logger);
