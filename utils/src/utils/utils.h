@@ -154,7 +154,7 @@ typedef struct {
 	t_list* tabla_segmentos;
 	double estimacion_rafaga;
     t_temporal* tiempo_llegada_ready;
-	t_list* tabla_archivos_abiertos; // [t_archivo_abierto]
+	t_list* tabla_archivos_abiertos;
 
 	t_temporal* salida_ejecucion;
 	int64_t rafaga_ejecutada;
@@ -163,6 +163,8 @@ typedef struct {
 
 	int socket_consola;
 	estados estado_actual;
+
+	t_list* recursos_pedidos;
 } t_pcb;
 
 typedef struct
@@ -255,4 +257,6 @@ t_list* leer_tabla_segmentos(char*, int*);
 
 t_segmento* crear_segmento(int, int, int);
 
+
+void agregar_tabla_segmentos_a_paquete(t_paquete*, t_list*);
 #endif /* UTILS_H_ */

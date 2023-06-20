@@ -251,7 +251,7 @@ t_pcb* iniciar_pcb(int socket)
     return nuevo_pcb;
 }
 
-t_pcb* pcb_create(char* instrucciones, int socket_consola) //TODO
+t_pcb* pcb_create(char* instrucciones, int socket_consola)
 {
     log_trace(kernel_logger, "instrucciones en pcb create %s", instrucciones);
     t_pcb* new_pcb = malloc(sizeof(t_pcb));
@@ -263,17 +263,17 @@ t_pcb* pcb_create(char* instrucciones, int socket_consola) //TODO
     new_pcb->tabla_segmentos = list_create();
     new_pcb->estimacion_rafaga = kernel_config.estimacion_inicial;
     new_pcb->tiempo_llegada_ready = temporal_create();
-    // new_pcb->tabla_archivos_abiertos = ; // TODO tabla de archivos abiertos
+    new_pcb->tabla_archivos_abiertos = list_create();
     
     new_pcb->salida_ejecucion = temporal_create();
     new_pcb->rafaga_ejecutada = 0;
     
     new_pcb->calculoRR = 1;
-    new_pcb->socket_consola = socket_consola;
 
+    new_pcb->socket_consola = socket_consola;
     new_pcb->estado_actual = NEW;
-    new_pcb->socket_consola = socket_consola;
 
+    new_pcb-> recursos_pedidos = list_create();
     return new_pcb;
 }
 
@@ -408,7 +408,7 @@ void agregar_lista_ready_con_log(t_list* listaready,t_pcb* pcb_a_encolar,char* a
 
 // ----------------------- Funciones planificador to - ready ----------------------- //
 
-void planificar_sig_to_ready() //TODO
+void planificar_sig_to_ready()
 {
     sem_wait(&grado_multiprog);
 
@@ -422,15 +422,13 @@ void planificar_sig_to_ready() //TODO
         inicializar_estructuras(pcb_a_ready);
 
         t_list* nuevo_segmento = pedir_tabla_segmentos();
-        t_segmento * primerSegmentoNuevo = list_get(nuevo_segmento,0);
-        log_error(kernel_logger, "info de la tabla de segmentos pedida: %d, %d, %d", primerSegmentoNuevo->tamanio_segmento,primerSegmentoNuevo->id_segmento, primerSegmentoNuevo->direccion_base);
 
         list_add_all(pcb_a_ready->tabla_segmentos, nuevo_segmento);
 
-        t_segmento * posibleSegmento = list_get(pcb_a_ready->tabla_segmentos, 0);
-        log_error(kernel_logger, "info (tamanio de segmento) de la tabla de segmentos creada: %d, %d, %d", posibleSegmento->tamanio_segmento,posibleSegmento->id_segmento, posibleSegmento->direccion_base);
         cambiar_estado_a(pcb_a_ready, READY, estadoActual(pcb_a_ready));
+
         agregar_a_lista_con_sems(pcb_a_ready, listaReady, m_listaReady);
+
         sem_post(&proceso_en_ready);
     }
 }
@@ -484,7 +482,7 @@ void planificar_sig_to_running()
                 t_pcb* pcb_a_ejecutar = list_get_maximum(listaReady, (void*) mayorRRdeLista);
                 setear_estimacion(pcb_a_ejecutar);
                 pthread_mutex_lock(&m_listaReady);
-                list_remove_element(listaReady, pcb_a_ejecutar);
+                    list_remove_element(listaReady, pcb_a_ejecutar);
                 pthread_mutex_unlock(&m_listaReady);
                 funcion_agregar_running(pcb_a_ejecutar);
             }
@@ -495,10 +493,15 @@ void planificar_sig_to_running()
 void funcion_agregar_running(t_pcb* pcb_a_ejecutar)
 {
     iniciar_tiempo_ejecucion(pcb_a_ejecutar);
+
     cambiar_estado_a(pcb_a_ejecutar, RUNNING, estadoActual(pcb_a_ejecutar));
+
     agregar_a_lista_con_sems(pcb_a_ejecutar, listaEjecutando, m_listaEjecutando);
+
     contexto_ejecucion * nuevoContexto = obtener_ce(pcb_a_ejecutar);
+    imprimir_ce(nuevoContexto, kernel_logger);
     enviar_ce(cpu_dispatch_connection, nuevoContexto, EJECUTAR_CE, kernel_logger);
+
     log_trace(kernel_logger, "Agrego un proceso a running y envio el contexto de ejecucion");
 }
 
@@ -580,20 +583,28 @@ t_pcb* mayor_prioridad_PID(t_pcb* pcb1, t_pcb* pcb2)
 
 // ----------------------- Funciones CE ----------------------- //
 
-contexto_ejecucion* obtener_ce(t_pcb* pcb) //TODO
+contexto_ejecucion* obtener_ce(t_pcb* pcb)
 {
     contexto_ejecucion * nuevoContexto = malloc(sizeof(contexto_ejecucion));
     nuevoContexto->instrucciones = string_array_new();
     nuevoContexto->registros_cpu = malloc(sizeof(t_registro));
     log_trace(kernel_logger, "hace maloc del nuevo contexto");
+
     copiar_id_pcb_a_ce(pcb, nuevoContexto);
     log_trace(kernel_logger, "copia el id del pcb");
+
     copiar_instrucciones_pcb_a_ce(pcb, nuevoContexto);
     log_trace(kernel_logger, "copia instrucciones del pcb");
+
     copiar_PC_pcb_a_ce(pcb, nuevoContexto);
     log_trace(kernel_logger, "copia program counter");
+
     copiar_registros_pcb_a_ce(pcb, nuevoContexto);
-    // copiar_tabla_segmentos(pcb, nuevoContexto);    // FALTA HACER
+    log_trace(kernel_logger, "copia registros del pcb");
+
+    copiar_tabla_segmentos_pcb_a_ce(pcb, nuevoContexto);
+    log_trace(kernel_logger, "copia tabla segmentos del pcb");
+
     return nuevoContexto;
 }
 
@@ -649,6 +660,11 @@ void copiar_registros_ce_a_pcb(contexto_ejecucion* ce, t_pcb* pcb)
 	strcpy(pcb->registros_cpu->RBX , ce->registros_cpu->RBX);
 	strcpy(pcb->registros_cpu->RCX , ce->registros_cpu->RCX);
 	strcpy(pcb->registros_cpu->RDX , ce->registros_cpu->RDX);
+}
+
+void copiar_tabla_segmentos_pcb_a_ce(t_pcb* pcb, contexto_ejecucion* ce)
+{
+    ce->tabla_segmentos = list_duplicate(pcb->tabla_segmentos);
 }
 
 // ----------------------- Funciones Dispatch Manager ----------------------- //
