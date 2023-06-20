@@ -4,7 +4,7 @@ int main(int argc, char **argv)
 {
     // ----------------------- creo el log del kernel ----------------------- //
 
-    kernel_logger = init_logger("./runlogs/kernel.log", "KERNEL", 1, LOG_LEVEL_INFO);
+    kernel_logger = init_logger("./runlogs/kernel.log", "KERNEL", 1, LOG_LEVEL_TRACE);
 
     // ----------------------- levanto y cargo la configuracion del kernel ----------------------- //
     log_info(kernel_logger, "INICIA EL MODULO DE KERNEL");
@@ -448,11 +448,13 @@ void inicializar_estructuras(t_pcb* pcb)
 t_list* pedir_tabla_segmentos()
 {
     int codigoOperacion = recibir_operacion(memory_connection);
+
     if (codigoOperacion != TABLA_SEGMENTOS)
     {
         log_error(kernel_logger, "Perdir tabla de segmentos no recibio una Tabla");
     }
-    return recibir_paquete(memory_connection);
+
+    return recibir_tabla_segmentos(memory_connection);
 }
 
 // ----------------------- Funciones planificador to - running ----------------------- //

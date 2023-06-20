@@ -177,6 +177,10 @@ typedef struct
 	t_buffer* buffer;
 } t_paquete;
 
+typedef struct{
+	int id;
+	t_list* tabla_segmentos;
+}t_proceso;
 
 typedef struct {
 	int id;
@@ -225,7 +229,6 @@ t_list* recibir_paquete_segmento(int );
 contexto_ejecucion * recibir_ce(int );
 char* recibir_string(int, t_log*);
 int recibir_entero(int, t_log*);
-t_paquete* agregar_tabla_segmentos_a_paquete(t_paquete * , t_list *);
 
 void enviar_paquete_string(int, char*, int, int);
 void enviar_paquete_entero(int , int , int );
@@ -245,4 +248,11 @@ void liberar_ce(contexto_ejecucion* );
 //liberar registro -> 
 
 char* obtenerCodOP(int);
+
+t_proceso* recibir_tabla_segmentos_como_proceso(int, t_log*);
+t_list* recibir_tabla_segmentos(int);
+t_list* leer_tabla_segmentos(char*, int*);
+
+t_segmento* crear_segmento(int, int, int);
+
 #endif /* UTILS_H_ */

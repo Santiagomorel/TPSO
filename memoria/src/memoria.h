@@ -30,10 +30,6 @@ typedef struct{
 } Memoria_config;
 Memoria_config memoria_config;
 
-typedef struct{
-	int id;
-	t_list* tabla_segmentos;
-}t_proceso;
 
 //esta mal (casi seguro)
 typedef struct{
@@ -51,7 +47,7 @@ int iniciarSegmentacion(void);
 
 // GuardarEnMemoria
 t_segmento *guardarElemento(void *elemento, int size);
-t_segmento* buscarSegmentoSegunTamanio(int size);
+t_segmento* buscarSegmentoSegunTamanio(int);
 t_list* buscarSegmentosDisponibles();
 t_segmento* buscarUnLugarLibre(int* base);
 void guardarEnMemoria(void *elemento, t_segmento *segmento, int size);
@@ -84,13 +80,10 @@ t_segmento* segmentoMenorTamanio(t_segmento* segmento, t_segmento* otroSegmento)
 //Serializacion y creacion de tablas
 t_list* generar_lista_huecos();
 void generar_tabla_segmentos();
-t_segmento* crear_segmento(int id_seg, int base, int tamanio);
 // void enviar_tabla_segmentos(int, t_log*);
 //Serializacion
-void enviar_tabla_segmentos(int, int, t_log*);
+void enviar_tabla_segmentos(int, int, t_proceso*);
 void agregar_tabla_a_paquete(t_paquete*,t_proceso* , t_log*);
-t_proceso * recibir_tabla_segmentos(int , t_log*);
-t_list* leer_tabla_segmentos(char*,int* );
 
 int socket_servidor_memoria;
 int socket_cliente_memoria_CPU;
@@ -116,6 +109,9 @@ sem_t finModulo;
 pthread_mutex_t mutexBitMapSegment;
 pthread_mutex_t mutexMemoria;
 pthread_mutex_t mutexIdGlobal;
+pthread_mutex_t listaProcesos;
+
+t_list* lista_procesos;
 
 void iniciar_semaforos();
 
@@ -123,7 +119,7 @@ void iniciar_semaforos();
 //listas
 void eliminarLista(t_list* lista);
 void eliminarAlgo(void* algo);
-void crear_proceso_en_memoria(int);
+t_proceso*  crear_proceso_en_memoria(int);
 
 //void enviar_tabla_segmentos();
 //void* serializar_segmento(t_segmento* segmento);

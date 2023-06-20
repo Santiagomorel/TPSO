@@ -29,6 +29,8 @@ int main(int argc, char **argv)
 
     load_config();
 
+    iniciar_semaforos();
+
     iniciarSegmentacion();
 
     /*Fin Estructuras Admin*/
@@ -123,12 +125,12 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
             case INICIAR_ESTRUCTURAS:
                 int id_inicio_estructura = recibir_entero(SOCKET_CLIENTE_KERNEL, log_memoria);
 
-                crear_proceso_en_memoria(id_inicio_estructura);
+                t_proceso* nuevo_proceso = crear_proceso_en_memoria(id_inicio_estructura);
 
                 log_trace(log_memoria, "recibi el op_cod %d INICIAR_ESTRUCTURAS", codigoOperacion);
                 log_trace(log_memoria, "creando paquete con tabla de segmentos base");
                 
-                enviar_tabla_segmentos(SOCKET_CLIENTE_KERNEL, TABLA_SEGMENTOS, log_memoria);
+                enviar_tabla_segmentos(SOCKET_CLIENTE_KERNEL, TABLA_SEGMENTOS, nuevo_proceso);
 
             // enviar_mensaje("enviado nueva tabla de segmentos", SOCKET_CLIENTE_KERNEL);
             enviar_tabla_segmentos(SOCKET_CLIENTE_KERNEL, TABLA_SEGMENTOS, log_memoria);
@@ -156,11 +158,11 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
             /*Para realizar un DELETE_SEGMENT, el Kernel deberá enviarle a la Memoria el Id del segmento a eliminar y recibirá como respuesta de la Memoria la tabla de segmentos actualizada.
             Nota: No se solicitará nunca la eliminación del segmento 0 o de un segmento inexistente.*/
             break;
-        case COMPACTAR:
-            sleep(memoria_config.retardo_compactacion);
-            log_warning(log_memoria, "Solicitud de Compactación");
-            //compactar();
-            break;
+        // case COMPACTAR:
+        //     sleep(memoria_config.retardo_compactacion);
+        //     log_warning(log_memoria, "Solicitud de Compactación");
+        //     //compactar();
+        //     break;
         // se desconecta kernel
         case -1:
             log_warning(log_memoria, "se desconecto kernel");
@@ -253,42 +255,18 @@ t_list *generar_lista_huecos()
     return lista_huecos;
 }
 
-/* serializacion vieja
-void enviar_tabla_segmentos(){
-    t_list* tabla_segmentos = list_create();
-    t_segmento* segmento_base = crear_segmento(1,1,64);
-    list_add(tabla_segmentos, segmento_base);
-    list_map(tabla_segmentos, serializar_segmento);  // < = Problema
+t_proceso* crear_proceso_en_memoria(int id_proceso){
+    t_proceso* nuevoProceso = malloc(sizeof(t_proceso));
+    
+    nuevoProceso->id = id_proceso;
 
-    //t_paquete* segmentos_paquete = crear_paquete_op_code(TABLA_SEGMENTOS);
-    //agregar_a_paquete(segmentos_paquete, tabla_segmentos, sizeof(t_list));
-    //enviar_paquete(segmentos_paquete, SOCKET_CLIENTE_KERNEL);
-}
+    generar_tabla_segmentos(nuevoProceso);
 
-void* serializar_segmento(void* segmento)
-{
-    t_segmento* segmento_actual = (t_segmento*)segmento;
-    int bytes = segmento_actual->tamanio_segmento + 2 * sizeof(int);
-    void* magic = malloc(bytes);
-    int desplazamiento = 0;
+    pthread_mutex_lock(&listaProcesos);
+    list_add(lista_procesos, nuevoProceso);
+    pthread_mutex_unlock(&listaProcesos);
 
-    memcpy(magic + desplazamiento, &(segmento_actual->id_segmento), sizeof(int));
-    desplazamiento += sizeof(int);
-    memcpy(magic + desplazamiento, &(segmento_actual->direccion_base), sizeof(int));
-    desplazamiento += sizeof(int);
-    memcpy(magic + desplazamiento, &(segmento_actual->tamanio_segmento), sizeof(int));
-    desplazamiento += sizeof(int);
-
-    return magic;
-}*/
-
-t_segmento *crear_segmento(int id_seg, int base, int tamanio)
-{
-    t_segmento *unSegmento = malloc(sizeof(t_segmento));
-    unSegmento->id_segmento = id_seg;
-    unSegmento->direccion_base = base;
-    unSegmento->tamanio_segmento = tamanio;
-    return unSegmento;
+    return nuevoProceso;
 }
 
 void generar_tabla_segmentos(t_proceso* proceso){
@@ -297,27 +275,19 @@ void generar_tabla_segmentos(t_proceso* proceso){
 
     list_add(nuevaTabla, nuevoElemento);
     proceso->tabla_segmentos = nuevaTabla;
-    // return nuevaTabla;
 }
 
 
-
-void enviar_tabla_segmentos(int conexion, int codOP, t_log* logger) {
+void enviar_tabla_segmentos(int conexion, int codOP, t_proceso* proceso) {
 	t_paquete* paquete = crear_paquete_op_code(codOP);
 
-    generar_tabla_segmentos(nuevoProceso);
+	agregar_entero_a_paquete(paquete, list_size(proceso->tabla_segmentos));
 
-    agregar_entero_a_paquete(paquete, nuevoProceso->id);
+	agregar_tabla_a_paquete(paquete, proceso, log_memoria);
 
-    agregar_entero_a_paquete(paquete, list_size(nuevoProceso->tabla_segmentos));
+	enviar_paquete(paquete, conexion);
 
-    agregar_tabla_a_paquete(paquete, nuevoProceso, logger);
-
-    imprimir_tabla_segmentos(nuevoProceso->tabla_segmentos, logger);
-
-    enviar_paquete(paquete, conexion);
-
-    eliminar_paquete(paquete);
+	eliminar_paquete(paquete);
 }
 
 //------------------------ SERIALIZACION DE LA TABLA CON MOREL CON MOREL -----------------------------
@@ -341,38 +311,6 @@ void agregar_tabla_a_paquete(t_paquete *paquete, t_proceso *proceso, t_log *logg
     // te mando todos los segmentos de una, vs del otro lado los tomas y los vas metiendo en un t_list
 }
 
-t_proceso *recibir_tabla_segmentos(int socket, t_log *logger)
-{
-    t_proceso *nuevoProceso = malloc(sizeof(t_proceso));
-    int size = 0;
-    char *buffer;
-    int desp = 0;
-
-    buffer = recibir_buffer(&size, socket);
-    log_warning(logger, "Antes de leer el entero");
-    nuevoProceso->id = leer_entero(buffer, &desp);
-    log_warning(logger, "despues de leer un entero");
-    nuevoProceso->tabla_segmentos = leer_tabla_segmentos(buffer, &desp);
-    log_warning(logger, "despues de leer la tabla de segmentos");
-    free(buffer);
-
-    return nuevoProceso;
-}
-
-t_list *leer_tabla_segmentos(char *buffer, int *desp)
-{
-    t_list *nuevalista = list_create();
-    int tamanio = leer_entero(buffer, desp);
-    for (int i = 0; i < tamanio; i++)
-    {
-        int id_segmento = leer_entero(buffer, desp);
-        int direccion_base = leer_entero(buffer, desp);
-        int tamanio_segmento = leer_entero(buffer, desp);
-        t_segmento *nuevoElemento = crear_segmento(id_segmento, direccion_base, tamanio_segmento);
-        list_add(nuevalista, nuevoElemento);
-    }
-    return nuevalista;
-}
 
 // semaforos
 
@@ -382,6 +320,7 @@ void iniciar_semaforos()
     pthread_mutex_init(&mutexBitMapSegment, NULL);
     pthread_mutex_init(&mutexMemoria, NULL);
     pthread_mutex_init(&mutexIdGlobal, NULL);
+    pthread_mutex_init(&listaProcesos, NULL);
 }
 
 //
@@ -414,6 +353,8 @@ int iniciarSegmentacion(void)
     int tamanio = bitsToBytes(memoria_config.tam_memoria);
 
     bitMapSegment = bitarray_create_with_mode(datos, tamanio, MSB_FIRST);
+
+    lista_procesos = list_create();
 
     return 1; // SI FALLA DEVUELVE 0
 }
@@ -743,21 +684,4 @@ void eliminarAlgo(void* algo){
 
 //     planificar_sig_to_ready();// usar esta funcion cada vez q se agregue un proceso a NEW o SUSPENDED-BLOCKED
 //     break;
-t_list* leer_tabla_segmentos(char* buffer, int* desp){
-	t_list* nuevalista = list_create();
-	int tamanio = leer_entero(buffer, desp);
-	for(int i=0; i<tamanio; i++){
-		int id_segmento = leer_entero(buffer, desp);
-		int direccion_base = leer_entero(buffer, desp);
-		int tamanio_segmento = leer_entero(buffer, desp);
-		t_segmento* nuevoElemento = crear_segmento(id_segmento, direccion_base, tamanio_segmento);
-		list_add(nuevalista, nuevoElemento);
-	}
-	return nuevalista;
-}
 
-void crear_proceso_en_memoria(int id_proceso){
-    t_proceso* nuevoProceso = malloc(sizeof(t_proceso));
-    
-
-}

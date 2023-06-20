@@ -453,7 +453,7 @@ void loggear_estado(t_log *logger, int estado)
 	free(string_estado);
 }
 
-t_list *recibir_paquete_segmento(int socket)
+t_list* recibir_paquete_segmento(int socket)
 { // usar desp de recibir el COD_OP
 
 	int size;
@@ -521,10 +521,6 @@ void enviar_paquete_entero(int conexion, int entero, int codOP){
 	agregar_entero_a_paquete(paquete, entero);
 	enviar_paquete(paquete, conexion);
 	eliminar_paquete(paquete);
-}
-
-t_paquete *agregar_tabla_segmentos_a_paquete(t_paquete *paquete, t_list *tabla)
-{ // le saque el tamanio tabla porque creo que con sizeof t_list se soluciona
 }
 
 void enviar_ce(int conexion, contexto_ejecucion *ce, int codOP, t_log *logger)
@@ -622,4 +618,59 @@ char* obtenerCodOP(int cop){
 	default:
 		break;
 	}
+}
+
+t_proceso* recibir_tabla_segmentos_como_proceso(int socket, t_log *logger)
+{
+    t_proceso *nuevoProceso = malloc(sizeof(t_proceso));
+    int size = 0;
+    char *buffer;
+    int desp = 0;
+
+    buffer = recibir_buffer(&size, socket);
+    log_warning(logger, "Antes de leer el entero");
+    nuevoProceso->id = leer_entero(buffer, &desp);
+    log_warning(logger, "despues de leer un entero");
+    nuevoProceso->tabla_segmentos = leer_tabla_segmentos(buffer, &desp);
+    log_warning(logger, "despues de leer la tabla de segmentos");
+    free(buffer);
+
+    return nuevoProceso;
+}
+
+t_list* recibir_tabla_segmentos(int socket)
+{
+    int size = 0;
+    char *buffer;
+    int desp = 0;
+
+    buffer = recibir_buffer(&size, socket);
+    
+	t_list* nuevaTablaSegmentos = leer_tabla_segmentos(buffer, &desp);
+
+    return nuevaTablaSegmentos;
+}
+
+t_list *leer_tabla_segmentos(char *buffer, int *desp)
+{
+    t_list *nuevalista = list_create();
+    int tamanio = leer_entero(buffer, desp);
+    for (int i = 0; i < tamanio; i++)
+    {
+        int id_segmento = leer_entero(buffer, desp);
+        int direccion_base = leer_entero(buffer, desp);
+        int tamanio_segmento = leer_entero(buffer, desp);
+        t_segmento *nuevoElemento = crear_segmento(id_segmento, direccion_base, tamanio_segmento);
+        list_add(nuevalista, nuevoElemento);
+    }
+    return nuevalista;
+}
+
+t_segmento *crear_segmento(int id_seg, int base, int tamanio)
+{
+    t_segmento *unSegmento = malloc(sizeof(t_segmento));
+    unSegmento->id_segmento = id_seg;
+    unSegmento->direccion_base = base;
+    unSegmento->tamanio_segmento = tamanio;
+    return unSegmento;
 }
