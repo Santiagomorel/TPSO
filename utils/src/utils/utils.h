@@ -4,6 +4,7 @@
 /*    Includes generales    */
 
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <sys/socket.h>
@@ -48,13 +49,14 @@ typedef enum
 	MENSAJE,
 	PAQUETE,
 	INICIAR_PCB,
+	STRING,
 	//RECIBIR_PCB,
 	// -------  CPU->kernel --------
 	EJECUTAR_CE, 			//  dispatch
 	EJECUTAR_INTERRUPCION,	// 	interrupt
 	// ------- enviadas por DIspatch: (CPU->kernel) --------
 	SUCCESS,
-	EXIT_RECURSO,
+	EXIT_ERROR_RECURSO,
 	SEG_FAULT,
 	DESALOJO_PCB,  			// TODO RUSO
 	BLOCK_IO,
@@ -176,6 +178,10 @@ typedef struct
 	t_buffer* buffer;
 } t_paquete;
 
+typedef struct{
+	int id;
+	t_list* tabla_segmentos;
+}t_proceso;
 
 typedef struct {
 	int id;
@@ -222,9 +228,15 @@ void loggear_estado(t_log* , int );
 
 t_list* recibir_paquete_segmento(int );
 contexto_ejecucion * recibir_ce(int );
-t_paquete* agregar_tabla_segmentos_a_paquete(t_paquete * , t_list *);
+char* recibir_string(int, t_log*);
+int recibir_entero(int, t_log*);
+
+void enviar_paquete_string(int, char*, int, int);
+void enviar_paquete_entero(int , int , int );
 
 void enviar_ce(int, contexto_ejecucion *, int, t_log*);
+void enviar_CodOp(int, int);
+void enviar_paquete_entero(int, int, int);
 
 void agregar_ce_a_paquete(t_paquete *, contexto_ejecucion *, t_log*);
 contexto_ejecucion * obtener_ce(t_pcb * pcb);
@@ -237,4 +249,11 @@ void liberar_ce(contexto_ejecucion* );
 //liberar registro -> 
 
 char* obtenerCodOP(int);
+
+t_proceso* recibir_tabla_segmentos_como_proceso(int, t_log*);
+t_list* recibir_tabla_segmentos(int);
+t_list* leer_tabla_segmentos(char*, int*);
+
+t_segmento* crear_segmento(int, int, int);
+
 #endif /* UTILS_H_ */

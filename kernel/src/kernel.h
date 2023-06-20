@@ -5,7 +5,7 @@
 
 #define IP_KERNEL "127.0.0.1"
 #define PUERTO_KERNEL ""
-
+#define MAX_RECURSOS 20
 // Variables y structs globales
 typedef struct{
 
@@ -24,8 +24,8 @@ typedef struct{
 
     int grado_max_multiprogramacion;
 
-    char* recursos;
-    char* instancias_recursos;
+    char** recursos;
+    int* instancias_recursos;
 
     char* ip_kernel;
     char* puerto_kernel;
@@ -44,17 +44,44 @@ int memory_connection;
 int cpu_dispatch_connection;
 int file_system_connection;
 
+// Variables globales de recursos
+int cantidad_instancias;
+
 // Declaraciones de parte inicio
 void load_config();
+int* convertirPunteroCaracterAEntero(char** );
 void inicializarListasGlobales();
+void iniciar_listas_recursos(char**);
 void iniciarSemaforos();
+void iniciar_semaforos_recursos(char**, int*);
 void iniciar_conexiones_kernel();
 void iniciar_planificadores();
 
 // Variables de semaforos
+pthread_mutex_t m_contador_id;
+pthread_mutex_t m_listaNuevos;
+pthread_mutex_t m_listaBloqueados;
+pthread_mutex_t m_listaEjecutando;
+pthread_mutex_t m_listaReady;
+pthread_mutex_t m_listaFinalizados;
+pthread_mutex_t* m_listaRecurso[MAX_RECURSOS];
 sem_t proceso_en_ready;
 sem_t fin_ejecucion;
 sem_t grado_multiprog;
+sem_t* sem_recurso[MAX_RECURSOS];
+
+// Variables de listas
+t_list* listaNuevos;        // NEW
+t_list* listaReady;         // READY
+t_list* listaBloqueados;    // BLOCKED
+t_list* listaEjecutando;    // RUNNING (EXEC)
+t_list* listaFinalizados;   // EXIT   
+t_list* listaIO;
+t_list** lista_recurso; // lista que tiene listas de recursos
+
+// Variables de hilo de planificadores
+pthread_t planificadorCP;
+pthread_t hiloDispatch;
 
 // Declaraciones de parte consola
 void recibir_consola(int);
@@ -74,11 +101,13 @@ int obtenerPid(t_pcb*);
 char* obtenerEstado(estados);
 int estadoActual(t_pcb*);
 void agregar_a_lista_con_sems(t_pcb*, t_list*, pthread_mutex_t);
+void agregar_lista_ready_con_log(t_list*, t_pcb*, char*);
+
 
 // Declaraciones de planificador to - ready
 void planificar_sig_to_ready();
 void inicializar_estructuras(t_pcb*);
-void pedir_tabla_segmentos(); //MODIFICAR cuando este implementado a (t_list *)
+t_list* pedir_tabla_segmentos();
 
 // Declaraciones de planificador to - running
 void planificar_sig_to_running();
@@ -107,50 +136,36 @@ void copiar_registros_ce_a_pcb(contexto_ejecucion*, t_pcb*);
 // Declaraciones Dispatch Manager
 void manejar_dispatch();
 void actualizar_pcb(t_pcb*, contexto_ejecucion*);
+void enviar_Fin_consola(int);
+
+// Declaraciones DESALOJO_YIELD
 void sacar_rafaga_ejecutada(t_pcb*);
 void iniciar_nueva_espera_ready(t_pcb*);
 
+// Declaraciones manejo de recursos
+int recurso_no_existe(char*);
+int obtener_id_recurso(char*);
+int id_proceso_en_lista(t_list*);
+int obtener_instancias_recurso(int);
+void restar_instancia(int);
+void sumar_instancia(int);
+
+// Declaraciones WAIT_RECURSO
+int tiene_instancia_wait(int);
+void bloqueo_proceso_en_recurso(t_pcb*, int);
+
+// Declaraciones SIGNAL_RECURSO
+int tiene_que_reencolar_bloq_recurso(int);
+void reencolar_bloqueo_por_recurso(int);
+
+//
+// ------------------------------------//
 
 // void end_program(int, t_log*, t_config*);
 
-
-void enviar_Fin_consola(int);
-bool bloqueado_termino_io(t_pcb *);
-
-
-
-// Semaforos
-
-pthread_mutex_t m_contador_id;
-pthread_mutex_t m_listaNuevos;
-pthread_mutex_t m_listaBloqueados;
-pthread_mutex_t m_listaEjecutando;
-pthread_mutex_t m_listaReady;
-pthread_mutex_t m_listaFinalizados;
-pthread_t planificadorCP;
-pthread_t hiloDispatch;
-// void iterator(char*);
-
-
-
+// Declaraciones finales
 void destruirSemaforos();
 
-
-
-
-
-
-
-// Listas de estados de tipo de planificacion
-t_list* listaNuevos;        // NEW
-t_list* listaReady;         // READY
-t_list* listaBloqueados;    // BLOCKED
-t_list* listaEjecutando;    // RUNNING (EXEC)
-t_list* listaFinalizados;   // EXIT   
-t_list* listaIO;
-
-t_temporal tiempo_global;
-int64_t time_stamp_calculo;
 
 
 
