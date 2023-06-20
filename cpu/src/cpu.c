@@ -516,7 +516,7 @@ void execute_process(contexto_ejecucion* ce){
     char** decoded_instruction = malloc(sizeof(char*));
 
     log_trace(cpu_logger, "Por empezar  end_process != 1 && input_ouput != 1 && wait == 0 && desalojo_por_yield != 1 && signal_recurso != 2 && sigsev != 1"); 
-    while(end_process != 1 && input_ouput != 1 && wait == 0 && desalojo_por_yield != 1 && signal_recurso != 2 && sigsegv != 1){
+    while(end_process != 1 && input_ouput != 1 && wait == 0 && desalojo_por_yield != 1 && signal_recurso == 0 && sigsegv != 1){
         //Llega el ce y con el program counter buscas la instruccion que necesita
         instruction = string_duplicate(fetch_next_instruction_to_execute(ce));
         decoded_instruction = decode(instruction);
@@ -560,14 +560,14 @@ void execute_process(contexto_ejecucion* ce){
     else if(wait){
        
        
-        if(wait == 1){  // Se bloquea por estar ocupado recurso
+        if(wait == 2){  // Se bloquea por estar ocupado recurso
             log_trace(cpu_logger, "Bloqueado por WAIT");
             enviar_ce(socket_kernel, ce, BLOCK_WAIT, cpu_logger);
-            liberar_ce(ce);
-        }else{
+        }else if(wait == 3){
             log_trace(cpu_logger, "No existe el recurso");
             enviar_ce(socket_kernel, ce, EXIT_RECURSO, cpu_logger);
-            liberar_ce(ce);
+        }else{
+            enviar_ce(socket_kernel, ce, EJECUTO_WAIT, cpu_logger);
         }
              
         
@@ -579,9 +579,17 @@ void execute_process(contexto_ejecucion* ce){
         enviar_ce(socket_kernel, ce, DESALOJO_YIELD, cpu_logger);
         liberar_ce(ce);
     }else if(signal_recurso){
+
+        if(signal_recurso == 3){
         log_trace(cpu_logger, "No existe el recurso");
         enviar_ce(socket_kernel, ce, EXIT_RECURSO, cpu_logger);
+    }else{
+        log_trace(cpu_logger, "Tengo el recurso");
+        enviar_ce(socket_kernel, ce, EJECUTO_SIGNAL, cpu_logger);
+    }
+        signal_recurso = 0;
         liberar_ce(ce);
+
     }
 }
 
@@ -589,11 +597,11 @@ int recibir_respuesta_recurso(){
     int codigo_op = recibir_operacion(socket_kernel);
 
     if(codigo_op == NO_EXISTE_RECURSO){
-        return 2;
+        return 3;
     }else if (codigo_op == NO_LO_TENGO){
-        return 1;
+        return 2;
     }else if(codigo_op == LO_TENGO){
-        return 0;
+        return 1;
     }
 }
 
