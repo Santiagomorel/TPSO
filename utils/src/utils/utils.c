@@ -481,7 +481,7 @@ contexto_ejecucion *recibir_ce(int socket)
 	nuevoCe->instrucciones = leer_string_array(buffer, &desp); // hay que liberar antes de perder la referencia
 	nuevoCe->program_counter = leer_entero(buffer, &desp);
 	nuevoCe->registros_cpu = leer_registros(buffer, &desp); // hay que liberar antes de perder la referencia
-	// nuevoCe->tabla_segmentos = leer_tabla_segmentos(buffer, &desp);
+	nuevoCe->tabla_segmentos = leer_tabla_segmentos(buffer, &desp);
 	free(buffer);
 	return nuevoCe;
 }
@@ -545,17 +545,32 @@ void enviar_CodOp(int conexion, int codOP)
 
 void agregar_ce_a_paquete(t_paquete *paquete, contexto_ejecucion *ce, t_log *logger)
 {
-	log_trace(logger, "antes de agregar entero");
 	agregar_entero_a_paquete(paquete, ce->id);
-	log_trace(logger, "despues de agregar entero");
-	agregar_array_string_a_paquete(paquete, ce->instrucciones);
-	log_trace(logger, "despues de agregar array de strings");
-	agregar_entero_a_paquete(paquete, ce->program_counter);
-	log_trace(logger, "despues de agregar program counter");
-	agregar_registros_a_paquete(paquete, ce->registros_cpu);
-	log_trace(logger, "despues de agregar registros"); // crear la funcion para mandar los registros.
+	log_trace(logger, "agrego id");
 
-	// agregar_tabla_segmentos_a_paquete(paquete, ce->tabla_segmentos); MODIFICAR
+	agregar_array_string_a_paquete(paquete, ce->instrucciones);
+	log_trace(logger, "agrego instrucciones");
+
+	agregar_entero_a_paquete(paquete, ce->program_counter);
+	log_trace(logger, "agrego program counter");
+
+	agregar_registros_a_paquete(paquete, ce->registros_cpu);
+	log_trace(logger, "agrego registros"); // crear la funcion para mandar los registros.
+
+	agregar_tabla_segmentos_a_paquete(paquete, ce->tabla_segmentos);
+	log_trace(logger, "agrego tabla de segmentos");
+}
+
+void agregar_tabla_segmentos_a_paquete(t_paquete* paquete, t_list* tabla_segmentos)
+{
+    int tamanio = list_size(tabla_segmentos);
+	agregar_entero_a_paquete(paquete, tamanio);
+    for (int i = 0; i < tamanio; i++)
+    {
+        agregar_entero_a_paquete(paquete, (((t_segmento *)list_get(tabla_segmentos, i))->id_segmento));
+        agregar_entero_a_paquete(paquete, (((t_segmento *)list_get(tabla_segmentos, i))->direccion_base));
+        agregar_entero_a_paquete(paquete, (((t_segmento *)list_get(tabla_segmentos, i))->tamanio_segmento));
+    }
 }
 
 void imprimir_ce(contexto_ejecucion* ce, t_log* logger) {
@@ -565,7 +580,7 @@ void imprimir_ce(contexto_ejecucion* ce, t_log* logger) {
     }
 	log_trace(logger, "El PC del CE es %d", ce->program_counter);
 	imprimir_registros(ce->registros_cpu, logger);
-	//imprimir_tabla_segmentos
+	imprimir_tabla_segmentos(ce->tabla_segmentos, logger);
 }
 
 void imprimir_registros(t_registro* registros , t_log* logger) {
@@ -651,7 +666,7 @@ t_list* recibir_tabla_segmentos(int socket)
     return nuevaTablaSegmentos;
 }
 
-t_list *leer_tabla_segmentos(char *buffer, int *desp)
+t_list* leer_tabla_segmentos(char *buffer, int *desp)
 {
     t_list *nuevalista = list_create();
     int tamanio = leer_entero(buffer, desp);

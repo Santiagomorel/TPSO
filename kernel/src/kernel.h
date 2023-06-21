@@ -132,6 +132,8 @@ void copiar_PC_pcb_a_ce(t_pcb*, contexto_ejecucion*);
 void copiar_PC_ce_a_pcb(contexto_ejecucion*, t_pcb*);
 void copiar_registros_pcb_a_ce(t_pcb*, contexto_ejecucion*);
 void copiar_registros_ce_a_pcb(contexto_ejecucion*, t_pcb*);
+void copiar_tabla_segmentos_pcb_a_ce(t_pcb*, contexto_ejecucion*);
+
 
 // Declaraciones Dispatch Manager
 void manejar_dispatch();
