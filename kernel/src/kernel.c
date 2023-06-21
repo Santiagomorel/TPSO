@@ -465,7 +465,7 @@ void planificar_sig_to_running()
         log_trace(kernel_logger, "Entra en la planificacion de READY RUNNING");
         if(strcmp(kernel_config.algoritmo_planificacion, "FIFO") == 0) { // FIFO
             pthread_mutex_lock(&m_listaReady);
-            t_pcb* pcb_a_ejecutar = list_remove(listaReady, 0);
+                t_pcb* pcb_a_ejecutar = list_remove(listaReady, 0);
             pthread_mutex_unlock(&m_listaReady);
             funcion_agregar_running(pcb_a_ejecutar);
         }
@@ -474,7 +474,7 @@ void planificar_sig_to_running()
             if(tamanioLista == 1){
                 log_trace(kernel_logger, "El tamanio de la lista de ready es 1, hago FIFO");
                 pthread_mutex_lock(&m_listaReady);
-                t_pcb* pcb_a_ejecutar = list_remove(listaReady, 0);
+                    t_pcb* pcb_a_ejecutar = list_remove(listaReady, 0);
                 pthread_mutex_unlock(&m_listaReady);
                 funcion_agregar_running(pcb_a_ejecutar);
             }else{
@@ -499,7 +499,7 @@ void funcion_agregar_running(t_pcb* pcb_a_ejecutar)
     agregar_a_lista_con_sems(pcb_a_ejecutar, listaEjecutando, m_listaEjecutando);
 
     contexto_ejecucion * nuevoContexto = obtener_ce(pcb_a_ejecutar);
-    imprimir_ce(nuevoContexto, kernel_logger);
+
     enviar_ce(cpu_dispatch_connection, nuevoContexto, EJECUTAR_CE, kernel_logger);
 
     log_trace(kernel_logger, "Agrego un proceso a running y envio el contexto de ejecucion");
@@ -725,7 +725,33 @@ void manejar_dispatch()
                 liberar_ce(contexto_a_reencolar);
                 //eliminar(pcb_a_reencolar);
                 break;
+            
+            case EJECUTO_WAIT:
+                contexto_ejecucion* contexto_ejecuta_wait = recibir_ce(cpu_dispatch_connection);
+
+                pthread_mutex_lock(&m_listaEjecutando);
+                    t_pcb * pcb_ejecuta_wait = (t_pcb *) list_get(listaEjecutando, 0); 
+                    actualizar_pcb(pcb_ejecuta_wait, contexto_ejecuta_wait);
+                pthread_mutex_unlock(&m_listaEjecutando);
+
+                enviar_ce(cpu_dispatch_connection, contexto_ejecuta_wait, EJECUTAR_CE, kernel_logger);
+
+                liberar_ce(contexto_ejecuta_wait);
+                break;
+
+            case EJECUTO_SIGNAL:
+                contexto_ejecucion* contexto_ejecuta_signal = recibir_ce(cpu_dispatch_connection);
+
+                pthread_mutex_lock(&m_listaEjecutando);
+                    t_pcb * pcb_ejecuta_signal = (t_pcb *) list_get(listaEjecutando, 0); 
+                    actualizar_pcb(pcb_ejecuta_signal, contexto_ejecuta_signal);
+                pthread_mutex_unlock(&m_listaEjecutando);
+
+                enviar_ce(cpu_dispatch_connection, contexto_ejecuta_signal, EJECUTAR_CE, kernel_logger);
                 
+                liberar_ce(contexto_ejecuta_signal);
+                break;
+
             case WAIT_RECURSO:
                 char* recurso_wait = recibir_string(cpu_dispatch_connection, kernel_logger);
 
@@ -965,12 +991,9 @@ void destruirSemaforos()
 }
 
 /*
-Logs minimos obligatorios
-Creación de Proceso: Se crea el proceso <PID> en NEW
-Fin de Proceso: Finaliza el proceso <PID> - Motivo: <SUCCESS / SEG_FAULT / OUT_OF_MEMORY>
-Cambio de Estado: PID: <PID> - Estado Anterior: <ESTADO_ANTERIOR> - Estado Actual: <ESTADO_ACTUAL>
+Logs minimos obligatorios TODO
+Fin de Proceso: Finaliza el proceso <PID> - Motivo: <SEG_FAULT / OUT_OF_MEMORY>
 Motivo de Bloqueo: PID: <PID> - Bloqueado por: <IO / NOMBRE_RECURSO / NOMBRE_ARCHIVO>
-I/O:  PID: <PID> - Ejecuta IO: <TIEMPO>
 Ingreso a Ready: Cola Ready <ALGORITMO>: [<LISTA DE PIDS>]
 Wait: PID: <PID> - Wait: <NOMBRE RECURSO> - Instancias: <INSTANCIAS RECURSO>    Nota: El valor de las instancias es después de ejecutar el Wait
 Signal: PID: <PID> - Signal: <NOMBRE RECURSO> - Instancias: <INSTANCIAS RECURSO>    Nota: El valor de las instancias es después de ejecutar el Signal
@@ -988,5 +1011,5 @@ Escribir Archivo: PID: <PID> -  Escribir Archivo: <NOMBRE ARCHIVO> - Puntero <PU
 
 TODO:
 PID: <PID> - Bloqueado por: <NOMBRE_ARCHIVO>
-
+ 
 */
