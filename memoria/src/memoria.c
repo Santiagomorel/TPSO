@@ -111,7 +111,7 @@ void end_program(int socket, t_log *log, t_config *config)
     config_destroy(config);
     liberar_conexion(socket);
 }
-
+//KERNEL
 void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
 {
 
@@ -124,7 +124,6 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
         {
             case INICIAR_ESTRUCTURAS:
                 int id_inicio_estructura = recibir_entero(SOCKET_CLIENTE_KERNEL, log_memoria);
-
                 t_proceso* nuevo_proceso = crear_proceso_en_memoria(id_inicio_estructura);
 
                 log_trace(log_memoria, "recibi el op_cod %d INICIAR_ESTRUCTURAS", codigoOperacion);
@@ -136,7 +135,6 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
             enviar_tabla_segmentos(SOCKET_CLIENTE_KERNEL, TABLA_SEGMENTOS, log_memoria);
 
             break;
-
         case CREATE_SEGMENT:
             /*1. Que el segmento se cree exitosamente y que la memoria nos devuelva la base del nuevo segmento
               2. Que no se tenga más espacio disponible en la memoria y por lo tanto el proceso tenga que finalizar con error Out of Memory.
@@ -174,6 +172,7 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
         }
     }
 }
+//CPU
 void recibir_cpu(int SOCKET_CLIENTE_CPU)
 {
 
@@ -208,6 +207,7 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU)
         }
     }
 }
+//FILESYSTEM
 void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM)
 {
 
