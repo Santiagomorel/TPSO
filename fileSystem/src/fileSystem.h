@@ -11,6 +11,7 @@ void end_program(int, t_log*, t_config*);
 typedef enum{
     
     MENSAJE_G,
+    F_CREATE,
     F_OPEN,
 	F_CLOSE,
 	F_SEEK,
@@ -19,14 +20,14 @@ typedef enum{
 	F_TRUNCATE,
 };
 
-// typedef struct{
+typedef struct{
 
-//     char* nombre_archivo;
-//     int tamanio_archivo;
-//     int puntero_directo;
-//     int puntero_indirecto;
+    char* nombre_archivo;
+    int tamanio_archivo;
+    int puntero_directo;
+    int puntero_indirecto;
 
-// } FileSystem_FCB;
+} FileSystem_FCB;
 
  typedef struct{
 
@@ -63,10 +64,11 @@ int conexion_memoria;
 
 void recibir_kernel(int);
 
-
+FileSystem_FCB* FCB;
 t_superbloque* superbloque;
 t_bitarray* bitmap;
 t_list* archivo_bloques;
+t_list* lista_fcb;
 
 #endif /* FILESYSTEM_H_ */
 
