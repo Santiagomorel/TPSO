@@ -42,11 +42,6 @@ int main(int argc, char ** argv) {
 	establecer_conexion(cpu_config.ip_memoria, cpu_config.puerto_memoria, cpu_config_file, cpu_logger);
     
 /*---------------------- CONEXION CON KERNEL ---------------------*/
-/*
-	socket_cpu = iniciar_servidor(cpu_config.puerto_escucha, cpu_logger);
-	esperar_cliente(socket_cpu, cpu_logger);
-	handshake_servidor(socket_cpu);
-*/
     pthread_t threadDispatch;
 
     pthread_create(&threadDispatch, NULL, (void *) process_dispatch, NULL);
@@ -554,17 +549,9 @@ void execute_process(contexto_ejecucion* ce){
     
     else if(sigsegv == 1){
         sigsegv = 0;
-        check_interruption = 0;
-        log_info(cpu_logger, "Error: Segmentation Fault (SEG_FAULT), enviando para terminar proceso");
-        send_ce_package(socket_cpu, ce, SEG_FAULT); //FALTA SEG_FAULT EN UTILS.H
         log_info(cpu_logger, "PID: %s - Error SEG_FAULT- Segmento: %s - Offset: %s - Tamaño: %s", ce->id,
-         id_segmento_con_segfault, desplazamiento_segfault, tamanio_segfault);
+        id_segmento_con_segfault, desplazamiento_segfault, tamanio_segfault);
         enviar_ce(socket_kernel, ce, SEG_FAULT, cpu_logger); 
-    }
-    else if(check_interruption) {
-        check_interruption = 0;
-        log_trace(cpu_logger, "Entro por check interrupt");
-        enviar_ce(socket_kernel, ce, EJECUTAR_INTERRUPCION, cpu_logger); 
     }
     else if(wait){
         if(wait == 2){  // Se bloquea por estar ocupado recurso
