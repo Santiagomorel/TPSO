@@ -190,14 +190,17 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU)
             break;
 
         case MOV_IN: //(Registro, Dirección Fisica): Lee el valor de memoria correspondiente a la Dirección Lógica y lo almacena en el Registro.
-            void * direccion = (void*)recibir_entero(SOCKET_CLIENTE_CPU, log_memoria);
-            mov_in(SOCKET_CLIENTE_CPU, direccion, 0);
+            void * direccion_movIn = (void*)recibir_entero(SOCKET_CLIENTE_CPU, log_memoria);
+            mov_in(SOCKET_CLIENTE_CPU, direccion_movIn, 0);
             
             // t_paquete* paquete_ok = crear_paquete_op_code(MOV_IN_OK);
             // enviar_paquete(paquete_ok);
             break;
         case MOV_OUT: //(Dirección Fisica, Registro): Lee el valor del Registro y lo escribe en la dirección física de memoria obtenida a partir de la Dirección Lógica.
-
+            int direccion_movOut = recibir_entero(SOCKET_CLIENTE_CPU, log_memoria);
+            void * registro = (void*)recibir_string(SOCKET_CLIENTE_CPU, log_memoria);
+            ocuparBitMap(direccion_movOut, sizeof(char));
+            ocuparMemoria(registro, direccion_movOut, sizeof(char)); 
             enviar_CodOp(SOCKET_CLIENTE_CPU, MOV_OUT_OK);
         case -1:
             log_warning(log_memoria, "se desconecto CPU");
@@ -331,10 +334,10 @@ void iniciar_semaforos()
 
 void mov_in(int socket_cliente,void* direc_fisica, int size/*sizeof(t_registro)*/){
     //para guido: antes de enviar la direccion fisica, castearla a void* si es q no esta hecha
-    t_registro* registro = direc_fisica;
+    char* registro = direc_fisica;
 
     t_paquete* paquete_ok = crear_paquete_op_code(MOV_IN_OK);
-    agregar_registros_a_paquete(paquete_ok, registro);
+    agregar_string_a_paquete(paquete_ok, registro);
     enviar_paquete(paquete_ok ,socket_cliente);
 
     eliminar_paquete(paquete_ok);
