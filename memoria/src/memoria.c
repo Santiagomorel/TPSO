@@ -189,15 +189,16 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU)
             recibir_mensaje(SOCKET_CLIENTE_CPU, log_memoria);
             break;
 
-        case MOV_IN: //(Registro, Dirección Lógica): Lee el valor de memoria correspondiente a la Dirección Lógica y lo almacena en el Registro.
-
+        case MOV_IN: //(Registro, Dirección Fisica): Lee el valor de memoria correspondiente a la Dirección Lógica y lo almacena en el Registro.
+            void * direccion = (void*)recibir_entero(SOCKET_CLIENTE_CPU, log_memoria);
+            mov_in(SOCKET_CLIENTE_CPU, direccion, 0);
+            
             // t_paquete* paquete_ok = crear_paquete_op_code(MOV_IN_OK);
             // enviar_paquete(paquete_ok);
             break;
-        case MOV_OUT: //(Dirección Lógica, Registro): Lee el valor del Registro y lo escribe en la dirección física de memoria obtenida a partir de la Dirección Lógica.
+        case MOV_OUT: //(Dirección Fisica, Registro): Lee el valor del Registro y lo escribe en la dirección física de memoria obtenida a partir de la Dirección Lógica.
 
-            // t_paquete* paquete_ok = crear_paquete_op_code(MOV_OUT_OK);
-            // enviar_paquete(paquete_ok);
+            enviar_CodOp(SOCKET_CLIENTE_CPU, MOV_OUT_OK);
         case -1:
             log_warning(log_memoria, "se desconecto CPU");
         break;
@@ -322,6 +323,26 @@ void iniciar_semaforos()
     pthread_mutex_init(&mutexIdGlobal, NULL);
     pthread_mutex_init(&listaProcesos, NULL);
 }
+
+
+//
+//  CPU
+//
+
+void mov_in(int socket_cliente,void* direc_fisica, int size/*sizeof(t_registro)*/){
+    //para guido: antes de enviar la direccion fisica, castearla a void* si es q no esta hecha
+    t_registro* registro = direc_fisica;
+
+    t_paquete* paquete_ok = crear_paquete_op_code(MOV_IN_OK);
+    agregar_registros_a_paquete(paquete_ok, registro);
+    enviar_paquete(paquete_ok ,socket_cliente);
+
+    eliminar_paquete(paquete_ok);
+    //ocuparMemoria(registro, direc_logica, size);
+    //ocuparBitMap(direc_logica, size);
+}
+
+
 
 //
 //  SEGMENTACION
@@ -510,7 +531,7 @@ t_list* puedenGuardar(t_list* segmentos, int size){
 void guardarEnMemoria(void *elemento, t_segmento *segmento, int size)
 {
 
-    ocuparBitMap(bitMapSegment, segmento->direccion_base, size);
+    ocuparBitMap(segmento->direccion_base, size);
     ocuparMemoria(elemento, segmento->direccion_base, size);
 }
 
@@ -600,7 +621,7 @@ int bitsToBytes(int bits){
 
 // bitMaps
 
-void ocuparBitMap(t_bitarray *segmentoBitMap, int base, int size)
+void ocuparBitMap(int base, int size)
 {
 
     pthread_mutex_lock(&mutexBitMapSegment);
@@ -611,7 +632,7 @@ void ocuparBitMap(t_bitarray *segmentoBitMap, int base, int size)
     pthread_mutex_unlock(&mutexBitMapSegment);
 }
 
-void liberarBitMap(t_bitarray *segmentoBitMap, int base, int size)
+void liberarBitMap(int base, int size)
 {
 
     pthread_mutex_lock(&mutexBitMapSegment);

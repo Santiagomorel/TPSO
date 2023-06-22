@@ -41,6 +41,10 @@ char* datos;
 void* MEMORIA_PRINCIPAL;
 int idGlobal;
 
+//CPU
+
+//Lee el valor de memoria "direc_fisica" y lo almacena en el Registro que luego envia.
+void mov_in(int socket_cliente, void* direc_fisica, int size);
 
 
 int iniciarSegmentacion(void);
@@ -67,8 +71,8 @@ int bitsToBytes(int bits);
 t_bitarray* bitMapSegment;
 t_bitarray* unBitmap;
 
-void ocuparBitMap(t_bitarray* segmentoBitMap, int base,int size);
-void liberarBitMap(t_bitarray* segmentoBitMap, int base, int size);
+void ocuparBitMap(int base,int size); //ocupa del bitmap global "bitMapSegment"
+void liberarBitMap(int base, int size); //libera del bitmap global "bitMapSegment"
 int contarEspaciosLibresDesde(t_bitarray* bitmap, int i);
 int contarEspaciosOcupadosDesde(t_bitarray*unBitmap, int i);
 
