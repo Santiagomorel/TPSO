@@ -165,13 +165,12 @@ void process_dispatch() {
 	while (1) {
 		int op_code = recibir_operacion(socket_kernel);
         log_trace(cpu_logger, "Codigo de operacion recibido de kernel: %d", op_code);
-        contexto_ejecucion* ce; //hay que hacer un free del contexto de ejecucion una vez termine de ejecutar
 
 		switch (op_code) {
             case EJECUTAR_CE: 
-                ce = recibir_ce(socket_kernel);
+                contexto_ejecucion* ce = recibir_ce(socket_kernel);
                 log_trace(cpu_logger, "Llego correctamente el CE con id: %d", ce->id);
-                imprimir_ce(ce, cpu_logger);
+                //imprimir_ce(ce, cpu_logger);
                 execute_process(ce);
                 break;   
             case -1:
@@ -180,7 +179,7 @@ void process_dispatch() {
                 pthread_exit(NULL);
                 break;
             default:
-                log_error(cpu_logger, "Codigo de operacion desconocido");
+                log_debug(cpu_logger, "Codigo de operacion desconocido");
                 //exit(1);
                 break;     
 	    }

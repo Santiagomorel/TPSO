@@ -138,6 +138,7 @@ void copiar_tabla_segmentos_pcb_a_ce(t_pcb*, contexto_ejecucion*);
 // Declaraciones Dispatch Manager
 void manejar_dispatch();
 void actualizar_pcb(t_pcb*, contexto_ejecucion*);
+void liberar_recursos_pedidos(t_pcb*);
 void enviar_Fin_consola(int);
 
 // Declaraciones DESALOJO_YIELD

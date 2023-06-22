@@ -372,7 +372,7 @@ int estadoActual(t_pcb* pcb)
 void agregar_a_lista_con_sems(t_pcb* pcb_a_agregar, t_list* lista, pthread_mutex_t m_sem)
 {
     pthread_mutex_lock(&m_sem);
-    agregar_lista_ready_con_log(lista,pcb_a_agregar,kernel_config.algoritmo_planificacion);
+    agregar_lista_ready_con_log(lista, pcb_a_agregar, kernel_config.algoritmo_planificacion);
     pthread_mutex_unlock(&m_sem);
 }
 
@@ -415,7 +415,7 @@ void planificar_sig_to_ready()
     if (!list_is_empty(listaNuevos)) // NEW -> READY
     {
         pthread_mutex_lock(&m_listaNuevos);
-        t_pcb *pcb_a_ready = list_remove(listaNuevos, 0);
+            t_pcb *pcb_a_ready = list_remove(listaNuevos, 0);
         pthread_mutex_unlock(&m_listaNuevos);
 
         log_trace(kernel_logger, "Inicializamos estructuras del pcb en memoria");
@@ -688,12 +688,12 @@ void manejar_dispatch()
 
                 cambiar_estado_a(pcb_a_finalizar, EXIT, estadoActual(pcb_a_finalizar));
 
+                liberar_recursos_pedidos(pcb_a_finalizar);
+                
                 sem_post(&grado_multiprog);
                 sem_post(&fin_ejecucion);
 
-                pthread_mutex_lock(&m_listaFinalizados);
-                    list_add(listaFinalizados, pcb_a_finalizar);
-                pthread_mutex_unlock(&m_listaFinalizados);
+                agregar_a_lista_con_sems(pcb_a_finalizar, listaFinalizados, m_listaFinalizados);
                 
                 log_info(kernel_logger, "Finaliza el proceso [%d] - Motivo: [%s]", pcb_a_finalizar->id, obtenerCodOP(cod_op));
                 
@@ -715,9 +715,7 @@ void manejar_dispatch()
                 sacar_rafaga_ejecutada(pcb_a_reencolar); // hacer cada vez que sale de running
                 iniciar_nueva_espera_ready(pcb_a_reencolar); // hacer cada vez que se mete en la lista de ready
                 
-                pthread_mutex_lock(&m_listaReady);
-                    agregar_lista_ready_con_log(listaReady, pcb_a_reencolar,kernel_config.algoritmo_planificacion);
-                pthread_mutex_unlock(&m_listaReady);
+                agregar_a_lista_con_sems(pcb_a_reencolar, listaReady, m_listaReady);
 
                 sem_post(&proceso_en_ready);
                 sem_post(&fin_ejecucion);
@@ -807,9 +805,7 @@ void manejar_dispatch()
                     sumar_instancia(id_recurso);
                     
                     log_info(kernel_logger, "PID: [%d] - Signal: [%s] - Instancias: [%d]", id_proceso_en_lista(listaEjecutando), recurso_signal, obtener_instancias_recurso(id_recurso));
-                    
-                    sem_post(sem_recurso[id_recurso]);
-                    
+                                        
                     if (tiene_que_reencolar_bloq_recurso(id_recurso)) {
                         reencolar_bloqueo_por_recurso(id_recurso);
                     }
@@ -846,9 +842,7 @@ void manejar_dispatch()
                 
                 iniciar_nueva_espera_ready(pcb_IO); // hacer cada vez que se mete en la lista de ready
                 
-                pthread_mutex_lock(&m_listaReady);
-                    agregar_lista_ready_con_log(listaReady, pcb_IO,kernel_config.algoritmo_planificacion);
-                pthread_mutex_unlock(&m_listaReady);
+                agregar_a_lista_con_sems(pcb_IO, listaReady, m_listaReady);
                 
                 sem_post(&proceso_en_ready);
                 
@@ -871,6 +865,19 @@ void actualizar_pcb(t_pcb* pcb, contexto_ejecucion* ce) //TODO
     copiar_PC_ce_a_pcb(ce, pcb);
     copiar_registros_ce_a_pcb(ce, pcb);
     //falta copiar la tabla de segmentos.
+}
+
+void liberar_recursos_pedidos(t_pcb* pcb)
+{
+    for (int i = 0; i < list_size(pcb->recursos_pedidos); i++)
+    {
+        sumar_instancia((int) list_get(pcb->recursos_pedidos, i));
+
+        if (tiene_que_reencolar_bloq_recurso(i)) {
+            reencolar_bloqueo_por_recurso(i);
+        }
+    }
+    list_clean(pcb->recursos_pedidos);
 }
 
 void enviar_Fin_consola(int socket)
@@ -932,13 +939,24 @@ int obtener_instancias_recurso(int id_recurso)
 }
 
 void restar_instancia(int id_recurso)
-{ // resta 1 a la instancia
+{ // resta 1 a la instancia y se la asigno a recursos_pedidos del proceso en ejecucion
     kernel_config.instancias_recursos[id_recurso] -= 1;
+    pthread_mutex_lock(&m_listaEjecutando);
+        t_pcb * pcb_pide_recurso = (t_pcb *) list_get(listaEjecutando, 0); 
+        list_add(pcb_pide_recurso->recursos_pedidos, id_recurso);
+    pthread_mutex_unlock(&m_listaEjecutando);
 }
 
 void sumar_instancia(int id_recurso)
-{
+{ // suma 1 a la instancia y se la saco a recursos_pedidos del proceso en ejecucion
     kernel_config.instancias_recursos[id_recurso] += 1;
+
+    sem_post(sem_recurso[id_recurso]);
+
+    pthread_mutex_lock(&m_listaEjecutando);
+        t_pcb * pcb_quita_recurso = (t_pcb *) list_get(listaEjecutando, 0); 
+        list_remove_element(pcb_quita_recurso->recursos_pedidos, id_recurso);
+    pthread_mutex_unlock(&m_listaEjecutando);
 }
 
 // ----------------------- Funciones WAIT_RECURSO ----------------------- //
@@ -974,9 +992,7 @@ void reencolar_bloqueo_por_recurso(int id_recurso)
     
     iniciar_nueva_espera_ready(pcb_a_reencolar); // hacer cada vez que se mete en la lista de ready
     
-    pthread_mutex_lock(&m_listaReady);
-        agregar_lista_ready_con_log(listaReady, pcb_a_reencolar,kernel_config.algoritmo_planificacion);
-    pthread_mutex_unlock(&m_listaReady);
+    agregar_a_lista_con_sems(pcb_a_reencolar, listaReady, m_listaReady);
     
     sem_post(&proceso_en_ready);
 }
