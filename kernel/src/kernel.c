@@ -137,6 +137,7 @@ void iniciarSemaforos()
     pthread_mutex_init(&m_listaBloqueados, NULL);
     pthread_mutex_init(&m_listaEjecutando, NULL);
     pthread_mutex_init(&m_contador_id, NULL);
+    pthread_mutex_init(&m_IO, NULL);
     sem_init(&proceso_en_ready, 0, 0);
     sem_init(&fin_ejecucion, 0, 1);
     sem_init(&grado_multiprog, 0, kernel_config.grado_max_multiprogramacion);
@@ -813,6 +814,7 @@ void manejar_dispatch()
                 break;
 
             case BLOCK_IO:
+                pthread_mutex_lock(&m_IO);
                 char* tiempo_bloqueo = recibir_string(cpu_dispatch_connection, kernel_logger);
 
                 recibir_operacion(cpu_dispatch_connection);
@@ -826,8 +828,6 @@ void manejar_dispatch()
                     actualizar_pcb(pcb_IO, contexto_IO);
                 pthread_mutex_unlock(&m_listaEjecutando);
                 
-                cambiar_estado_a(pcb_IO, BLOCKED, estadoActual(pcb_IO));
-                
                 sacar_rafaga_ejecutada(pcb_IO); // hacer cada vez que sale de running
                 
                 sem_post(&fin_ejecucion);
@@ -835,6 +835,10 @@ void manejar_dispatch()
                 log_info(kernel_logger, "PID: [%d] - Bloqueado por: [IO]",pcb_IO->id);
                 
                 log_info(kernel_logger,"PID: [%d] - Ejecuta IO: [%d]",pcb_IO->id, bloqueo);
+                
+                
+
+                cambiar_estado_a(pcb_IO, BLOCKED, estadoActual(pcb_IO));
                 
                 sleep(bloqueo);
                 
@@ -847,6 +851,8 @@ void manejar_dispatch()
                 sem_post(&proceso_en_ready);
                 
                 liberar_ce(contexto_IO);
+
+                pthread_mutex_unlock(&m_IO);
                 break;
 
             case -1:
@@ -871,8 +877,10 @@ void liberar_recursos_pedidos(t_pcb* pcb)
 {
     for (int i = 0; i < list_size(pcb->recursos_pedidos); i++)
     {
-        sumar_instancia((int) list_get(pcb->recursos_pedidos, i));
-
+        log_warning(kernel_logger, "se libera un recurso al finalizar el proceso");
+        int element = list_get(pcb->recursos_pedidos, i);
+        sumar_instancia(element);
+        log_warning(kernel_logger, "se suma la instancia");
         if (tiene_que_reencolar_bloq_recurso(i)) {
             reencolar_bloqueo_por_recurso(i);
         }
@@ -947,7 +955,7 @@ void restar_instancia(int id_recurso)
     pthread_mutex_unlock(&m_listaEjecutando);
 }
 
-void sumar_instancia(int id_recurso)
+void sumar_instancia(int id_recurso) // tednria que haber un sumar_instancia por exit que saque los elementos de el pcb q esta de salida
 { // suma 1 a la instancia y se la saco a recursos_pedidos del proceso en ejecucion
     kernel_config.instancias_recursos[id_recurso] += 1;
 
