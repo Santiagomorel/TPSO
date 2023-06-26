@@ -79,7 +79,9 @@ int contarEspaciosOcupadosDesde(t_bitarray*unBitmap, int i);
 //criterio de asignacion
 t_segmento* elegirSegCriterio(t_list* segmentos, int size);
 t_segmento* segmentoBestFit(t_list* segmentos, int size);
+t_segmento* segmentoWorstFit(t_list* segmentos, int size); // este "size" puede que no vaya
 t_segmento* segmentoMenorTamanio(t_segmento* segmento, t_segmento* otroSegmento);
+t_segmento* segmentoMayorTamanio(t_segmento* segmento, t_segmento* otroSegmento);
 
 //Serializacion y creacion de tablas
 t_list* generar_lista_huecos();

@@ -201,6 +201,7 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU)
             void * registro = (void*)recibir_string(SOCKET_CLIENTE_CPU, log_memoria);
             ocuparBitMap(direccion_movOut, sizeof(char));
             ocuparMemoria(registro, direccion_movOut, sizeof(char)); 
+            //falta chequear que el tipo que se pide para los size este bien
             enviar_CodOp(SOCKET_CLIENTE_CPU, MOV_OUT_OK);
         case -1:
             log_warning(log_memoria, "se desconecto CPU");
@@ -557,7 +558,9 @@ t_segmento* elegirSegCriterio(t_list* segmentos, int size){
         segmento = list_get(segmentos,0); //FIRST FIT DEVUELVE EL PRIMER SEGMENTO DONDE PUEDE GUARDARSE
     }else if(strcmp(memoria_config.algoritmo_asignacion,"BEST") == 0){
     	log_info(log_memoria,"Entre por BEST");
-        segmento = segmentoBestFit(segmentos, size); // => Falta agregar la funcion
+        segmento = segmentoBestFit(segmentos, size);
+    }else if(strcmp(memoria_config.algoritmo_asignacion,"WORST") == 0){
+        segmento = segmentoWorstFit(segmentos, size);
     }
 
     return segmento;
@@ -587,6 +590,21 @@ t_segmento* segmentoMenorTamanio(t_segmento* segmento, t_segmento* otroSegmento)
     }else
         return otroSegmento; 
 }
+t_segmento* segmentoMayorTamanio(t_segmento* segmento, t_segmento* otroSegmento){
+
+    if(segmento->tamanio_segmento > otroSegmento->tamanio_segmento){
+        return segmento;
+    }else
+        return otroSegmento; 
+}
+t_segmento* segmentoWorstFit(t_list* segmentos, int size){
+    
+    t_segmento* segmento;
+
+    return segmento = list_get_maximum(segmentos, (void*)segmentoMayorTamanio);
+}
+
+
 
 // BitArrays
 
