@@ -65,7 +65,6 @@ pthread_mutex_t m_listaEjecutando;
 pthread_mutex_t m_listaReady;
 pthread_mutex_t m_listaFinalizados;
 pthread_mutex_t* m_listaRecurso[MAX_RECURSOS];
-pthread_mutex_t m_IO;
 sem_t proceso_en_ready;
 sem_t fin_ejecucion;
 sem_t grado_multiprog;
@@ -83,6 +82,7 @@ t_list** lista_recurso; // lista que tiene listas de recursos
 // Variables de hilo de planificadores
 pthread_t planificadorCP;
 pthread_t hiloDispatch;
+pthread_t hiloIO;
 
 // Declaraciones de parte consola
 void recibir_consola(int);
@@ -153,6 +153,7 @@ int id_proceso_en_lista(t_list*);
 int obtener_instancias_recurso(int);
 void restar_instancia(int);
 void sumar_instancia(int);
+void sumar_instancia_exit(int, t_pcb*);
 
 // Declaraciones WAIT_RECURSO
 int tiene_instancia_wait(int);
@@ -162,6 +163,13 @@ void bloqueo_proceso_en_recurso(t_pcb*, int);
 int tiene_que_reencolar_bloq_recurso(int);
 void reencolar_bloqueo_por_recurso(int);
 
+// Declaraciones BLOCK_IO
+typedef struct{
+    t_pcb* pcb;
+    int bloqueo;
+}thread_args;
+
+void rutina_io(thread_args*);
 //
 // ------------------------------------//
 

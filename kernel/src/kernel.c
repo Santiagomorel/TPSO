@@ -137,7 +137,6 @@ void iniciarSemaforos()
     pthread_mutex_init(&m_listaBloqueados, NULL);
     pthread_mutex_init(&m_listaEjecutando, NULL);
     pthread_mutex_init(&m_contador_id, NULL);
-    pthread_mutex_init(&m_IO, NULL);
     sem_init(&proceso_en_ready, 0, 0);
     sem_init(&fin_ejecucion, 0, 1);
     sem_init(&grado_multiprog, 0, kernel_config.grado_max_multiprogramacion);
@@ -814,7 +813,6 @@ void manejar_dispatch()
                 break;
 
             case BLOCK_IO:
-                pthread_mutex_lock(&m_IO);
                 char* tiempo_bloqueo = recibir_string(cpu_dispatch_connection, kernel_logger);
 
                 recibir_operacion(cpu_dispatch_connection);
@@ -836,23 +834,14 @@ void manejar_dispatch()
                 
                 log_info(kernel_logger,"PID: [%d] - Ejecuta IO: [%d]",pcb_IO->id, bloqueo);
                 
-                
+                thread_args* argumentos = malloc(sizeof(thread_args));
+                argumentos->pcb = pcb_IO;
+                argumentos->bloqueo = bloqueo;
 
-                cambiar_estado_a(pcb_IO, BLOCKED, estadoActual(pcb_IO));
-                
-                sleep(bloqueo);
-                
-                cambiar_estado_a(pcb_IO, READY, estadoActual(pcb_IO));
-                
-                iniciar_nueva_espera_ready(pcb_IO); // hacer cada vez que se mete en la lista de ready
-                
-                agregar_a_lista_con_sems(pcb_IO, listaReady, m_listaReady);
-                
-                sem_post(&proceso_en_ready);
-                
+                pthread_create(&hiloIO, NULL, (void*) rutina_io, (void*) (thread_args*) argumentos);
+                pthread_detach(hiloIO);
+
                 liberar_ce(contexto_IO);
-
-                pthread_mutex_unlock(&m_IO);
                 break;
 
             case -1:
@@ -879,7 +868,7 @@ void liberar_recursos_pedidos(t_pcb* pcb)
     {
         log_warning(kernel_logger, "se libera un recurso al finalizar el proceso");
         int element = list_get(pcb->recursos_pedidos, i);
-        sumar_instancia(element);
+        sumar_instancia_exit(element, pcb);
         log_warning(kernel_logger, "se suma la instancia");
         if (tiene_que_reencolar_bloq_recurso(i)) {
             reencolar_bloqueo_por_recurso(i);
@@ -967,6 +956,14 @@ void sumar_instancia(int id_recurso) // tednria que haber un sumar_instancia por
     pthread_mutex_unlock(&m_listaEjecutando);
 }
 
+void sumar_instancia_exit(int id_recurso, t_pcb* pcb_quita_recurso)
+{
+    kernel_config.instancias_recursos[id_recurso] += 1;
+
+    sem_post(sem_recurso[id_recurso]);
+
+    list_remove_element(pcb_quita_recurso->recursos_pedidos, id_recurso);
+}
 // ----------------------- Funciones WAIT_RECURSO ----------------------- //
 
 int tiene_instancia_wait(int id_recurso)
@@ -1005,6 +1002,24 @@ void reencolar_bloqueo_por_recurso(int id_recurso)
     sem_post(&proceso_en_ready);
 }
 
+
+void rutina_io(thread_args* args)
+{
+    t_pcb* pcb = args->pcb;
+    int bloqueo = args->bloqueo;
+
+    cambiar_estado_a(pcb, BLOCKED, estadoActual(pcb));
+    
+    sleep(bloqueo);
+    
+    cambiar_estado_a(pcb, READY, estadoActual(pcb));
+    
+    iniciar_nueva_espera_ready(pcb); // hacer cada vez que se mete en la lista de ready
+    
+    agregar_a_lista_con_sems(pcb, listaReady, m_listaReady);
+    
+    sem_post(&proceso_en_ready);
+}
 // ----------------------- Funciones finales ----------------------- //
 
 void destruirSemaforos()
