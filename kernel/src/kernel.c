@@ -137,6 +137,7 @@ void iniciarSemaforos()
     pthread_mutex_init(&m_listaBloqueados, NULL);
     pthread_mutex_init(&m_listaEjecutando, NULL);
     pthread_mutex_init(&m_contador_id, NULL);
+    pthread_mutex_init(&m_IO, NULL);
     sem_init(&proceso_en_ready, 0, 0);
     sem_init(&fin_ejecucion, 0, 1);
     sem_init(&grado_multiprog, 0, kernel_config.grado_max_multiprogramacion);
@@ -830,14 +831,15 @@ void manejar_dispatch()
                 
                 sem_post(&fin_ejecucion);
                 
+                cambiar_estado_a(pcb_IO, BLOCKED, estadoActual(pcb_IO));
+
                 log_info(kernel_logger, "PID: [%d] - Bloqueado por: [IO]",pcb_IO->id);
-                
-                log_info(kernel_logger,"PID: [%d] - Ejecuta IO: [%d]",pcb_IO->id, bloqueo);
                 
                 thread_args* argumentos = malloc(sizeof(thread_args));
                 argumentos->pcb = pcb_IO;
                 argumentos->bloqueo = bloqueo;
 
+                pthread_mutex_lock(&m_IO);
                 pthread_create(&hiloIO, NULL, (void*) rutina_io, (void*) (thread_args*) argumentos);
                 pthread_detach(hiloIO);
 
@@ -871,6 +873,7 @@ void liberar_recursos_pedidos(t_pcb* pcb)
         sumar_instancia_exit(element, pcb);
         log_warning(kernel_logger, "se suma la instancia");
         if (tiene_que_reencolar_bloq_recurso(i)) {
+            log_warning(kernel_logger, "se detecto un proceso a reencolar");
             reencolar_bloqueo_por_recurso(i);
         }
     }
@@ -982,7 +985,7 @@ void bloqueo_proceso_en_recurso(t_pcb* pcb, int id_recurso)
 
 int tiene_que_reencolar_bloq_recurso(int id_recurso)
 {
-    return (kernel_config.instancias_recursos[id_recurso] < 0);
+    return (kernel_config.instancias_recursos[id_recurso] <= 0);
 }
 
 void reencolar_bloqueo_por_recurso(int id_recurso)
@@ -1008,8 +1011,8 @@ void rutina_io(thread_args* args)
     t_pcb* pcb = args->pcb;
     int bloqueo = args->bloqueo;
 
-    cambiar_estado_a(pcb, BLOCKED, estadoActual(pcb));
-    
+    log_info(kernel_logger,"PID: [%d] - Ejecuta IO: [%d]",pcb->id, bloqueo);
+
     sleep(bloqueo);
     
     cambiar_estado_a(pcb, READY, estadoActual(pcb));
@@ -1019,6 +1022,8 @@ void rutina_io(thread_args* args)
     agregar_a_lista_con_sems(pcb, listaReady, m_listaReady);
     
     sem_post(&proceso_en_ready);
+
+    pthread_mutex_unlock(&m_IO);
 }
 // ----------------------- Funciones finales ----------------------- //
 

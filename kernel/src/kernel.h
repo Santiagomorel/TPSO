@@ -65,6 +65,7 @@ pthread_mutex_t m_listaEjecutando;
 pthread_mutex_t m_listaReady;
 pthread_mutex_t m_listaFinalizados;
 pthread_mutex_t* m_listaRecurso[MAX_RECURSOS];
+pthread_mutex_t m_IO;
 sem_t proceso_en_ready;
 sem_t fin_ejecucion;
 sem_t grado_multiprog;
