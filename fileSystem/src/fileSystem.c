@@ -85,7 +85,7 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL) {
                 int longitud = sizeof lista_fcb / sizeof lista_fcb[0];
                 int existe = pertenece(lista_fcb,archivo,longitud);
                 if (existe = 1 ){
-                    enviar_codOp(SOCKET_CLIENTE_KERNEL, OK);
+                    enviar_CodOp(SOCKET_CLIENTE_KERNEL, OK);
                 }else{
                     crear_fcb(archivo);
                     enviar_mensaje("No tiene FCB, por ende se creo un FCB", SOCKET_CLIENTE_KERNEL);

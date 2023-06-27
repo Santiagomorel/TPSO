@@ -45,10 +45,9 @@ int main(int argc, char **argv)
     iniciar_planificadores();
 
     // ----------------------- espero conexiones de consola ----------------------- //
-
+    // for(int i = 0; i < 3; i++) // tirar 2 consolas, esperar a que terminen, luego tirar la 3ra para cortar el programa
     while (1)
     {
-
         log_trace(kernel_logger, "esperando cliente consola");
         socket_cliente = esperar_cliente(socket_servidor_kernel, kernel_logger);
         log_trace(kernel_logger, "entro una consola con el socket: %d", socket_cliente);
@@ -58,6 +57,8 @@ int main(int argc, char **argv)
         pthread_detach(atiende_consola);
     }
 
+    // falta liberar instancias de sockets, semaforos, free intArray de las instancias, free listas_recursos
+    // semaforos de los recursos
     return EXIT_SUCCESS;
 }
 
@@ -137,6 +138,7 @@ void iniciarSemaforos()
     pthread_mutex_init(&m_listaBloqueados, NULL);
     pthread_mutex_init(&m_listaEjecutando, NULL);
     pthread_mutex_init(&m_contador_id, NULL);
+    pthread_mutex_init(&m_IO, NULL);
     sem_init(&proceso_en_ready, 0, 0);
     sem_init(&fin_ejecucion, 0, 1);
     sem_init(&grado_multiprog, 0, kernel_config.grado_max_multiprogramacion);
@@ -372,7 +374,7 @@ int estadoActual(t_pcb* pcb)
 void agregar_a_lista_con_sems(t_pcb* pcb_a_agregar, t_list* lista, pthread_mutex_t m_sem)
 {
     pthread_mutex_lock(&m_sem);
-    agregar_lista_ready_con_log(lista,pcb_a_agregar,kernel_config.algoritmo_planificacion);
+    agregar_lista_ready_con_log(lista, pcb_a_agregar, kernel_config.algoritmo_planificacion);
     pthread_mutex_unlock(&m_sem);
 }
 
@@ -415,7 +417,7 @@ void planificar_sig_to_ready()
     if (!list_is_empty(listaNuevos)) // NEW -> READY
     {
         pthread_mutex_lock(&m_listaNuevos);
-        t_pcb *pcb_a_ready = list_remove(listaNuevos, 0);
+            t_pcb *pcb_a_ready = list_remove(listaNuevos, 0);
         pthread_mutex_unlock(&m_listaNuevos);
 
         log_trace(kernel_logger, "Inicializamos estructuras del pcb en memoria");
@@ -465,7 +467,7 @@ void planificar_sig_to_running()
         log_trace(kernel_logger, "Entra en la planificacion de READY RUNNING");
         if(strcmp(kernel_config.algoritmo_planificacion, "FIFO") == 0) { // FIFO
             pthread_mutex_lock(&m_listaReady);
-            t_pcb* pcb_a_ejecutar = list_remove(listaReady, 0);
+                t_pcb* pcb_a_ejecutar = list_remove(listaReady, 0);
             pthread_mutex_unlock(&m_listaReady);
             funcion_agregar_running(pcb_a_ejecutar);
         }
@@ -474,7 +476,7 @@ void planificar_sig_to_running()
             if(tamanioLista == 1){
                 log_trace(kernel_logger, "El tamanio de la lista de ready es 1, hago FIFO");
                 pthread_mutex_lock(&m_listaReady);
-                t_pcb* pcb_a_ejecutar = list_remove(listaReady, 0);
+                    t_pcb* pcb_a_ejecutar = list_remove(listaReady, 0);
                 pthread_mutex_unlock(&m_listaReady);
                 funcion_agregar_running(pcb_a_ejecutar);
             }else{
@@ -499,7 +501,7 @@ void funcion_agregar_running(t_pcb* pcb_a_ejecutar)
     agregar_a_lista_con_sems(pcb_a_ejecutar, listaEjecutando, m_listaEjecutando);
 
     contexto_ejecucion * nuevoContexto = obtener_ce(pcb_a_ejecutar);
-    imprimir_ce(nuevoContexto, kernel_logger);
+
     enviar_ce(cpu_dispatch_connection, nuevoContexto, EJECUTAR_CE, kernel_logger);
 
     log_trace(kernel_logger, "Agrego un proceso a running y envio el contexto de ejecucion");
@@ -688,12 +690,12 @@ void manejar_dispatch()
 
                 cambiar_estado_a(pcb_a_finalizar, EXIT, estadoActual(pcb_a_finalizar));
 
+                liberar_recursos_pedidos(pcb_a_finalizar);
+                
                 sem_post(&grado_multiprog);
                 sem_post(&fin_ejecucion);
 
-                pthread_mutex_lock(&m_listaFinalizados);
-                    list_add(listaFinalizados, pcb_a_finalizar);
-                pthread_mutex_unlock(&m_listaFinalizados);
+                agregar_a_lista_con_sems(pcb_a_finalizar, listaFinalizados, m_listaFinalizados);
                 
                 log_info(kernel_logger, "Finaliza el proceso [%d] - Motivo: [%s]", pcb_a_finalizar->id, obtenerCodOP(cod_op));
                 
@@ -715,9 +717,7 @@ void manejar_dispatch()
                 sacar_rafaga_ejecutada(pcb_a_reencolar); // hacer cada vez que sale de running
                 iniciar_nueva_espera_ready(pcb_a_reencolar); // hacer cada vez que se mete en la lista de ready
                 
-                pthread_mutex_lock(&m_listaReady);
-                    agregar_lista_ready_con_log(listaReady, pcb_a_reencolar,kernel_config.algoritmo_planificacion);
-                pthread_mutex_unlock(&m_listaReady);
+                agregar_a_lista_con_sems(pcb_a_reencolar, listaReady, m_listaReady);
 
                 sem_post(&proceso_en_ready);
                 sem_post(&fin_ejecucion);
@@ -725,7 +725,21 @@ void manejar_dispatch()
                 liberar_ce(contexto_a_reencolar);
                 //eliminar(pcb_a_reencolar);
                 break;
+            
+            case EJECUTO_WAIT:
+            case EJECUTO_SIGNAL:
+                contexto_ejecucion* contexto_ejecuta_instruccion = recibir_ce(cpu_dispatch_connection);
+
+                pthread_mutex_lock(&m_listaEjecutando);
+                    t_pcb * pcb_ejecuta_instruccion = (t_pcb *) list_get(listaEjecutando, 0); 
+                    actualizar_pcb(pcb_ejecuta_instruccion, contexto_ejecuta_instruccion);
+                pthread_mutex_unlock(&m_listaEjecutando);
+
+                enviar_ce(cpu_dispatch_connection, contexto_ejecuta_instruccion, EJECUTAR_CE, kernel_logger);
                 
+                liberar_ce(contexto_ejecuta_instruccion);
+                break;
+
             case WAIT_RECURSO:
                 char* recurso_wait = recibir_string(cpu_dispatch_connection, kernel_logger);
 
@@ -781,9 +795,7 @@ void manejar_dispatch()
                     sumar_instancia(id_recurso);
                     
                     log_info(kernel_logger, "PID: [%d] - Signal: [%s] - Instancias: [%d]", id_proceso_en_lista(listaEjecutando), recurso_signal, obtener_instancias_recurso(id_recurso));
-                    
-                    sem_post(sem_recurso[id_recurso]);
-                    
+                                        
                     if (tiene_que_reencolar_bloq_recurso(id_recurso)) {
                         reencolar_bloqueo_por_recurso(id_recurso);
                     }
@@ -804,28 +816,22 @@ void manejar_dispatch()
                     actualizar_pcb(pcb_IO, contexto_IO);
                 pthread_mutex_unlock(&m_listaEjecutando);
                 
-                cambiar_estado_a(pcb_IO, BLOCKED, estadoActual(pcb_IO));
-                
                 sacar_rafaga_ejecutada(pcb_IO); // hacer cada vez que sale de running
                 
                 sem_post(&fin_ejecucion);
                 
+                cambiar_estado_a(pcb_IO, BLOCKED, estadoActual(pcb_IO));
+
                 log_info(kernel_logger, "PID: [%d] - Bloqueado por: [IO]",pcb_IO->id);
                 
-                log_info(kernel_logger,"PID: [%d] - Ejecuta IO: [%d]",pcb_IO->id, bloqueo);
-                
-                sleep(bloqueo);
-                
-                cambiar_estado_a(pcb_IO, READY, estadoActual(pcb_IO));
-                
-                iniciar_nueva_espera_ready(pcb_IO); // hacer cada vez que se mete en la lista de ready
-                
-                pthread_mutex_lock(&m_listaReady);
-                    agregar_lista_ready_con_log(listaReady, pcb_IO,kernel_config.algoritmo_planificacion);
-                pthread_mutex_unlock(&m_listaReady);
-                
-                sem_post(&proceso_en_ready);
-                
+                thread_args* argumentos = malloc(sizeof(thread_args));
+                argumentos->pcb = pcb_IO;
+                argumentos->bloqueo = bloqueo;
+
+                pthread_mutex_lock(&m_IO);
+                pthread_create(&hiloIO, NULL, (void*) rutina_io, (void*) (thread_args*) argumentos);
+                pthread_detach(hiloIO);
+
                 liberar_ce(contexto_IO);
                 break;
 
@@ -845,6 +851,22 @@ void actualizar_pcb(t_pcb* pcb, contexto_ejecucion* ce) //TODO
     copiar_PC_ce_a_pcb(ce, pcb);
     copiar_registros_ce_a_pcb(ce, pcb);
     //falta copiar la tabla de segmentos.
+}
+
+void liberar_recursos_pedidos(t_pcb* pcb)
+{
+    for (int i = 0; i < list_size(pcb->recursos_pedidos); i++)
+    {
+        log_warning(kernel_logger, "se libera un recurso al finalizar el proceso");
+        int element = list_get(pcb->recursos_pedidos, i);
+        sumar_instancia_exit(element, pcb);
+        log_warning(kernel_logger, "se suma la instancia");
+        if (tiene_que_reencolar_bloq_recurso(i)) {
+            log_warning(kernel_logger, "se detecto un proceso a reencolar");
+            reencolar_bloqueo_por_recurso(i);
+        }
+    }
+    list_clean(pcb->recursos_pedidos);
 }
 
 void enviar_Fin_consola(int socket)
@@ -906,15 +928,34 @@ int obtener_instancias_recurso(int id_recurso)
 }
 
 void restar_instancia(int id_recurso)
-{ // resta 1 a la instancia
+{ // resta 1 a la instancia y se la asigno a recursos_pedidos del proceso en ejecucion
     kernel_config.instancias_recursos[id_recurso] -= 1;
+    pthread_mutex_lock(&m_listaEjecutando);
+        t_pcb * pcb_pide_recurso = (t_pcb *) list_get(listaEjecutando, 0); 
+        list_add(pcb_pide_recurso->recursos_pedidos, id_recurso);
+    pthread_mutex_unlock(&m_listaEjecutando);
 }
 
-void sumar_instancia(int id_recurso)
+void sumar_instancia(int id_recurso) // tednria que haber un sumar_instancia por exit que saque los elementos de el pcb q esta de salida
+{ // suma 1 a la instancia y se la saco a recursos_pedidos del proceso en ejecucion
+    kernel_config.instancias_recursos[id_recurso] += 1;
+
+    sem_post(sem_recurso[id_recurso]);
+
+    pthread_mutex_lock(&m_listaEjecutando);
+        t_pcb * pcb_quita_recurso = (t_pcb *) list_get(listaEjecutando, 0); 
+        list_remove_element(pcb_quita_recurso->recursos_pedidos, id_recurso);
+    pthread_mutex_unlock(&m_listaEjecutando);
+}
+
+void sumar_instancia_exit(int id_recurso, t_pcb* pcb_quita_recurso)
 {
     kernel_config.instancias_recursos[id_recurso] += 1;
-}
 
+    sem_post(sem_recurso[id_recurso]);
+
+    list_remove_element(pcb_quita_recurso->recursos_pedidos, id_recurso);
+}
 // ----------------------- Funciones WAIT_RECURSO ----------------------- //
 
 int tiene_instancia_wait(int id_recurso)
@@ -933,7 +974,7 @@ void bloqueo_proceso_en_recurso(t_pcb* pcb, int id_recurso)
 
 int tiene_que_reencolar_bloq_recurso(int id_recurso)
 {
-    return (kernel_config.instancias_recursos[id_recurso] < 0);
+    return (kernel_config.instancias_recursos[id_recurso] <= 0);
 }
 
 void reencolar_bloqueo_por_recurso(int id_recurso)
@@ -948,13 +989,31 @@ void reencolar_bloqueo_por_recurso(int id_recurso)
     
     iniciar_nueva_espera_ready(pcb_a_reencolar); // hacer cada vez que se mete en la lista de ready
     
-    pthread_mutex_lock(&m_listaReady);
-        agregar_lista_ready_con_log(listaReady, pcb_a_reencolar,kernel_config.algoritmo_planificacion);
-    pthread_mutex_unlock(&m_listaReady);
+    agregar_a_lista_con_sems(pcb_a_reencolar, listaReady, m_listaReady);
     
     sem_post(&proceso_en_ready);
 }
 
+
+void rutina_io(thread_args* args)
+{
+    t_pcb* pcb = args->pcb;
+    int bloqueo = args->bloqueo;
+
+    log_info(kernel_logger,"PID: [%d] - Ejecuta IO: [%d]",pcb->id, bloqueo);
+
+    sleep(bloqueo);
+    
+    cambiar_estado_a(pcb, READY, estadoActual(pcb));
+    
+    iniciar_nueva_espera_ready(pcb); // hacer cada vez que se mete en la lista de ready
+    
+    agregar_a_lista_con_sems(pcb, listaReady, m_listaReady);
+    
+    sem_post(&proceso_en_ready);
+
+    pthread_mutex_unlock(&m_IO);
+}
 // ----------------------- Funciones finales ----------------------- //
 
 void destruirSemaforos()
@@ -965,12 +1024,9 @@ void destruirSemaforos()
 }
 
 /*
-Logs minimos obligatorios
-Creación de Proceso: Se crea el proceso <PID> en NEW
-Fin de Proceso: Finaliza el proceso <PID> - Motivo: <SUCCESS / SEG_FAULT / OUT_OF_MEMORY>
-Cambio de Estado: PID: <PID> - Estado Anterior: <ESTADO_ANTERIOR> - Estado Actual: <ESTADO_ACTUAL>
+Logs minimos obligatorios TODO
+Fin de Proceso: Finaliza el proceso <PID> - Motivo: <SEG_FAULT / OUT_OF_MEMORY>
 Motivo de Bloqueo: PID: <PID> - Bloqueado por: <IO / NOMBRE_RECURSO / NOMBRE_ARCHIVO>
-I/O:  PID: <PID> - Ejecuta IO: <TIEMPO>
 Ingreso a Ready: Cola Ready <ALGORITMO>: [<LISTA DE PIDS>]
 Wait: PID: <PID> - Wait: <NOMBRE RECURSO> - Instancias: <INSTANCIAS RECURSO>    Nota: El valor de las instancias es después de ejecutar el Wait
 Signal: PID: <PID> - Signal: <NOMBRE RECURSO> - Instancias: <INSTANCIAS RECURSO>    Nota: El valor de las instancias es después de ejecutar el Signal
@@ -988,5 +1044,5 @@ Escribir Archivo: PID: <PID> -  Escribir Archivo: <NOMBRE ARCHIVO> - Puntero <PU
 
 TODO:
 PID: <PID> - Bloqueado por: <NOMBRE_ARCHIVO>
-
+ 
 */

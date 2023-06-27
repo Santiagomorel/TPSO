@@ -53,12 +53,10 @@ typedef enum
 	//RECIBIR_PCB,
 	// -------  CPU->kernel --------
 	EJECUTAR_CE, 			//  dispatch
-	EJECUTAR_INTERRUPCION,	// 	interrupt
 	// ------- enviadas por DIspatch: (CPU->kernel) --------
 	SUCCESS,
 	EXIT_ERROR_RECURSO,
 	SEG_FAULT,
-	DESALOJO_PCB,  			// TODO RUSO
 	BLOCK_IO,
 	BLOCK_WAIT,
 	WAIT_RECURSO,
