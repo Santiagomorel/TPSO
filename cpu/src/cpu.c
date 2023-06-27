@@ -182,7 +182,7 @@ void process_dispatch() {
                 break;
             default:
                 log_error(cpu_logger, "Codigo de operacion desconocido");
-                //exit(1);
+                exit(1);
                 break;     
 	    }
     }
@@ -326,9 +326,10 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             // I/O (Tiempo)
             log_trace(cpu_logger, "Por ejecutar instruccion I/O");
             log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s", ce->id, instruction[0], instruction[1]);
-              
-            enviar_paquete_string(socket_kernel, instruction[1], BLOCK_IO, strlen(instruction[1])+1);
 
+            tiempo = instruction[1];
+            enviar_ce_con_entero(socket_kernel, ce, tiempo, BLOCK_IO);
+            log_trace(cpu_logger, "%s", tiempo);
             input_ouput = 1;
             break;
          case I_EXIT:
@@ -345,9 +346,8 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             log_trace(cpu_logger, "Por ejecutar instruccion WAIT");
             log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s ", ce->id, instruction[0], instruction[1]);
             // Si rompe crear una varible char* recurso, asignandole instruccion[1] y enviar el recurso en el execute process
-
-            enviar_paquete_string(socket_kernel, instruction[1], WAIT_RECURSO, strlen(instruction[1])+1);
-            log_warning(cpu_logger, "ENVIO EL PAQUETE STRING Y ESPERO RESPUESTA");
+            
+            enviar_ce_con_string(socket_kernel, ce, instruction[1], WAIT_RECURSO);
 
             wait = recibir_respuesta_recurso();
             
@@ -358,9 +358,11 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             log_trace(cpu_logger, "Por ejecutar instruccion SIGNAL");
             log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s", ce->id, instruction[0], instruction[1]);
 
-            enviar_paquete_string(socket_kernel, instruction[1], SIGNAL_RECURSO, strlen(instruction[1])+1);
+            enviar_ce_con_string(socket_kernel, ce, instruction[1], SIGNAL_RECURSO);
 
             signal_recurso = recibir_respuesta_recurso();
+
+            
             break;
         case I_YIELD:
             log_trace(cpu_logger, "Por ejecutar instruccion YIELD");
@@ -532,7 +534,7 @@ void execute_process(contexto_ejecucion* ce){
 
 
     save_context_ce(ce); // ACA GUARDAMOS EL CONTEXTO
-    //imprimir_registros(ce->registros_cpu, cpu_logger); // para comprobar que los registros se guardaran bien
+    imprimir_registros(ce->registros_cpu, cpu_logger); // para comprobar que los registros se guardaran bien
     if(end_process) {
         end_process = 0; // IMPORTANTE: Apagar el flag para que no rompa el proximo proceso que llegue
         enviar_ce(socket_kernel, ce, SUCCESS, cpu_logger);
@@ -541,11 +543,8 @@ void execute_process(contexto_ejecucion* ce){
     } 
     else if(input_ouput) {
         input_ouput = 0;
-        check_interruption = 0;
-        // log_trace(cpu_logger, "Tiempo: %s", tiempo);
-        log_trace(cpu_logger, "Bloqueado por IO");
-        enviar_ce(socket_kernel, ce, BLOCK_IO, cpu_logger);
-        liberar_ce(ce);
+        log_trace(cpu_logger, "Tiempo: %s", tiempo);
+ 
     }
     
     else if(sigsegv == 1){
@@ -555,6 +554,8 @@ void execute_process(contexto_ejecucion* ce){
         enviar_ce(socket_kernel, ce, SEG_FAULT, cpu_logger); 
     }
     else if(wait){
+       
+       
         if(wait == 2){  // Se bloquea por estar ocupado recurso
             log_trace(cpu_logger, "Bloqueado por WAIT");
             enviar_ce(socket_kernel, ce, BLOCK_WAIT, cpu_logger);
@@ -564,9 +565,10 @@ void execute_process(contexto_ejecucion* ce){
         }else{
             enviar_ce(socket_kernel, ce, EJECUTO_WAIT, cpu_logger);
         }
+             
+        
         wait = 0;
         liberar_ce(ce);
-        
     }else if(desalojo_por_yield){
         desalojo_por_yield = 0;
         log_trace(cpu_logger, "Desalojado por YIELD");
@@ -651,6 +653,7 @@ void enviar_ce_con_string(int client_socket, contexto_ejecucion* ce, char* param
     eliminar_paquete(paquete);
     
 }
+
 
 
 void enviar_ce_con_dos_enteros(int client_socket, contexto_ejecucion* ce, char* x, char* y, int codOP){
