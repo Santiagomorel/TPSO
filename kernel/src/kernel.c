@@ -45,10 +45,9 @@ int main(int argc, char **argv)
     iniciar_planificadores();
 
     // ----------------------- espero conexiones de consola ----------------------- //
-
+    // for(int i = 0; i < 3; i++) // tirar 2 consolas, esperar a que terminen, luego tirar la 3ra para cortar el programa
     while (1)
     {
-
         log_trace(kernel_logger, "esperando cliente consola");
         socket_cliente = esperar_cliente(socket_servidor_kernel, kernel_logger);
         log_trace(kernel_logger, "entro una consola con el socket: %d", socket_cliente);
@@ -58,6 +57,8 @@ int main(int argc, char **argv)
         pthread_detach(atiende_consola);
     }
 
+    // falta liberar instancias de sockets, semaforos, free intArray de las instancias, free listas_recursos
+    // semaforos de los recursos
     return EXIT_SUCCESS;
 }
 
@@ -726,29 +727,17 @@ void manejar_dispatch()
                 break;
             
             case EJECUTO_WAIT:
-                contexto_ejecucion* contexto_ejecuta_wait = recibir_ce(cpu_dispatch_connection);
-
-                pthread_mutex_lock(&m_listaEjecutando);
-                    t_pcb * pcb_ejecuta_wait = (t_pcb *) list_get(listaEjecutando, 0); 
-                    actualizar_pcb(pcb_ejecuta_wait, contexto_ejecuta_wait);
-                pthread_mutex_unlock(&m_listaEjecutando);
-
-                enviar_ce(cpu_dispatch_connection, contexto_ejecuta_wait, EJECUTAR_CE, kernel_logger);
-
-                liberar_ce(contexto_ejecuta_wait);
-                break;
-
             case EJECUTO_SIGNAL:
-                contexto_ejecucion* contexto_ejecuta_signal = recibir_ce(cpu_dispatch_connection);
+                contexto_ejecucion* contexto_ejecuta_instruccion = recibir_ce(cpu_dispatch_connection);
 
                 pthread_mutex_lock(&m_listaEjecutando);
-                    t_pcb * pcb_ejecuta_signal = (t_pcb *) list_get(listaEjecutando, 0); 
-                    actualizar_pcb(pcb_ejecuta_signal, contexto_ejecuta_signal);
+                    t_pcb * pcb_ejecuta_instruccion = (t_pcb *) list_get(listaEjecutando, 0); 
+                    actualizar_pcb(pcb_ejecuta_instruccion, contexto_ejecuta_instruccion);
                 pthread_mutex_unlock(&m_listaEjecutando);
 
-                enviar_ce(cpu_dispatch_connection, contexto_ejecuta_signal, EJECUTAR_CE, kernel_logger);
+                enviar_ce(cpu_dispatch_connection, contexto_ejecuta_instruccion, EJECUTAR_CE, kernel_logger);
                 
-                liberar_ce(contexto_ejecuta_signal);
+                liberar_ce(contexto_ejecuta_instruccion);
                 break;
 
             case WAIT_RECURSO:
