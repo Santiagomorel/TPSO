@@ -26,7 +26,7 @@ int socket_kernel;
 void load_config(void);
 void leer_consola(t_log*);
 void paquete(int);
-void terminar_programa(int, t_log*, t_config*);
+void terminar_programa(t_log*, t_config*);
 
 /*-------------- CONEXIONES ------------*/
 void establecer_conexion(char* , char* , t_config*, t_log*);

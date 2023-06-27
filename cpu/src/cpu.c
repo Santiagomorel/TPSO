@@ -50,7 +50,7 @@ int main(int argc, char ** argv) {
     
 
 /*---------------------- TERMINO CPU ---------------------*/
-	terminar_programa(conexion_cpu, cpu_logger, cpu_config_file);
+	terminar_programa(cpu_logger, cpu_config_file);
 
 	return 0;
 
@@ -80,6 +80,7 @@ void establecer_conexion(char * ip_memoria, char* puerto_memoria, t_config* conf
 	// Enviamos al servidor el valor de ip como mensaje si es que levanta el cliente
 	if((conexion_cpu = crear_conexion(ip_memoria, puerto_memoria)) == -1){
 		log_trace(logger, "Error al conectar con Memoria. El servidor no esta activo");
+        free(conexion_cpu);
 		exit(-1);
 	}else{
 		//handshake_cliente(conexion_cpu);
@@ -134,7 +135,7 @@ void leer_consola(t_log* logger)
 
 
 
-void terminar_programa(int conexion, t_log* logger, t_config* config)
+void terminar_programa(t_log* logger, t_config* config)
 {
 
 	if(logger != NULL){
@@ -145,7 +146,7 @@ void terminar_programa(int conexion, t_log* logger, t_config* config)
 		config_destroy(config);
 	}
 
-	liberar_conexion(conexion);
+	liberar_conexion(conexion_cpu);
 }
 
 
