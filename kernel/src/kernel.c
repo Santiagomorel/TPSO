@@ -835,6 +835,24 @@ void manejar_dispatch()
                 liberar_ce(contexto_IO);
                 break;
 
+            case CREAR_SEGMENTO:
+                t_ce_2enteros * estructura_crear_segmento = recibir_ce_2enteros(cpu_dispatch_connection);
+
+                contexto_ejecucion * contexto_crea_segmento = estructura_crear_segmento->ce;
+
+                int id_segmento = estructura_crear_segmento->entero1;
+
+                int tamanio = estructura_crear_segmento->entero2;
+
+                pthread_mutex_lock(&m_listaEjecutando);
+                    t_pcb * pcb_crea_segmento = (t_pcb *) list_get(listaEjecutando, 0); 
+                    actualizar_pcb(pcb_crea_segmento, contexto_crea_segmento);
+                pthread_mutex_unlock(&m_listaEjecutando);
+
+                log_warning(kernel_logger, "llego aca sin explotar y el id_segmneto: %d y tamanio: %d", id_segmento, tamanio);
+                // llego hasta aca despues sigo
+                liberar_ce_2enteros(estructura_crear_segmento);
+                break;
             case -1:
                 break;
 

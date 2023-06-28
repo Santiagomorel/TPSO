@@ -193,6 +193,11 @@ typedef struct {
 	t_list* tabla_segmentos;
 } contexto_ejecucion;
 
+typedef struct{
+	contexto_ejecucion* ce;
+	int entero1;
+	int entero2;
+} t_ce_2enteros;
 
 
 int crear_conexion(char* ip, char* puerto);
@@ -260,4 +265,7 @@ t_segmento* crear_segmento(int, int, int);
 
 
 void agregar_tabla_segmentos_a_paquete(t_paquete*, t_list*);
+
+t_ce_2enteros * recibir_ce_2enteros(int);
+void liberar_ce_2enteros(t_ce_2enteros*);
 #endif /* UTILS_H_ */

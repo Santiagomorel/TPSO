@@ -419,8 +419,10 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
 
             break;
         case I_CREATE_SEGMENT:
+        sig_f = 0;
         log_trace(cpu_logger, "Por ejecutar instruccion CREATE_SEGMENT");
         log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s", ce->id, instruction[0], instruction[1], instruction[2]);
+        update_program_counter(ce);
 
         enviar_ce_con_dos_enteros(socket_kernel, ce, instruction[1], instruction[2], CREAR_SEGMENTO);
 
@@ -516,10 +518,11 @@ void execute_process(contexto_ejecucion* ce){
         log_trace(cpu_logger, "Por ejecutar la instruccion decodificada %s", decoded_instruction[0]);
         execute_instruction(decoded_instruction, ce);
 
-        if(sigsegv != 1) {   // en caso de tener seg fault no se actualiza program counter
+        if(sigsegv != 1 && sig_f) {   // en caso de tener seg fault no se actualiza program counter
             update_program_counter(ce);
         }
         
+        sig_f = 1; // si es 1 corre de manera normal y ejecuta el program counter, si es 0 saltea el program counter
         
         log_trace(cpu_logger, "PROGRAM COUNTER: %d", ce->program_counter);
 

@@ -689,3 +689,35 @@ t_segmento *crear_segmento(int id_seg, int base, int tamanio)
     unSegmento->tamanio_segmento = tamanio;
     return unSegmento;
 }
+
+t_ce_2enteros * recibir_ce_2enteros(int socket)
+{
+	t_ce_2enteros* nuevo_ce_2enteros = malloc(sizeof(t_ce_2enteros));
+	contexto_ejecucion *nuevoCe = malloc(sizeof(contexto_ejecucion));
+	int size = 0;
+	char *buffer;
+	int desp = 0;
+
+	buffer = recibir_buffer(&size, socket);
+
+	nuevoCe->id = leer_entero(buffer, &desp);
+	nuevoCe->instrucciones = leer_string_array(buffer, &desp); // hay que liberar antes de perder la referencia
+	nuevoCe->program_counter = leer_entero(buffer, &desp);
+	nuevoCe->registros_cpu = leer_registros(buffer, &desp); // hay que liberar antes de perder la referencia
+	nuevoCe->tabla_segmentos = leer_tabla_segmentos(buffer, &desp);
+
+	nuevo_ce_2enteros->ce = nuevoCe;
+
+	nuevo_ce_2enteros->entero1 = leer_entero(buffer, &desp);
+
+	nuevo_ce_2enteros->entero2 = leer_entero(buffer, &desp);
+
+	free(buffer);
+	return nuevo_ce_2enteros;
+}
+
+void liberar_ce_2enteros(t_ce_2enteros* ce_2enteros)
+{
+	liberar_ce(ce_2enteros->ce);
+	free(ce_2enteros); //esto no se si funciona OJO 
+}
