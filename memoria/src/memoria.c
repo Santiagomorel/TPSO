@@ -198,9 +198,11 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU)
             break;
         case MOV_OUT: //(Dirección Fisica, Registro): Lee el valor del Registro y lo escribe en la dirección física de memoria obtenida a partir de la Dirección Lógica.
             int direccion_movOut = recibir_entero(SOCKET_CLIENTE_CPU, log_memoria);
-            void * registro = (void*)recibir_string(SOCKET_CLIENTE_CPU, log_memoria);
+//            void * registro = (void*)recibir_string(SOCKET_CLIENTE_CPU, log_memoria);
+            char* registro = recibir_string(SOCKET_CLIENTE_CPU, log_memoria); 
             ocuparBitMap(direccion_movOut, sizeof(char));
-            ocuparMemoria(registro, direccion_movOut, sizeof(char)); 
+            ocuparMemoria(registro, direccion_movOut, sizeof(char));
+            log_trace(log_memoria, "el regigistro cargado en la direccion: %d es: %d", direccion_movOut, &registro); 
             //falta chequear que el tipo que se pide para los size este bien
             enviar_CodOp(SOCKET_CLIENTE_CPU, MOV_OUT_OK);
         case -1:

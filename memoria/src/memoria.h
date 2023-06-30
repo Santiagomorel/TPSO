@@ -86,7 +86,6 @@ t_segmento* segmentoMayorTamanio(t_segmento* segmento, t_segmento* otroSegmento)
 //Serializacion y creacion de tablas
 t_list* generar_lista_huecos();
 void generar_tabla_segmentos();
-// void enviar_tabla_segmentos(int, t_log*);
 //Serializacion
 void enviar_tabla_segmentos(int, int, t_proceso*);
 void agregar_tabla_a_paquete(t_paquete*,t_proceso* , t_log*);
