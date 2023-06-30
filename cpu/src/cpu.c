@@ -531,14 +531,9 @@ void execute_process(contexto_ejecucion* ce){
     log_trace(cpu_logger, "SALI DEL WHILE DE EJECUCION");
 
     save_context_ce(ce); // ACA GUARDAMOS EL CONTEXTO
-<<<<<<< HEAD
-    imprimir_registros(ce->registros_cpu, cpu_logger); // para comprobar que los registros se guardaran bien
-    if(end_process) {
-=======
     //imprimir_registros(ce->registros_cpu, cpu_logger); // para comprobar que los registros se guardaran bien
     if (end_process)
     {
->>>>>>> origin/main
         end_process = 0; // IMPORTANTE: Apagar el flag para que no rompa el proximo proceso que llegue
 
         enviar_ce(socket_kernel, ce, SUCCESS, cpu_logger);
@@ -550,10 +545,6 @@ void execute_process(contexto_ejecucion* ce){
     else if (input_ouput)
     {
         input_ouput = 0;
-<<<<<<< HEAD
-        log_trace(cpu_logger, "Tiempo: %s", tiempo);
- 
-=======
         check_interruption = 0;
 
         log_trace(cpu_logger, "Bloqueado por IO");
@@ -561,21 +552,10 @@ void execute_process(contexto_ejecucion* ce){
         enviar_ce(socket_kernel, ce, BLOCK_IO, cpu_logger);
 
         liberar_ce(ce);
->>>>>>> origin/main
     }
     else if (sigsegv == 1)
     {
         sigsegv = 0;
-<<<<<<< HEAD
-        log_info(cpu_logger, "PID: %s - Error SEG_FAULT- Segmento: %s - Offset: %s - Tamaño: %s", ce->id,
-         id_segmento_con_segfault, desplazamiento_segfault, tamanio_segfault);
-        enviar_ce(socket_kernel, ce, SEG_FAULT, cpu_logger); 
-    }
-    else if(wait){
-       
-       
-        if(wait == 2){  // Se bloquea por estar ocupado recurso
-=======
 
         log_info(cpu_logger, "PID: %s - Error SEG_FAULT- Segmento: %s - Offset: %s - Tamaño: %s", ce->id, id_segmento_con_segfault, desplazamiento_segfault, tamanio_segfault);
         enviar_ce(socket_kernel, ce, SEG_FAULT, cpu_logger);
@@ -586,7 +566,6 @@ void execute_process(contexto_ejecucion* ce){
     {
         if(wait == 2)
         {  // Se bloquea por estar ocupado recurso
->>>>>>> origin/main
             log_trace(cpu_logger, "Bloqueado por WAIT");
             enviar_ce(socket_kernel, ce, BLOCK_WAIT, cpu_logger);
         }
@@ -600,22 +579,12 @@ void execute_process(contexto_ejecucion* ce){
             log_trace(cpu_logger, "EJECUTO_WAIT"); // Prueba
             enviar_ce(socket_kernel, ce, EJECUTO_WAIT, cpu_logger);
         }
-<<<<<<< HEAD
-             
-        
-=======
-
->>>>>>> origin/main
         wait = 0;
 
         liberar_ce(ce);
-<<<<<<< HEAD
-    }else if(desalojo_por_yield){
-=======
     }
     else if (desalojo_por_yield)
     {
->>>>>>> origin/main
         desalojo_por_yield = 0;
 
         log_trace(cpu_logger, "Desalojado por YIELD");

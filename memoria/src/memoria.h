@@ -83,6 +83,14 @@ t_segmento* segmentoWorstFit(t_list* segmentos, int size); // este "size" puede 
 t_segmento* segmentoMenorTamanio(t_segmento* segmento, t_segmento* otroSegmento);
 t_segmento* segmentoMayorTamanio(t_segmento* segmento, t_segmento* otroSegmento);
 
+//Compactacion
+void compactacion();
+t_list* buscarSegmentosOcupados();
+t_list* copiarContenidoSeg(t_list* segmentosNoCompactados);
+void* copiarSegmentacion(t_segmento* unSegmento);
+void actualizarCompactacion(t_list* segmentosNoCompactados, t_list* segmentosCompactados);
+void actualizarCadaSegmento(t_segmento* segmentoViejo, t_segmento* segmentoNuevo);
+
 //Serializacion y creacion de tablas
 t_list* generar_lista_huecos();
 void generar_tabla_segmentos();

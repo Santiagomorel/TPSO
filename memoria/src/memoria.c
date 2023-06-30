@@ -602,7 +602,89 @@ t_segmento* segmentoWorstFit(t_list* segmentos, int size){
     return segmento = list_get_maximum(segmentos, (void*)segmentoMayorTamanio);
 }
 
+//Compactacion
+void compactacion(){
+    //BUSCO SEGMENTOS OCUPADOS, CON EL BITMAP EN 1
+    t_list* segmentosNoCompactados = buscarSegmentosOcupados();
 
+    //SACO LO QUE TENGO GUARDADO EN ESOS SEGMENTOS,  Esta lista tiene PCB|TCB|Tareas|PCB|TCB|Tareas....
+    t_list* cosasDeLosSegmentos = copiarContenidoSeg(segmentosNoCompactados); //HACER
+
+    //LIMPIO EL BITMAP -> TODO EN 0
+    liberarBitMap(0, memoria_config.tam_memoria);
+
+    int cantidadS = list_size(segmentosNoCompactados);
+
+    //NUEVA LISTA DE SEGMENTOS
+    t_list* segmentosCompactados = list_create();
+
+    //GUARDO LA LISTA COSASDELOSSEGMENTOS EN LA MEMORIA, EN ORDEN, TODOS PEGADOS
+    for(int i =0 ; i<cantidadS ; i++){
+        //AGARRO UNO
+        t_segmento* miSegmento = list_get(segmentosNoCompactados, i);
+        
+        //LO GUARDO 
+        t_segmento* nuevoSegmento = guardarElemento(list_get(cosasDeLosSegmentos,i), miSegmento->tamanio_segmento);
+        
+        //LO AGREGO A LA NUEVA LISTA
+        list_add(segmentosCompactados, nuevoSegmento);
+    }
+
+    //ACTUALIZO LOS SEGMENTOS VIEJOS NO COMPACTADOS
+    actualizarCompactacion(segmentosNoCompactados, segmentosCompactados); //HACER
+
+    //LIBERO LISTAS
+    eliminarLista(cosasDeLosSegmentos);   
+    list_destroy(segmentosCompactados);
+    list_destroy(segmentosNoCompactados);
+    
+} 
+//CAMBIAR
+t_list* buscarSegmentosOcupados(){
+    t_list* lista = list_create();
+    return lista;
+}
+t_list* copiarContenidoSeg(t_list* segmentosNoCompactados){
+
+    t_list* segmentos = list_map(segmentosNoCompactados, (void*)copiarSegmentacion);
+    return segmentos;
+
+}
+void* copiarSegmentacion(t_segmento* unSegmento){
+	
+	void* algo;
+    //if(unSegmento->limite == 21){       //TRIPU
+    //    algo = malloc(sizeof(t_tcb));
+    //}else if(unSegmento->limite == 8){  //PATOTA
+    //    algo = malloc(sizeof(t_pcb));
+    //}else{                              //TAREAS
+    //    algo = malloc(unSegmento->limite);
+    //}
+
+    algo = malloc(unSegmento->tamanio_segmento);
+    //CHEQUEAR
+	pthread_mutex_lock(&mutexMemoria);
+	memcpy(algo,MEMORIA_PRINCIPAL + unSegmento->direccion_base, unSegmento->tamanio_segmento); //COPIA EN ALGO DESDE HASTA TAL LUGAR
+	//CHEQUEAR
+    pthread_mutex_unlock(&mutexMemoria);
+    
+    return algo;
+}
+
+void actualizarCompactacion(t_list* segmentosNoCompactados, t_list* segmentosCompactados){
+    for(int i = 0; i<list_size(segmentosNoCompactados);i++){
+        actualizarCadaSegmento(list_get(segmentosNoCompactados, i), list_get(segmentosCompactados,i));
+    }
+}
+void actualizarCadaSegmento(t_segmento* segmentoViejo, t_segmento* segmentoNuevo){
+    pthread_mutex_lock(&mutexMemoria);		
+	log_info(log_memoria, "El segmento %d ahora tiene base %p",segmentoViejo->id_segmento, MEMORIA_PRINCIPAL + segmentoNuevo->direccion_base);
+	pthread_mutex_unlock(&mutexMemoria);
+    
+    //CAMBIAR A FUNCIONES QUE SIRVAN O BORRAR
+    //actualizarListaPatotas(segmentoViejo, segmentoNuevo); //si esta lo cambia, sino no hace nada
+	//actualizarListaTripulantes(segmentoViejo, segmentoNuevo); //si esta lo cambia, sino no hace nada
+}
 
 // BitArrays
 
