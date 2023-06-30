@@ -130,10 +130,6 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
                 log_trace(log_memoria, "creando paquete con tabla de segmentos base");
                 
                 enviar_tabla_segmentos(SOCKET_CLIENTE_KERNEL, TABLA_SEGMENTOS, nuevo_proceso);
-
-            // enviar_mensaje("enviado nueva tabla de segmentos", SOCKET_CLIENTE_KERNEL);
-            enviar_tabla_segmentos(SOCKET_CLIENTE_KERNEL, TABLA_SEGMENTOS, log_memoria);
-
             break;
         case CREATE_SEGMENT:
             /*1. Que el segmento se cree exitosamente y que la memoria nos devuelva la base del nuevo segmento

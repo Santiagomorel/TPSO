@@ -42,11 +42,6 @@ int main(int argc, char ** argv) {
 	establecer_conexion(cpu_config.ip_memoria, cpu_config.puerto_memoria, cpu_config_file, cpu_logger);
     
 /*---------------------- CONEXION CON KERNEL ---------------------*/
-/*
-	socket_cpu = iniciar_servidor(cpu_config.puerto_escucha, cpu_logger);
-	esperar_cliente(socket_cpu, cpu_logger);
-	handshake_servidor(socket_cpu);
-*/
     pthread_t threadDispatch;
 
     pthread_create(&threadDispatch, NULL, (void *) process_dispatch, NULL);
@@ -170,13 +165,12 @@ void process_dispatch() {
 	while (1) {
 		int op_code = recibir_operacion(socket_kernel);
         log_trace(cpu_logger, "Codigo de operacion recibido de kernel: %d", op_code);
-        contexto_ejecucion* ce; //hay que hacer un free del contexto de ejecucion una vez termine de ejecutar
 
 		switch (op_code) {
             case EJECUTAR_CE: 
-                ce = recibir_ce(socket_kernel);
+                contexto_ejecucion* ce = recibir_ce(socket_kernel);
                 log_trace(cpu_logger, "Llego correctamente el CE con id: %d", ce->id);
-                imprimir_ce(ce, cpu_logger);
+                //imprimir_ce(ce, cpu_logger);
                 execute_process(ce);
                 break;   
             case -1:
@@ -536,23 +530,43 @@ void execute_process(contexto_ejecucion* ce){
     
     log_trace(cpu_logger, "SALI DEL WHILE DE EJECUCION");
 
-
     save_context_ce(ce); // ACA GUARDAMOS EL CONTEXTO
+<<<<<<< HEAD
     imprimir_registros(ce->registros_cpu, cpu_logger); // para comprobar que los registros se guardaran bien
     if(end_process) {
+=======
+    //imprimir_registros(ce->registros_cpu, cpu_logger); // para comprobar que los registros se guardaran bien
+    if (end_process)
+    {
+>>>>>>> origin/main
         end_process = 0; // IMPORTANTE: Apagar el flag para que no rompa el proximo proceso que llegue
+
         enviar_ce(socket_kernel, ce, SUCCESS, cpu_logger);
+
         liberar_ce(ce);
+
         log_trace(cpu_logger, "Enviamos paquete a dispatch: FIN PROCESO");
-    } 
-    else if(input_ouput) {
+    }
+    else if (input_ouput)
+    {
         input_ouput = 0;
+<<<<<<< HEAD
         log_trace(cpu_logger, "Tiempo: %s", tiempo);
  
+=======
+        check_interruption = 0;
+
+        log_trace(cpu_logger, "Bloqueado por IO");
+
+        enviar_ce(socket_kernel, ce, BLOCK_IO, cpu_logger);
+
+        liberar_ce(ce);
+>>>>>>> origin/main
     }
-    
-    else if(sigsegv == 1){
+    else if (sigsegv == 1)
+    {
         sigsegv = 0;
+<<<<<<< HEAD
         log_info(cpu_logger, "PID: %s - Error SEG_FAULT- Segmento: %s - Offset: %s - Tamaño: %s", ce->id,
          id_segmento_con_segfault, desplazamiento_segfault, tamanio_segfault);
         enviar_ce(socket_kernel, ce, SEG_FAULT, cpu_logger); 
@@ -561,35 +575,70 @@ void execute_process(contexto_ejecucion* ce){
        
        
         if(wait == 2){  // Se bloquea por estar ocupado recurso
+=======
+
+        log_info(cpu_logger, "PID: %s - Error SEG_FAULT- Segmento: %s - Offset: %s - Tamaño: %s", ce->id, id_segmento_con_segfault, desplazamiento_segfault, tamanio_segfault);
+        enviar_ce(socket_kernel, ce, SEG_FAULT, cpu_logger);
+
+        liberar_ce(ce); // VER PREGUNTAR A GUIDO
+    }
+    else if(wait)
+    {
+        if(wait == 2)
+        {  // Se bloquea por estar ocupado recurso
+>>>>>>> origin/main
             log_trace(cpu_logger, "Bloqueado por WAIT");
             enviar_ce(socket_kernel, ce, BLOCK_WAIT, cpu_logger);
-        }else if(wait == 3){
+        }
+        else if(wait == 3)
+        {
             log_trace(cpu_logger, "No existe el recurso");
             enviar_ce(socket_kernel, ce, EXIT_ERROR_RECURSO, cpu_logger);
-        }else{
+        }
+        else
+        {
+            log_trace(cpu_logger, "EJECUTO_WAIT"); // Prueba
             enviar_ce(socket_kernel, ce, EJECUTO_WAIT, cpu_logger);
         }
+<<<<<<< HEAD
              
         
+=======
+
+>>>>>>> origin/main
         wait = 0;
+
         liberar_ce(ce);
+<<<<<<< HEAD
     }else if(desalojo_por_yield){
+=======
+    }
+    else if (desalojo_por_yield)
+    {
+>>>>>>> origin/main
         desalojo_por_yield = 0;
+
         log_trace(cpu_logger, "Desalojado por YIELD");
         enviar_ce(socket_kernel, ce, DESALOJO_YIELD, cpu_logger);
-        liberar_ce(ce);
-    }else if(signal_recurso){
 
-        if(signal_recurso == 3){
-        log_trace(cpu_logger, "No existe el recurso");
-        enviar_ce(socket_kernel, ce, EXIT_ERROR_RECURSO, cpu_logger);
-    }else{
-        log_trace(cpu_logger, "Tengo el recurso"); // Prueba
-        enviar_ce(socket_kernel, ce, EJECUTO_SIGNAL, cpu_logger);
+        liberar_ce(ce);
     }
-        signal_recurso = 0;
-        liberar_ce(ce);
+    else if (signal_recurso)
+    {
+        if (signal_recurso == 3)
+        {
+            log_trace(cpu_logger, "No existe el recurso");
+            enviar_ce(socket_kernel, ce, EXIT_ERROR_RECURSO, cpu_logger);
+        }
+        else
+        {
+            log_trace(cpu_logger, "EJECUTO_SIGNAL"); // Prueba
+            enviar_ce(socket_kernel, ce, EJECUTO_SIGNAL, cpu_logger);
+        }
 
+        signal_recurso = 0;
+
+        liberar_ce(ce);
     }
 }
 
