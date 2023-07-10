@@ -828,7 +828,7 @@ void manejar_dispatch()
                 argumentos->pcb = pcb_IO;
                 argumentos->bloqueo = bloqueo;
 
-                pthread_mutex_lock(&m_IO);
+                //pthread_mutex_lock(&m_IO);
                 pthread_create(&hiloIO, NULL, (void*) rutina_io, (void*) (thread_args*) argumentos);
                 pthread_detach(hiloIO);
 
@@ -1030,7 +1030,7 @@ void rutina_io(thread_args* args)
     
     sem_post(&proceso_en_ready);
 
-    pthread_mutex_unlock(&m_IO);
+    //pthread_mutex_unlock(&m_IO);
 }
 // ----------------------- Funciones finales ----------------------- //
 
