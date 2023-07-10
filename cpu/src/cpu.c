@@ -326,9 +326,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             log_trace(cpu_logger, "Por ejecutar instruccion I/O");
             log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s", ce->id, instruction[0], instruction[1]);
 
-            tiempo = instruction[1];
-            enviar_ce_con_entero(socket_kernel, ce, tiempo, BLOCK_IO);
-            log_trace(cpu_logger, "%s", tiempo);
+            enviar_paquete_string(socket_kernel, instruction[1], BLOCK_IO, strlen(instruction[1])+1);
             input_ouput = 1;
             break;
          case I_EXIT:
@@ -346,7 +344,8 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s ", ce->id, instruction[0], instruction[1]);
             // Si rompe crear una varible char* recurso, asignandole instruccion[1] y enviar el recurso en el execute process
             
-            enviar_ce_con_string(socket_kernel, ce, instruction[1], WAIT_RECURSO);
+            enviar_paquete_string(socket_kernel, instruction[1], WAIT_RECURSO, strlen(instruction[1])+1);
+            log_warning(cpu_logger, "ENVIO EL PAQUETE STRING Y ESPERO RESPUESTA");
 
             wait = recibir_respuesta_recurso();
             
@@ -357,7 +356,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             log_trace(cpu_logger, "Por ejecutar instruccion SIGNAL");
             log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s", ce->id, instruction[0], instruction[1]);
 
-            enviar_ce_con_string(socket_kernel, ce, instruction[1], SIGNAL_RECURSO);
+            enviar_paquete_string(socket_kernel, instruction[1], SIGNAL_RECURSO, strlen(instruction[1])+1);
 
             signal_recurso = recibir_respuesta_recurso();
 
