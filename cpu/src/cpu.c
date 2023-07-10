@@ -360,6 +360,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
 
             signal_recurso = recibir_respuesta_recurso();
             break;
+            
         case I_YIELD:
             log_trace(cpu_logger, "Por ejecutar instruccion YIELD");
             log_info(cpu_logger, "PID: %d - Ejecutando: %s", ce->id, instruction[0]);
