@@ -41,6 +41,10 @@ char* datos;
 void* MEMORIA_PRINCIPAL;
 int idGlobal;
 
+//CPU
+
+//Lee el valor de memoria "direc_fisica" y lo almacena en el Registro que luego envia.
+void mov_in(int socket_cliente, void* direc_fisica, int size);
 
 
 int iniciarSegmentacion(void);
@@ -67,20 +71,29 @@ int bitsToBytes(int bits);
 t_bitarray* bitMapSegment;
 t_bitarray* unBitmap;
 
-void ocuparBitMap(t_bitarray* segmentoBitMap, int base,int size);
-void liberarBitMap(t_bitarray* segmentoBitMap, int base, int size);
+void ocuparBitMap(int base,int size); //ocupa del bitmap global "bitMapSegment"
+void liberarBitMap(int base, int size); //libera del bitmap global "bitMapSegment"
 int contarEspaciosLibresDesde(t_bitarray* bitmap, int i);
 int contarEspaciosOcupadosDesde(t_bitarray*unBitmap, int i);
 
 //criterio de asignacion
 t_segmento* elegirSegCriterio(t_list* segmentos, int size);
 t_segmento* segmentoBestFit(t_list* segmentos, int size);
+t_segmento* segmentoWorstFit(t_list* segmentos, int size); // este "size" puede que no vaya
 t_segmento* segmentoMenorTamanio(t_segmento* segmento, t_segmento* otroSegmento);
+t_segmento* segmentoMayorTamanio(t_segmento* segmento, t_segmento* otroSegmento);
+
+//Compactacion
+void compactacion();
+t_list* buscarSegmentosOcupados();
+t_list* copiarContenidoSeg(t_list* segmentosNoCompactados);
+void* copiarSegmentacion(t_segmento* unSegmento);
+void actualizarCompactacion(t_list* segmentosNoCompactados, t_list* segmentosCompactados);
+void actualizarCadaSegmento(t_segmento* segmentoViejo, t_segmento* segmentoNuevo);
 
 //Serializacion y creacion de tablas
 t_list* generar_lista_huecos();
 void generar_tabla_segmentos();
-// void enviar_tabla_segmentos(int, t_log*);
 //Serializacion
 void enviar_tabla_segmentos(int, int, t_proceso*);
 void agregar_tabla_a_paquete(t_paquete*,t_proceso* , t_log*);
