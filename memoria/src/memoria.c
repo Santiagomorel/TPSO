@@ -87,7 +87,7 @@ int main(int argc, char **argv)
         }
     }*/
     sem_wait(&finModulo);
-
+    log_warning(log_memoria, "FINALIZA EL MODULO DE MEMORIA");
     free(MEMORIA_PRINCIPAL);
     end_program(socket_servidor_memoria, log_memoria, memoria_config_file);
 
@@ -283,12 +283,13 @@ void generar_tabla_segmentos(t_proceso* proceso){
 
 void enviar_tabla_segmentos(int conexion, int codOP, t_proceso* proceso) {
 	t_paquete* paquete = crear_paquete_op_code(codOP);
-
+    log_warning(log_memoria, "crea el paquete con el codigo de operacion de tabla de segmentos %d", codOP);
 	agregar_entero_a_paquete(paquete, list_size(proceso->tabla_segmentos));
-
+    log_warning(log_memoria, "agrega el entero al paquete");
 	agregar_tabla_a_paquete(paquete, proceso, log_memoria);
-
+    log_warning(log_memoria, "agrega la tabla al paquete");
 	enviar_paquete(paquete, conexion);
+    log_warning(log_memoria, "envia el paquete");
 
 	eliminar_paquete(paquete);
 }

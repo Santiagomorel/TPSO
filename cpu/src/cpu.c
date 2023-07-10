@@ -345,7 +345,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             // Si rompe crear una varible char* recurso, asignandole instruccion[1] y enviar el recurso en el execute process
             
             enviar_paquete_string(socket_kernel, instruction[1], WAIT_RECURSO, strlen(instruction[1])+1);
-            log_warning(cpu_logger, "ENVIO EL PAQUETE STRING Y ESPERO RESPUESTA");
+            //log_warning(cpu_logger, "ENVIO EL PAQUETE STRING Y ESPERO RESPUESTA");
 
             wait = recibir_respuesta_recurso();
             
@@ -422,12 +422,13 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
 
             break;
         case I_CREATE_SEGMENT:
-        sig_f = 1;
         log_trace(cpu_logger, "Por ejecutar instruccion CREATE_SEGMENT");
         log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s", ce->id, instruction[0], instruction[1], instruction[2]);
         //update_program_counter(ce);
 
         enviar_2_enteros(socket_kernel, instruction[1], instruction[2], CREAR_SEGMENTO);
+
+        sig_f = recibir_respuesta_segmento();
         //enviar_ce_con_dos_enteros(socket_kernel, ce, instruction[1], instruction[2], CREAR_SEGMENTO);
 
             break;
@@ -514,7 +515,7 @@ void execute_process(contexto_ejecucion* ce){
     char** decoded_instruction = malloc(sizeof(char*));
 
     log_trace(cpu_logger, "Por empezar  end_process != 1 && input_ouput != 1 && wait == 0 && desalojo_por_yield != 1 && signal_recurso != 2 && sigsev != 1"); 
-    while(end_process != 1 && input_ouput != 1 && wait == 0 && desalojo_por_yield != 1 && signal_recurso == 0 && sigsegv != 1){
+    while(end_process != 1 && input_ouput != 1 && wait == 0 && desalojo_por_yield != 1 && signal_recurso == 0 && sigsegv != 1 && sig_f != 1){
         //Llega el ce y con el program counter buscas la instruccion que necesita
         instruction = string_duplicate(fetch_next_instruction_to_execute(ce));
         decoded_instruction = decode(instruction);
@@ -580,7 +581,7 @@ void execute_process(contexto_ejecucion* ce){
         else
         {
             log_trace(cpu_logger, "EJECUTO_WAIT"); // Prueba
-            enviar_ce(socket_kernel, ce, EJECUTO_WAIT, cpu_logger);
+            enviar_ce(socket_kernel, ce, EJECUTO_INSTRUCCION, cpu_logger);
         }
         wait = 0;
 
@@ -605,7 +606,7 @@ void execute_process(contexto_ejecucion* ce){
         else
         {
             log_trace(cpu_logger, "EJECUTO_SIGNAL"); // Prueba
-            enviar_ce(socket_kernel, ce, EJECUTO_SIGNAL, cpu_logger);
+            enviar_ce(socket_kernel, ce, EJECUTO_INSTRUCCION, cpu_logger);
         }
 
         signal_recurso = 0;
@@ -614,7 +615,20 @@ void execute_process(contexto_ejecucion* ce){
     }
     else if (sig_f)
     {
+        if (sig_f == 2)
+        {
+            log_trace(cpu_logger, "No hay memoria");
+            enviar_ce(socket_kernel, ce, EXIT_OUT_OF_MEMORY, cpu_logger);
+        }
+        else
+        {
+            log_trace(cpu_logger, "EJECUTO_CREATE_SEGMENT"); // Prueba
+            enviar_ce(socket_kernel, ce, EJECUTO_INSTRUCCION, cpu_logger);
+        }
+
         sig_f = 0;
+
+        liberar_ce(ce);
     }
 }
 
@@ -633,11 +647,9 @@ int recibir_respuesta_recurso(){
 int recibir_respuesta_segmento(){
     int codigo_op = recibir_operacion(socket_kernel);
 
-    if(codigo_op == NO_EXISTE_RECURSO){
-        return 3;
-    }else if (codigo_op == NO_LO_TENGO){
+    if(codigo_op == OUT_OF_MEMORY){
         return 2;
-    }else if(codigo_op == LO_TENGO){
+    }else if(codigo_op == CORRECTO){
         return 1;
     }
 }

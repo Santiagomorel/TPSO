@@ -445,14 +445,14 @@ void inicializar_estructuras(t_pcb* pcb)
     agregar_entero_a_paquete(paquete, pcb->id);
 
     enviar_paquete(paquete, memory_connection);
-
+    log_warning(kernel_logger, "Envia el paquete del inicio de estructuras");
     eliminar_paquete(paquete);
 }
 
 t_list* pedir_tabla_segmentos()
 {
     int codigoOperacion = recibir_operacion(memory_connection);
-
+    log_warning(kernel_logger, "me llego el codigo de operacion %d", codigoOperacion);
     if (codigoOperacion != TABLA_SEGMENTOS)
     {
         log_error(kernel_logger, "Perdir tabla de segmentos no recibio una Tabla");
@@ -730,8 +730,7 @@ void manejar_dispatch()
                 //eliminar(pcb_a_reencolar);
                 break;
             
-            case EJECUTO_WAIT:
-            case EJECUTO_SIGNAL:
+            case EJECUTO_INSTRUCCION:
                 contexto_ejecucion* contexto_ejecuta_instruccion = recibir_ce(cpu_dispatch_connection);
 
                 pthread_mutex_lock(&m_listaEjecutando);
@@ -847,7 +846,6 @@ void manejar_dispatch()
                 int tamanio = estructura_2_enteros->entero2;
 
                 log_warning(kernel_logger, "llego aca sin explotar y el id_segmneto: %d y tamanio: %d", id_segmento, tamanio);
-                // llego hasta aca despues sigo
 
                 // mandar a memoria los 2 enteros, el manager de memoria es el que le envia a cpu si tiene o no las cosas
 
@@ -1039,7 +1037,7 @@ void manejar_memoria()
     while(1){
         int cod_op = recibir_operacion(memory_connection);
         switch(cod_op){
-            
+            // recibir el codigo y enviar la base o el codigo de error
         }
     }
 }
