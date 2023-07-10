@@ -718,6 +718,23 @@ t_ce_2enteros * recibir_ce_2enteros(int socket)
 	return nuevo_ce_2enteros;
 }
 
+t_2_enteros * recibir_2_enteros(int socket)
+{
+	t_2_enteros* nuevo_2_enteros = malloc(sizeof(t_2_enteros));
+	int size = 0;
+	char *buffer;
+	int desp = 0;
+
+	buffer = recibir_buffer(&size, socket);
+
+	nuevo_2_enteros->entero1 = leer_entero(buffer, &desp);
+
+	nuevo_2_enteros->entero2 = leer_entero(buffer, &desp);
+
+	free(buffer);
+	return nuevo_2_enteros;
+}
+
 void liberar_ce_2enteros(t_ce_2enteros* ce_2enteros)
 {
 	liberar_ce(ce_2enteros->ce);

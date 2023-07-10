@@ -423,12 +423,13 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
 
             break;
         case I_CREATE_SEGMENT:
-        sig_f = 0;
+        sig_f = 1;
         log_trace(cpu_logger, "Por ejecutar instruccion CREATE_SEGMENT");
         log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s", ce->id, instruction[0], instruction[1], instruction[2]);
-        update_program_counter(ce);
+        //update_program_counter(ce);
 
-        enviar_ce_con_dos_enteros(socket_kernel, ce, instruction[1], instruction[2], CREAR_SEGMENTO);
+        enviar_2_enteros(socket_kernel, instruction[1], instruction[2], CREAR_SEGMENTO);
+        //enviar_ce_con_dos_enteros(socket_kernel, ce, instruction[1], instruction[2], CREAR_SEGMENTO);
 
             break;
         case I_DELETE_SEGMENT:
@@ -522,12 +523,10 @@ void execute_process(contexto_ejecucion* ce){
         log_trace(cpu_logger, "Por ejecutar la instruccion decodificada %s", decoded_instruction[0]);
         execute_instruction(decoded_instruction, ce);
 
-        if(sigsegv != 1 && sig_f) {   // en caso de tener seg fault no se actualiza program counter
+        if(sigsegv != 1) {   // en caso de tener seg fault no se actualiza program counter
             update_program_counter(ce);
         }
-        
-        sig_f = 1; // si es 1 corre de manera normal y ejecuta el program counter, si es 0 saltea el program counter
-        
+                
         log_trace(cpu_logger, "PROGRAM COUNTER: %d", ce->program_counter);
 
 
@@ -614,9 +613,25 @@ void execute_process(contexto_ejecucion* ce){
 
         liberar_ce(ce);
     }
+    else if (sig_f)
+    {
+        sig_f = 0;
+    }
 }
 
 int recibir_respuesta_recurso(){
+    int codigo_op = recibir_operacion(socket_kernel);
+
+    if(codigo_op == NO_EXISTE_RECURSO){
+        return 3;
+    }else if (codigo_op == NO_LO_TENGO){
+        return 2;
+    }else if(codigo_op == LO_TENGO){
+        return 1;
+    }
+}
+
+int recibir_respuesta_segmento(){
     int codigo_op = recibir_operacion(socket_kernel);
 
     if(codigo_op == NO_EXISTE_RECURSO){
@@ -681,7 +696,14 @@ void enviar_ce_con_string(int client_socket, contexto_ejecucion* ce, char* param
     
 }
 
+void enviar_2_enteros(int client_socket, char* x, char* y, int codOP){
+    t_paquete* paquete = crear_paquete_op_code(codOP);
 
+    agregar_entero_a_paquete(paquete, atoi(x)); 
+    agregar_entero_a_paquete(paquete, atoi(y)); 
+    enviar_paquete(paquete, client_socket);
+    eliminar_paquete(paquete);
+}
 
 void enviar_ce_con_dos_enteros(int client_socket, contexto_ejecucion* ce, char* x, char* y, int codOP){
     t_paquete* paquete = crear_paquete_op_code(codOP);
@@ -691,7 +713,6 @@ void enviar_ce_con_dos_enteros(int client_socket, contexto_ejecucion* ce, char* 
     agregar_entero_a_paquete(paquete, atoi(y)); 
     enviar_paquete(paquete, client_socket);
     eliminar_paquete(paquete);
-    
 }
 
 void enviar_ce_con_string_entero(int client_socket, contexto_ejecucion* ce, char* parameter, char* x, int codOP){

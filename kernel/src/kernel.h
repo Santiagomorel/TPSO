@@ -83,6 +83,7 @@ t_list** lista_recurso; // lista que tiene listas de recursos
 // Variables de hilo de planificadores
 pthread_t planificadorCP;
 pthread_t hiloDispatch;
+pthread_t hiloMemoria;
 pthread_t hiloIO;
 
 // Declaraciones de parte consola
@@ -171,6 +172,10 @@ typedef struct{
 }thread_args;
 
 void rutina_io(thread_args*);
+
+// Declaraciones Memory Manager
+void manejar_memoria();
+
 //
 // ------------------------------------//
 

@@ -197,6 +197,10 @@ void iniciar_planificadores()
 
     pthread_create(&hiloDispatch, NULL, (void*)manejar_dispatch, (void*) (intptr_t)cpu_dispatch_connection);
     pthread_detach(hiloDispatch);
+
+    pthread_create(&hiloMemoria, NULL, (void*)manejar_memoria, (void*) (intptr_t)memory_connection);
+    pthread_detach(hiloMemoria);
+
 }
 
 // ----------------------- Funciones relacionadas con consola ----------------------- //
@@ -836,22 +840,18 @@ void manejar_dispatch()
                 break;
 
             case CREAR_SEGMENTO:
-                t_ce_2enteros * estructura_crear_segmento = recibir_ce_2enteros(cpu_dispatch_connection);
+                t_2_enteros * estructura_2_enteros = recibir_2_enteros(cpu_dispatch_connection);
 
-                contexto_ejecucion * contexto_crea_segmento = estructura_crear_segmento->ce;
+                int id_segmento = estructura_2_enteros->entero1;
 
-                int id_segmento = estructura_crear_segmento->entero1;
-
-                int tamanio = estructura_crear_segmento->entero2;
-
-                pthread_mutex_lock(&m_listaEjecutando);
-                    t_pcb * pcb_crea_segmento = (t_pcb *) list_get(listaEjecutando, 0); 
-                    actualizar_pcb(pcb_crea_segmento, contexto_crea_segmento);
-                pthread_mutex_unlock(&m_listaEjecutando);
+                int tamanio = estructura_2_enteros->entero2;
 
                 log_warning(kernel_logger, "llego aca sin explotar y el id_segmneto: %d y tamanio: %d", id_segmento, tamanio);
                 // llego hasta aca despues sigo
-                liberar_ce_2enteros(estructura_crear_segmento);
+
+                // mandar a memoria los 2 enteros, el manager de memoria es el que le envia a cpu si tiene o no las cosas
+
+                //liberar_2_enteros(estructura_crear_segmento);
                 break;
             case -1:
                 break;
@@ -1031,6 +1031,17 @@ void rutina_io(thread_args* args)
     sem_post(&proceso_en_ready);
 
     //pthread_mutex_unlock(&m_IO);
+}
+
+void manejar_memoria()
+{
+    log_trace(kernel_logger, "Entre por manejar dispatch");
+    while(1){
+        int cod_op = recibir_operacion(memory_connection);
+        switch(cod_op){
+            
+        }
+    }
 }
 // ----------------------- Funciones finales ----------------------- //
 

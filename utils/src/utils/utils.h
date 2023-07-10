@@ -199,6 +199,11 @@ typedef struct{
 	int entero2;
 } t_ce_2enteros;
 
+typedef struct{
+	int entero1;
+	int entero2;
+} t_2_enteros;
+
 
 int crear_conexion(char* ip, char* puerto);
 void enviar_mensaje(char* mensaje, int socket_cliente);
@@ -267,5 +272,6 @@ t_segmento* crear_segmento(int, int, int);
 void agregar_tabla_segmentos_a_paquete(t_paquete*, t_list*);
 
 t_ce_2enteros * recibir_ce_2enteros(int);
+t_2_enteros * recibir_2_enteros(int);
 void liberar_ce_2enteros(t_ce_2enteros*);
 #endif /* UTILS_H_ */
