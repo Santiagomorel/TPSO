@@ -1034,12 +1034,12 @@ void rutina_io(thread_args* args)
 void manejar_memoria()
 {
     log_trace(kernel_logger, "Entre por manejar dispatch");
-    while(1){
-        int cod_op = recibir_operacion(memory_connection);
-        switch(cod_op){
-            // recibir el codigo y enviar la base o el codigo de error
-        }
-    }
+    // while(1){
+    //     int cod_op = recibir_operacion(memory_connection);
+    //     switch(cod_op){
+    //         // recibir el codigo y enviar la base o el codigo de error
+    //     }
+    // }
 }
 // ----------------------- Funciones finales ----------------------- //
 
