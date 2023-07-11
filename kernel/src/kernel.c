@@ -445,14 +445,12 @@ void inicializar_estructuras(t_pcb* pcb)
     agregar_entero_a_paquete(paquete, pcb->id);
 
     enviar_paquete(paquete, memory_connection);
-    log_warning(kernel_logger, "Envia el paquete del inicio de estructuras");
     eliminar_paquete(paquete);
 }
 
 t_list* pedir_tabla_segmentos()
 {
     int codigoOperacion = recibir_operacion(memory_connection);
-    log_warning(kernel_logger, "me llego el codigo de operacion %d", codigoOperacion);
     if (codigoOperacion != TABLA_SEGMENTOS)
     {
         log_error(kernel_logger, "Perdir tabla de segmentos no recibio una Tabla");
@@ -684,50 +682,11 @@ void manejar_dispatch()
             case SEG_FAULT:
                 // recuperacion de waits pedidos - archivos
             case SUCCESS:
-                // TODO es probable que necesite liberar las instancias en memoria y en file system antes de encolar en EXIT
-                contexto_ejecucion* contexto_a_finalizar = recibir_ce(cpu_dispatch_connection);
-
-                pthread_mutex_lock(&m_listaEjecutando);
-                    t_pcb * pcb_a_finalizar = (t_pcb *) list_remove(listaEjecutando, 0);
-                    actualizar_pcb(pcb_a_finalizar, contexto_a_finalizar);
-                pthread_mutex_unlock(&m_listaEjecutando);
-
-                cambiar_estado_a(pcb_a_finalizar, EXIT, estadoActual(pcb_a_finalizar));
-
-                liberar_recursos_pedidos(pcb_a_finalizar);
-                
-                sem_post(&grado_multiprog);
-                sem_post(&fin_ejecucion);
-
-                agregar_a_lista_con_sems(pcb_a_finalizar, listaFinalizados, m_listaFinalizados);
-                
-                log_info(kernel_logger, "Finaliza el proceso [%d] - Motivo: [%s]", pcb_a_finalizar->id, obtenerCodOP(cod_op));
-                
-                enviar_Fin_consola(pcb_a_finalizar->socket_consola);
-
-                liberar_ce(contexto_a_finalizar);
+                atender_final_proceso(cod_op);
                 break;
 
             case DESALOJO_YIELD:
-                contexto_ejecucion* contexto_a_reencolar = recibir_ce(cpu_dispatch_connection);
-
-                pthread_mutex_lock(&m_listaEjecutando);
-                    t_pcb * pcb_a_reencolar = (t_pcb *) list_remove(listaEjecutando, 0); // inicializar pcb y despues liberarlo
-                    actualizar_pcb(pcb_a_reencolar, contexto_a_reencolar);
-                pthread_mutex_unlock(&m_listaEjecutando);
-
-                cambiar_estado_a(pcb_a_reencolar, READY, estadoActual(pcb_a_reencolar));
-
-                sacar_rafaga_ejecutada(pcb_a_reencolar); // hacer cada vez que sale de running
-                iniciar_nueva_espera_ready(pcb_a_reencolar); // hacer cada vez que se mete en la lista de ready
-                
-                agregar_a_lista_con_sems(pcb_a_reencolar, listaReady, m_listaReady);
-
-                sem_post(&proceso_en_ready);
-                sem_post(&fin_ejecucion);
-
-                liberar_ce(contexto_a_reencolar);
-                //eliminar(pcb_a_reencolar);
+                atender_desalojo_yield();
                 break;
             
             case EJECUTO_INSTRUCCION:
@@ -744,112 +703,19 @@ void manejar_dispatch()
                 break;
 
             case WAIT_RECURSO:
-                char* recurso_wait = recibir_string(cpu_dispatch_connection, kernel_logger);
-
-                if (recurso_no_existe(recurso_wait)) {
-                    enviar_CodOp(cpu_dispatch_connection, NO_EXISTE_RECURSO);
-                } else {
-                    int id_recurso = obtener_id_recurso(recurso_wait);
-
-                    restar_instancia(id_recurso);
-                    
-                    log_info(kernel_logger, "PID: [%d] - Wait: [%s] - Instancias: [%d]", id_proceso_en_lista(listaEjecutando), recurso_wait, obtener_instancias_recurso(id_recurso));
-                    
-                    if (tiene_instancia_wait(id_recurso)) {
-                        enviar_CodOp(cpu_dispatch_connection, LO_TENGO);
-
-                        sem_wait(sem_recurso[id_recurso]);
-                    } else {
-                        enviar_CodOp(cpu_dispatch_connection, NO_LO_TENGO);
-
-                        recibir_operacion(cpu_dispatch_connection);
-                        contexto_ejecucion* contexto_bloqueado_en_recurso= recibir_ce(cpu_dispatch_connection);
-                        
-                        pthread_mutex_lock(&m_listaEjecutando);
-                            t_pcb * pcb_bloqueado_en_recurso = (t_pcb *) list_remove(listaEjecutando, 0); // inicializar pcb y despues liberarlo
-                            actualizar_pcb(pcb_bloqueado_en_recurso, contexto_bloqueado_en_recurso);
-                        pthread_mutex_unlock(&m_listaEjecutando);
-                        
-                        cambiar_estado_a(pcb_bloqueado_en_recurso, BLOCKED, estadoActual(pcb_bloqueado_en_recurso));
-                        
-                        log_info(kernel_logger, "PID: [%d] - Bloqueado por: [%s]",pcb_bloqueado_en_recurso->id, recurso_wait);
-                        
-                        sacar_rafaga_ejecutada(pcb_bloqueado_en_recurso); // hacer cada vez que sale de running
-                        
-                        sem_post(&fin_ejecucion);
-                        
-                        liberar_ce(contexto_bloqueado_en_recurso);
-                        
-                        bloqueo_proceso_en_recurso(pcb_bloqueado_en_recurso, id_recurso); // aca tengo que encolar en la lista correspondiente
-                    }
-                }
+                atender_wait_recurso();
                 break; 
 
             case SIGNAL_RECURSO:
-                char* recurso_signal = recibir_string(cpu_dispatch_connection, kernel_logger);
-
-                if (recurso_no_existe(recurso_signal)) {
-                    enviar_CodOp(cpu_dispatch_connection, NO_EXISTE_RECURSO);
-                } else {
-                    enviar_CodOp(cpu_dispatch_connection, LO_TENGO);
-
-                    int id_recurso = obtener_id_recurso(recurso_signal);
-
-                    sumar_instancia(id_recurso);
-                    
-                    log_info(kernel_logger, "PID: [%d] - Signal: [%s] - Instancias: [%d]", id_proceso_en_lista(listaEjecutando), recurso_signal, obtener_instancias_recurso(id_recurso));
-                                        
-                    if (tiene_que_reencolar_bloq_recurso(id_recurso)) {
-                        reencolar_bloqueo_por_recurso(id_recurso);
-                    }
-                }
+                atender_signal_recurso();
                 break;
 
             case BLOCK_IO:
-                char* tiempo_bloqueo = recibir_string(cpu_dispatch_connection, kernel_logger);
-
-                recibir_operacion(cpu_dispatch_connection);
-                
-                contexto_ejecucion* contexto_IO = recibir_ce(cpu_dispatch_connection);
-                
-                int bloqueo = atoi(tiempo_bloqueo);
-                
-                pthread_mutex_lock(&m_listaEjecutando);
-                    t_pcb * pcb_IO = (t_pcb *) list_remove(listaEjecutando, 0);
-                    actualizar_pcb(pcb_IO, contexto_IO);
-                pthread_mutex_unlock(&m_listaEjecutando);
-                
-                sacar_rafaga_ejecutada(pcb_IO); // hacer cada vez que sale de running
-                
-                sem_post(&fin_ejecucion);
-                
-                cambiar_estado_a(pcb_IO, BLOCKED, estadoActual(pcb_IO));
-
-                log_info(kernel_logger, "PID: [%d] - Bloqueado por: [IO]",pcb_IO->id);
-                
-                thread_args* argumentos = malloc(sizeof(thread_args));
-                argumentos->pcb = pcb_IO;
-                argumentos->bloqueo = bloqueo;
-
-                //pthread_mutex_lock(&m_IO);
-                pthread_create(&hiloIO, NULL, (void*) rutina_io, (void*) (thread_args*) argumentos);
-                pthread_detach(hiloIO);
-
-                liberar_ce(contexto_IO);
+                atender_block_io();
                 break;
 
             case CREAR_SEGMENTO:
-                t_2_enteros * estructura_2_enteros = recibir_2_enteros(cpu_dispatch_connection);
-
-                int id_segmento = estructura_2_enteros->entero1;
-
-                int tamanio = estructura_2_enteros->entero2;
-
-                log_warning(kernel_logger, "llego aca sin explotar y el id_segmneto: %d y tamanio: %d", id_segmento, tamanio);
-
-                // mandar a memoria los 2 enteros, el manager de memoria es el que le envia a cpu si tiene o no las cosas
-
-                //liberar_2_enteros(estructura_crear_segmento);
+                atender_crear_segmento();
                 break;
             case -1:
                 break;
@@ -867,6 +733,34 @@ void actualizar_pcb(t_pcb* pcb, contexto_ejecucion* ce) //TODO
     copiar_PC_ce_a_pcb(ce, pcb);
     copiar_registros_ce_a_pcb(ce, pcb);
     //falta copiar la tabla de segmentos.
+}
+
+// ----------------------- Funciones de final de proceso ----------------------- //
+
+void atender_final_proceso(int cod_op)
+{
+    // TODO es probable que necesite liberar las instancias en memoria y en file system antes de encolar en EXIT
+    contexto_ejecucion* contexto_a_finalizar = recibir_ce(cpu_dispatch_connection);
+
+    pthread_mutex_lock(&m_listaEjecutando);
+        t_pcb * pcb_a_finalizar = (t_pcb *) list_remove(listaEjecutando, 0);
+        actualizar_pcb(pcb_a_finalizar, contexto_a_finalizar);
+    pthread_mutex_unlock(&m_listaEjecutando);
+
+    cambiar_estado_a(pcb_a_finalizar, EXIT, estadoActual(pcb_a_finalizar));
+
+    liberar_recursos_pedidos(pcb_a_finalizar);
+    
+    sem_post(&grado_multiprog);
+    sem_post(&fin_ejecucion);
+
+    agregar_a_lista_con_sems(pcb_a_finalizar, listaFinalizados, m_listaFinalizados);
+    
+    log_info(kernel_logger, "Finaliza el proceso [%d] - Motivo: [%s]", pcb_a_finalizar->id, obtenerCodOP(cod_op));
+    
+    enviar_Fin_consola(pcb_a_finalizar->socket_consola);
+
+    liberar_ce(contexto_a_finalizar);
 }
 
 void liberar_recursos_pedidos(t_pcb* pcb)
@@ -895,6 +789,29 @@ void enviar_Fin_consola(int socket)
 }
 
 // ----------------------- Funciones DESALOJO_YIELD ----------------------- //
+
+void atender_desalojo_yield()
+{
+    contexto_ejecucion* contexto_a_reencolar = recibir_ce(cpu_dispatch_connection);
+
+    pthread_mutex_lock(&m_listaEjecutando);
+        t_pcb * pcb_a_reencolar = (t_pcb *) list_remove(listaEjecutando, 0); // inicializar pcb y despues liberarlo
+        actualizar_pcb(pcb_a_reencolar, contexto_a_reencolar);
+    pthread_mutex_unlock(&m_listaEjecutando);
+
+    cambiar_estado_a(pcb_a_reencolar, READY, estadoActual(pcb_a_reencolar));
+
+    sacar_rafaga_ejecutada(pcb_a_reencolar); // hacer cada vez que sale de running
+    iniciar_nueva_espera_ready(pcb_a_reencolar); // hacer cada vez que se mete en la lista de ready
+    
+    agregar_a_lista_con_sems(pcb_a_reencolar, listaReady, m_listaReady);
+
+    sem_post(&proceso_en_ready);
+    sem_post(&fin_ejecucion);
+
+    liberar_ce(contexto_a_reencolar);
+    //eliminar(pcb_a_reencolar);
+}
 
 void sacar_rafaga_ejecutada(t_pcb* pcb)
 {
@@ -974,6 +891,49 @@ void sumar_instancia_exit(int id_recurso, t_pcb* pcb_quita_recurso)
 }
 // ----------------------- Funciones WAIT_RECURSO ----------------------- //
 
+void atender_wait_recurso()
+{
+    char* recurso_wait = recibir_string(cpu_dispatch_connection, kernel_logger);
+
+    if (recurso_no_existe(recurso_wait)) {
+        enviar_CodOp(cpu_dispatch_connection, NO_EXISTE_RECURSO);
+    } else {
+        int id_recurso = obtener_id_recurso(recurso_wait);
+
+        restar_instancia(id_recurso);
+        
+        log_info(kernel_logger, "PID: [%d] - Wait: [%s] - Instancias: [%d]", id_proceso_en_lista(listaEjecutando), recurso_wait, obtener_instancias_recurso(id_recurso));
+        
+        if (tiene_instancia_wait(id_recurso)) {
+            enviar_CodOp(cpu_dispatch_connection, LO_TENGO);
+
+            sem_wait(sem_recurso[id_recurso]);
+        } else {
+            enviar_CodOp(cpu_dispatch_connection, NO_LO_TENGO);
+
+            recibir_operacion(cpu_dispatch_connection);
+            contexto_ejecucion* contexto_bloqueado_en_recurso= recibir_ce(cpu_dispatch_connection);
+            
+            pthread_mutex_lock(&m_listaEjecutando);
+                t_pcb * pcb_bloqueado_en_recurso = (t_pcb *) list_remove(listaEjecutando, 0); // inicializar pcb y despues liberarlo
+                actualizar_pcb(pcb_bloqueado_en_recurso, contexto_bloqueado_en_recurso);
+            pthread_mutex_unlock(&m_listaEjecutando);
+            
+            cambiar_estado_a(pcb_bloqueado_en_recurso, BLOCKED, estadoActual(pcb_bloqueado_en_recurso));
+            
+            log_info(kernel_logger, "PID: [%d] - Bloqueado por: [%s]",pcb_bloqueado_en_recurso->id, recurso_wait);
+            
+            sacar_rafaga_ejecutada(pcb_bloqueado_en_recurso); // hacer cada vez que sale de running
+            
+            sem_post(&fin_ejecucion);
+            
+            liberar_ce(contexto_bloqueado_en_recurso);
+            
+            bloqueo_proceso_en_recurso(pcb_bloqueado_en_recurso, id_recurso); // aca tengo que encolar en la lista correspondiente
+        }
+    }
+}
+
 int tiene_instancia_wait(int id_recurso)
 { // devuelve 1 si instancia recurso es >= 0, 0 en otro caso
     return (kernel_config.instancias_recursos[id_recurso] >= 0);
@@ -987,6 +947,27 @@ void bloqueo_proceso_en_recurso(t_pcb* pcb, int id_recurso)
 }
 
 // ----------------------- Funciones SIGNAL_RECURSO ----------------------- //
+
+void atender_signal_recurso()
+{
+    char* recurso_signal = recibir_string(cpu_dispatch_connection, kernel_logger);
+
+                if (recurso_no_existe(recurso_signal)) {
+                    enviar_CodOp(cpu_dispatch_connection, NO_EXISTE_RECURSO);
+                } else {
+                    enviar_CodOp(cpu_dispatch_connection, LO_TENGO);
+
+                    int id_recurso = obtener_id_recurso(recurso_signal);
+
+                    sumar_instancia(id_recurso);
+                    
+                    log_info(kernel_logger, "PID: [%d] - Signal: [%s] - Instancias: [%d]", id_proceso_en_lista(listaEjecutando), recurso_signal, obtener_instancias_recurso(id_recurso));
+                                        
+                    if (tiene_que_reencolar_bloq_recurso(id_recurso)) {
+                        reencolar_bloqueo_por_recurso(id_recurso);
+                    }
+                }
+}
 
 int tiene_que_reencolar_bloq_recurso(int id_recurso)
 {
@@ -1010,6 +991,41 @@ void reencolar_bloqueo_por_recurso(int id_recurso)
     sem_post(&proceso_en_ready);
 }
 
+// ----------------------- Funciones BLOCK_IO ----------------------- //
+
+void atender_block_io()
+{
+    char* tiempo_bloqueo = recibir_string(cpu_dispatch_connection, kernel_logger);
+
+    recibir_operacion(cpu_dispatch_connection);
+    
+    contexto_ejecucion* contexto_IO = recibir_ce(cpu_dispatch_connection);
+    
+    int bloqueo = atoi(tiempo_bloqueo);
+    
+    pthread_mutex_lock(&m_listaEjecutando);
+        t_pcb * pcb_IO = (t_pcb *) list_remove(listaEjecutando, 0);
+        actualizar_pcb(pcb_IO, contexto_IO);
+    pthread_mutex_unlock(&m_listaEjecutando);
+    
+    sacar_rafaga_ejecutada(pcb_IO); // hacer cada vez que sale de running
+    
+    sem_post(&fin_ejecucion);
+    
+    cambiar_estado_a(pcb_IO, BLOCKED, estadoActual(pcb_IO));
+
+    log_info(kernel_logger, "PID: [%d] - Bloqueado por: [IO]",pcb_IO->id);
+    
+    thread_args* argumentos = malloc(sizeof(thread_args));
+    argumentos->pcb = pcb_IO;
+    argumentos->bloqueo = bloqueo;
+
+    //pthread_mutex_lock(&m_IO);
+    pthread_create(&hiloIO, NULL, (void*) rutina_io, (void*) (thread_args*) argumentos);
+    pthread_detach(hiloIO);
+
+    liberar_ce(contexto_IO);
+}
 
 void rutina_io(thread_args* args)
 {
@@ -1029,6 +1045,21 @@ void rutina_io(thread_args* args)
     sem_post(&proceso_en_ready);
 
     //pthread_mutex_unlock(&m_IO);
+}
+
+void atender_crear_segmento()
+{
+    t_2_enteros * estructura_2_enteros = recibir_2_enteros(cpu_dispatch_connection);
+
+    int id_segmento = estructura_2_enteros->entero1;
+
+    int tamanio = estructura_2_enteros->entero2;
+
+    log_warning(kernel_logger, "llego aca sin explotar y el id_segmneto: %d y tamanio: %d", id_segmento, tamanio);
+
+    // mandar a memoria los 2 enteros, el manager de memoria es el que le envia a cpu si tiene o no las cosas
+
+    //liberar_2_enteros(estructura_crear_segmento);
 }
 
 void manejar_memoria()

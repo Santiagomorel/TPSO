@@ -141,10 +141,14 @@ void copiar_tabla_segmentos_pcb_a_ce(t_pcb*, contexto_ejecucion*);
 // Declaraciones Dispatch Manager
 void manejar_dispatch();
 void actualizar_pcb(t_pcb*, contexto_ejecucion*);
+
+// Declaraciones de fin de proceso
+void atender_final_proceso(int);
 void liberar_recursos_pedidos(t_pcb*);
 void enviar_Fin_consola(int);
 
 // Declaraciones DESALOJO_YIELD
+void atender_desalojo_yield();
 void sacar_rafaga_ejecutada(t_pcb*);
 void iniciar_nueva_espera_ready(t_pcb*);
 
@@ -158,10 +162,12 @@ void sumar_instancia(int);
 void sumar_instancia_exit(int, t_pcb*);
 
 // Declaraciones WAIT_RECURSO
+void atender_wait_recurso();
 int tiene_instancia_wait(int);
 void bloqueo_proceso_en_recurso(t_pcb*, int);
 
 // Declaraciones SIGNAL_RECURSO
+void atender_signal_recurso();
 int tiene_que_reencolar_bloq_recurso(int);
 void reencolar_bloqueo_por_recurso(int);
 
@@ -171,8 +177,11 @@ typedef struct{
     int bloqueo;
 }thread_args;
 
+void atender_block_io();
 void rutina_io(thread_args*);
 
+// Declaraciones CREATE_SEGMENT
+void atender_crear_segmento();
 // Declaraciones Memory Manager
 void manejar_memoria();
 
