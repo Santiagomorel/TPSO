@@ -734,6 +734,45 @@ t_2_enteros * recibir_2_enteros(int socket)
 	free(buffer);
 	return nuevo_2_enteros;
 }
+t_3_enteros * recibir_3_enteros(int socket)
+{
+	t_3_enteros* nuevo_3_enteros = malloc(sizeof(t_3_enteros));
+	int size = 0;
+	char *buffer;
+	int desp = 0;
+
+	buffer = recibir_buffer(&size, socket);
+
+	nuevo_3_enteros->entero1 = leer_entero(buffer, &desp);
+
+	nuevo_3_enteros->entero2 = leer_entero(buffer, &desp);
+
+	nuevo_3_enteros->entero3 = leer_entero(buffer, &desp);
+
+	free(buffer);
+	return nuevo_3_enteros;
+}
+
+recive_mov_out * recibir_mov_out(int socket)
+{
+	recive_mov_out* nuevo_4_enteros = malloc(sizeof(recive_mov_out));
+	int size = 0;
+	char *buffer;
+	int desp = 0;
+
+	buffer = recibir_buffer(&size, socket);
+
+	nuevo_4_enteros->DF = leer_entero(buffer, &desp);
+
+	nuevo_4_enteros->registro = leer_string(buffer, &desp);
+
+	nuevo_4_enteros->index_segmento = leer_entero(buffer, &desp);
+	
+	nuevo_4_enteros->PID = leer_entero(buffer, &desp);
+
+	free(buffer);
+	return nuevo_4_enteros;
+}
 
 void liberar_ce_2enteros(t_ce_2enteros* ce_2enteros)
 {

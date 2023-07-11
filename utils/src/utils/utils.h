@@ -84,6 +84,8 @@ typedef enum
 	CREATE_SEGMENT,
 	DELETE_SEGMENT,
 	COMPACTAR,
+	SIN_ESPACIO,
+	ASK_COMPACTAR,
 	//  CPU->MEMORIA
 	ENVIAR_CONFIG, 			//siendo el cpu le pido a la mem que me pase la configuracion para traducir las direcciones
 	//MMU
@@ -203,6 +205,18 @@ typedef struct{
 	int entero2;
 } t_2_enteros;
 
+typedef struct{
+	int entero1;
+	int entero2;
+	int entero3;
+} t_3_enteros;
+
+typedef struct{
+	int DF;
+	char* registro;
+	int index_segmento;
+	int PID;
+} recive_mov_out;
 
 int crear_conexion(char* ip, char* puerto);
 void enviar_mensaje(char* mensaje, int socket_cliente);
@@ -272,5 +286,7 @@ void agregar_tabla_segmentos_a_paquete(t_paquete*, t_list*);
 
 t_ce_2enteros * recibir_ce_2enteros(int);
 t_2_enteros * recibir_2_enteros(int);
+t_3_enteros * recibir_3_enteros(int);
+recive_mov_out * recibir_mov_out(int);
 void liberar_ce_2enteros(t_ce_2enteros*);
 #endif /* UTILS_H_ */

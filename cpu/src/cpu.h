@@ -106,11 +106,13 @@ void execute_process(contexto_ejecucion* ce);
 
 
 int traducir_direccion_logica(int logical_address, contexto_ejecucion* ce, int valor_a_sumar);
-char* fetch_value_in_memory(int physical_adress, contexto_ejecucion* ce);
+char* fetch_value_in_memory(int physical_adress, contexto_ejecucion* ce, int size);
 void store_value_in_register(char* register_mov_in, char* value);
 char* encontrarValorDeRegistro(char* register_to_find_value);
 void escribir_valor(int physical_address, char* register_value_mov_out, int segment_index, int pid);
 
 int read_int(char* buffer, int* desp);
+
+tamanio_registro(char* registro);
 
 #endif
