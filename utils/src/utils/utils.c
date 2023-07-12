@@ -718,6 +718,25 @@ t_ce_2enteros * recibir_ce_2enteros(int socket)
 	return nuevo_ce_2enteros;
 }
 
+void enviar_2_enteros(int client_socket, int x, int y, int codOP){
+    t_paquete* paquete = crear_paquete_op_code(codOP);
+
+    agregar_entero_a_paquete(paquete, x); 
+    agregar_entero_a_paquete(paquete, y); 
+    enviar_paquete(paquete, client_socket);
+    eliminar_paquete(paquete);
+}
+
+void enviar_3_enteros(int client_socket, int x, int y, int z, int codOP){
+    t_paquete* paquete = crear_paquete_op_code(codOP);
+
+    agregar_entero_a_paquete(paquete, x); 
+    agregar_entero_a_paquete(paquete, y);
+	agregar_entero_a_paquete(paquete, z); 
+    enviar_paquete(paquete, client_socket);
+    eliminar_paquete(paquete);
+}
+
 t_2_enteros * recibir_2_enteros(int socket)
 {
 	t_2_enteros* nuevo_2_enteros = malloc(sizeof(t_2_enteros));

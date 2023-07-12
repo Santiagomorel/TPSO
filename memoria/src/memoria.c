@@ -132,7 +132,20 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
                 enviar_tabla_segmentos(SOCKET_CLIENTE_KERNEL, TABLA_SEGMENTOS, nuevo_proceso);
             break;
         case CREATE_SEGMENT:
-            t_2_enteros* estructura_2_enteros = recibir_2_enteros(SOCKET_CLIENTE_KERNEL);
+            t_3_enteros* estructura_3_enteros = recibir_3_enteros(SOCKET_CLIENTE_KERNEL);
+            int id_proceso = estructura_3_enteros->entero1;
+            int id_segmento = estructura_3_enteros->entero2;
+            int tamanio = estructura_3_enteros->entero3;
+
+            // si se crea el segmento, me mandas el cod de operacion OK + la base del segmento creado
+            //enviar_paquete_entero(SOCKET_CLIENTE_KERNEL, base_del_segmento, OK);
+
+            // si no se crea el segmento, me mandas el cod de operacion OUT_OF_MEMORY
+            //enviar_CodOp(SOCKET_CLIENTE_KERNEL, OUT_OF_MEMORY);
+
+            // si se necesita compactar, me mandas el cod de operacion NECESITO_COMPACTAR
+            //enviar_CodOp(SOCKET_CLIENTE_KERNEL, NECESITO_COMPACTAR);
+
             /*1. Que el segmento se cree exitosamente y que la memoria nos devuelva la base del nuevo segmento
 
               2. Que no se tenga más espacio disponible en la memoria y por lo tanto el proceso tenga que finalizar con error Out of Memory.

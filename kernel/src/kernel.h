@@ -182,7 +182,7 @@ void rutina_io(thread_args*);
 
 // Declaraciones CREATE_SEGMENT
 void atender_crear_segmento();
-void atender_compactacion(int, int);
+void atender_compactacion(int, int, int);
 // Declaraciones Memory Manager
 void manejar_memoria();
 

@@ -426,7 +426,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
         log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s", ce->id, instruction[0], instruction[1], instruction[2]);
         //update_program_counter(ce);
 
-        enviar_2_enteros(socket_kernel, instruction[1], instruction[2], CREAR_SEGMENTO);
+        enviar_2_enteros(socket_kernel, atoi(instruction[1]), atoi(instruction[2]), CREAR_SEGMENTO);
 
         sig_f = recibir_respuesta_segmento();
         //enviar_ce_con_dos_enteros(socket_kernel, ce, instruction[1], instruction[2], CREAR_SEGMENTO);
@@ -651,7 +651,7 @@ int recibir_respuesta_segmento(){
 
     if(codigo_op == OUT_OF_MEMORY){
         return 2;
-    }else if(codigo_op == CORRECTO){
+    }else if(codigo_op == OK){
         return 1;
     }
 }
@@ -707,15 +707,6 @@ void enviar_ce_con_string(int client_socket, contexto_ejecucion* ce, char* param
     enviar_paquete(paquete, client_socket);
     eliminar_paquete(paquete);
     
-}
-
-void enviar_2_enteros(int client_socket, char* x, char* y, int codOP){
-    t_paquete* paquete = crear_paquete_op_code(codOP);
-
-    agregar_entero_a_paquete(paquete, atoi(x)); 
-    agregar_entero_a_paquete(paquete, atoi(y)); 
-    enviar_paquete(paquete, client_socket);
-    eliminar_paquete(paquete);
 }
 
 void enviar_ce_con_dos_enteros(int client_socket, contexto_ejecucion* ce, char* x, char* y, int codOP){
