@@ -214,8 +214,8 @@ typedef struct{
 typedef struct{
 	int DF;
 	char* registro;
-	int index_segmento;
 	int PID;
+	int size;
 } recive_mov_out;
 
 int crear_conexion(char* ip, char* puerto);
