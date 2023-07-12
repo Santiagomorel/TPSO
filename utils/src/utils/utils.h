@@ -80,7 +80,7 @@ typedef enum
 	ACCEDER_TP,
 	ACCEDER_EU,
 	INICIAR_PROCESO,
-	SUSPENDER_PROCESO,
+	SUSPENDER_PROCESO, // esto no va
 	CREATE_SEGMENT,
 	DELETE_SEGMENT,
 	COMPACTAR,
@@ -128,6 +128,8 @@ typedef struct{
 	int direccion_base;		//falta definir tipo
 	int tamanio_segmento;
 } t_segmento;
+
+
 
 typedef struct{
 	char* archivo;
@@ -186,6 +188,8 @@ typedef struct{
 	int id;
 	t_list* tabla_segmentos;
 }t_proceso;
+
+
 
 typedef struct {
 	int id;
@@ -292,4 +296,6 @@ void enviar_3_enteros(int client_socket, int x, int y, int z, int codOP);
 t_3_enteros * recibir_3_enteros(int);
 recive_mov_out * recibir_mov_out(int);
 void liberar_ce_2enteros(t_ce_2enteros*);
+
+
 #endif /* UTILS_H_ */

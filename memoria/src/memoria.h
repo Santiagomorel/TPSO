@@ -30,6 +30,10 @@ typedef struct{
 } Memoria_config;
 Memoria_config memoria_config;
 
+//t_list* tabla_segmentos_global;
+//esta tabla estara compuesta por segmentos
+
+t_list* tabla_de_procesos;
 
 //esta mal (casi seguro)
 typedef struct{
@@ -40,6 +44,11 @@ typedef struct{
 char* datos;
 void* MEMORIA_PRINCIPAL;
 int idGlobal;
+
+
+//KERNEL
+t_proceso* buscar_proceso(int id_proceso);
+t_proceso* borrar_segmento(int PID, int segmento);
 
 //CPU
 
