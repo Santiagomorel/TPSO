@@ -134,6 +134,7 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
         case CREATE_SEGMENT:
             t_2_enteros* estructura_2_enteros = recibir_2_enteros(SOCKET_CLIENTE_KERNEL);
             /*1. Que el segmento se cree exitosamente y que la memoria nos devuelva la base del nuevo segmento
+
               2. Que no se tenga más espacio disponible en la memoria y por lo tanto el proceso tenga que finalizar con error Out of Memory.
               3. Que se tenga el espacio disponible, pero que el mismo no se encuentre contiguo, por lo que se deba compactar, este caso lo vamos a analizar más en detalle,
                 ya que involucra controlar las operaciones de File System que se estén ejecutando.*/
@@ -141,13 +142,15 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
             // resp_op codigo_respuesta_seg = crear_segmento() => lo debe agregar a la memoria, o no en caso que no pueda y retornar un codigo de respuesta
             /*
             if(codigo_respuesta_seg){
-
+            
             }*/
+            
 
             break;
 
         case DELETE_SEGMENT:
             // Debe recibir el id del segmento que desea eliminar
+            int id_segmento_delete = recibir_entero(SOCKET_CLIENTE_KERNEL, log_memoria);
             // tabla_segmentos_sin_segmento = borrar_segmento(id_segmento);
 
             /*Para realizar un DELETE_SEGMENT, el Kernel deberá enviarle a la Memoria el Id del segmento a eliminar y recibirá como respuesta de la Memoria la tabla de segmentos actualizada.
@@ -158,6 +161,7 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
         //     log_warning(log_memoria, "Solicitud de Compactación");
         //     //compactar();
         //     break;
+
         // se desconecta kernel
         case -1:
             log_warning(log_memoria, "se desconecto kernel");
@@ -186,22 +190,27 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU)
             recibir_mensaje(SOCKET_CLIENTE_CPU, log_memoria);
             break;
 
-        case MOV_IN: //(Registro, Dirección Fisica): Lee el valor de memoria correspondiente a la Dirección Lógica y lo almacena en el Registro.
-            void * direccion_movIn = (void*)recibir_entero(SOCKET_CLIENTE_CPU, log_memoria);
-            mov_in(SOCKET_CLIENTE_CPU, direccion_movIn, 0);
-            
-            // t_paquete* paquete_ok = crear_paquete_op_code(MOV_IN_OK);
-            // enviar_paquete(paquete_ok);
+        case MOV_IN: //(Registro, Direc_base ,size): Lee el valor de memoria correspondiente a la Dirección Lógica y lo almacena en el Registro.
+            //falta el PID
+            //PID|direc_base|size
+            //int PID = recibir_entero(SOCKET_CLIENTE_CPU, log_memoria)
+            t_3_enteros* movin = recibir_3_enteros(SOCKET_CLIENTE_CPU);
+            log_info(log_memoria, "PID: %d - Accion: LEER - Direccion física: %d - Tamaño: %d - Origen: CPU",movin->entero1, movin->entero2,movin->entero3);
+            mov_in(SOCKET_CLIENTE_CPU, movin->entero2, movin->entero3);
+
             break;
         case MOV_OUT: //(Dirección Fisica, Registro): Lee el valor del Registro y lo escribe en la dirección física de memoria obtenida a partir de la Dirección Lógica.
-            int direccion_movOut = recibir_entero(SOCKET_CLIENTE_CPU, log_memoria);
+            recive_mov_out data_mov_out = recibir_mov_out(SOCKET_CLIENTE_CPU, log_memoria);
 //            void * registro = (void*)recibir_string(SOCKET_CLIENTE_CPU, log_memoria);
-            char* registro = recibir_string(SOCKET_CLIENTE_CPU, log_memoria); 
-            ocuparBitMap(direccion_movOut, sizeof(char));
-            ocuparMemoria(registro, direccion_movOut, sizeof(char));
-            log_trace(log_memoria, "el regigistro cargado en la direccion: %d es: %d", direccion_movOut, &registro); 
+            
+            mov_out()
+            ocuparBitMap(direccion_movOut, sizeof(*registro));
+            ocuparMemoria(registro, direccion_movOut, sizeof(*registro));
+
+            log_trace(log_memoria,"PID: <PID> - Acción: ESCRIBIR - Dirección física: <DIRECCIÓN_FÍSICA> - Tamaño: <TAMAÑO> - Origen: CPU", direccion_movOut, *registro); 
             //falta chequear que el tipo que se pide para los size este bien
             enviar_CodOp(SOCKET_CLIENTE_CPU, MOV_OUT_OK);
+        
         case -1:
             log_warning(log_memoria, "se desconecto CPU");
         break;
@@ -227,9 +236,14 @@ void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM)
 
             break;
 
-        // case CREATE_FILE:
-        //
-        //     break;
+        case MOV_IN: //se va a llamar distinto seguro
+
+            break;
+        
+        case MOV_OUT: //se va a llamar distinto seguro
+
+            break;
+
         case -1:
                 log_warning(log_memoria, "se desconecto FILESYSTEM");
             break;
@@ -329,10 +343,10 @@ void iniciar_semaforos()
 //  CPU
 //
 
-void mov_in(int socket_cliente,void* direc_fisica, int size/*sizeof(t_registro)*/){
+void mov_in(int socket_cliente,int direc_fisica, int size/*sizeof(t_registro)*/){
     //para guido: antes de enviar la direccion fisica, castearla a void* si es q no esta hecha
-    char* registro = direc_fisica;
-
+    char* registro;
+    memcpy(registro, MEMORIA_PRINCIPAL+direc_fisica ,size);
     t_paquete* paquete_ok = crear_paquete_op_code(MOV_IN_OK);
     agregar_string_a_paquete(paquete_ok, registro);
     enviar_paquete(paquete_ok ,socket_cliente);
@@ -447,6 +461,7 @@ t_segmento* buscarSegmentoSegunTamanio(int size){
         log_info(log_memoria,"No hay espacio suficiente para guardar, se debe compactar");
         //compactacion(); Descomentar cuando se tenga compactacion
         //segmento = buscarSegmentoSegunTamanio(size);
+        
     }else if(list_size(segmentosCandidatos)== 1){
         segmento = list_get(segmentosCandidatos, 0);
     }else{

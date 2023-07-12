@@ -44,7 +44,7 @@ int idGlobal;
 //CPU
 
 //Lee el valor de memoria "direc_fisica" y lo almacena en el Registro que luego envia.
-void mov_in(int socket_cliente, void* direc_fisica, int size);
+void mov_in(int socket_cliente, int direc_fisica, int size);
 
 
 int iniciarSegmentacion(void);

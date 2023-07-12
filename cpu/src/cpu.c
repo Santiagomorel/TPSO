@@ -446,12 +446,14 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             char* register_mov_in = instruction[1];
             int logical_address_mov_in = atoi(instruction[2]);
 
-            direccion_fisica = traducir_direccion_logica(logical_address_mov_in, ce, sizeof(register_mov_in));
+            int size = tamanio_registro(register_mov_in);    
+            direccion_fisica = traducir_direccion_logica(logical_address_mov_in, ce, sizeof(register_mov_in));//fijarse si el sizeof(register_mov_in) es correcto
 
+            
             //------------SI NO TENEMOS SEG FAULT EJECUTAMOS LO DEMAS ------------ //
             if(sigsegv != 1){
                 
-                char* value = fetch_value_in_memory(direccion_fisica, ce);
+                char* value = fetch_value_in_memory(direccion_fisica, ce, size);
 
                 store_value_in_register(register_mov_in, value);
                 log_info(cpu_logger, "PID: %d - Acción: LEER - Segmento: %d - Dirección Fisica: %d",
@@ -821,11 +823,14 @@ int traducir_direccion_logica(int logical_address, contexto_ejecucion* ce, int v
       return (segment->direccion_base + desplazamiento_segmento);
 }
 
-char* fetch_value_in_memory(int physical_adress, contexto_ejecucion* ce){
+char* fetch_value_in_memory(int physical_adress, contexto_ejecucion* ce, int size){
 
     t_paquete* package = crear_paquete_op_code(MOV_IN); 
+    agregar_entero_a_paquete(package, ce->id);
     agregar_entero_a_paquete(package, physical_adress);
-    agregar_ce_a_paquete(package,ce, cpu_logger);
+    agregar_entero_a_paquete(package, size);
+    //agregar_ce_a_paquete(package,ce, cpu_logger);
+    
     enviar_paquete(package, conexion_cpu);
     eliminar_paquete(package);
     log_info(cpu_logger, "MOV IN enviado");    
@@ -865,4 +870,18 @@ int read_int(char* buffer, int* desp) {
 	memcpy(&ret, buffer + (*desp), sizeof(int));
 	(*desp)+=sizeof(int);
 	return ret;
+}
+int tamanio_registro(char* registro){
+    if (strcmp(registro, "AX") == 0) return 4;
+    else if (strcmp(registro, "BX") == 0) return 4;
+    else if (strcmp(registro, "CX") == 0) return 4;
+    else if (strcmp(registro, "DX") == 0) return 4;
+    else if (strcmp(registro, "EAX") == 0) return 8;
+    else if (strcmp(registro, "EBX") == 0) return 8;
+    else if (strcmp(registro, "ECX") == 0) return 8;
+    else if (strcmp(registro, "EDX") == 0) return 8;
+    else if (strcmp(registro, "RAX") == 0) return 16;
+    else if (strcmp(registro, "RBX") == 0) return 16;
+    else if (strcmp(registro, "RCX") == 0) return 16;
+    else if (strcmp(registro, "RDX") == 0) return 16;
 }
