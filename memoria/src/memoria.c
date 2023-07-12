@@ -132,6 +132,7 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
                 enviar_tabla_segmentos(SOCKET_CLIENTE_KERNEL, TABLA_SEGMENTOS, nuevo_proceso);
             break;
         case CREATE_SEGMENT:
+            t_2_enteros* estructura_2_enteros = recibir_2_enteros(SOCKET_CLIENTE_KERNEL);
             /*1. Que el segmento se cree exitosamente y que la memoria nos devuelva la base del nuevo segmento
 
               2. Que no se tenga más espacio disponible en la memoria y por lo tanto el proceso tenga que finalizar con error Out of Memory.
@@ -296,13 +297,9 @@ void generar_tabla_segmentos(t_proceso* proceso){
 
 void enviar_tabla_segmentos(int conexion, int codOP, t_proceso* proceso) {
 	t_paquete* paquete = crear_paquete_op_code(codOP);
-    log_warning(log_memoria, "crea el paquete con el codigo de operacion de tabla de segmentos %d", codOP);
 	agregar_entero_a_paquete(paquete, list_size(proceso->tabla_segmentos));
-    log_warning(log_memoria, "agrega el entero al paquete");
 	agregar_tabla_a_paquete(paquete, proceso, log_memoria);
-    log_warning(log_memoria, "agrega la tabla al paquete");
 	enviar_paquete(paquete, conexion);
-    log_warning(log_memoria, "envia el paquete");
 
 	eliminar_paquete(paquete);
 }
