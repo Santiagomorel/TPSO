@@ -161,6 +161,8 @@ void restar_instancia(int);
 void sumar_instancia(int);
 void sumar_instancia_exit(int, t_pcb*);
 
+// Declaraciones EJECUTAR_INSTRUCCION
+void atender_ejecutar_instruccion();
 // Declaraciones WAIT_RECURSO
 void atender_wait_recurso();
 int tiene_instancia_wait(int);
@@ -180,9 +182,12 @@ typedef struct{
 void atender_block_io();
 void rutina_io(thread_args*);
 
-// Declaraciones CREATE_SEGMENT
+// Declaraciones CREAR_SEGMENTO
 void atender_crear_segmento();
 void atender_compactacion(int, int, int);
+
+// Declaraciones BORRAR_SEGMENTO
+void atender_borrar_segmento();
 // Declaraciones Memory Manager
 void manejar_memoria();
 

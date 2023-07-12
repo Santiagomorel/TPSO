@@ -690,16 +690,7 @@ void manejar_dispatch()
                 break;
             
             case EJECUTO_INSTRUCCION:
-                contexto_ejecucion* contexto_ejecuta_instruccion = recibir_ce(cpu_dispatch_connection);
-
-                pthread_mutex_lock(&m_listaEjecutando);
-                    t_pcb * pcb_ejecuta_instruccion = (t_pcb *) list_get(listaEjecutando, 0); 
-                    actualizar_pcb(pcb_ejecuta_instruccion, contexto_ejecuta_instruccion);
-                pthread_mutex_unlock(&m_listaEjecutando);
-
-                enviar_ce(cpu_dispatch_connection, contexto_ejecuta_instruccion, EJECUTAR_CE, kernel_logger);
-                
-                liberar_ce(contexto_ejecuta_instruccion);
+                atender_ejecutar_instruccion();
                 break;
 
             case WAIT_RECURSO:
@@ -717,6 +708,11 @@ void manejar_dispatch()
             case CREAR_SEGMENTO:
                 atender_crear_segmento();
                 break;
+
+            case BORRAR_SEGMENTO:
+                atender_borrar_segmento();
+                break;
+
             case -1:
                 break;
 
@@ -889,6 +885,22 @@ void sumar_instancia_exit(int id_recurso, t_pcb* pcb_quita_recurso)
 
     list_remove_element(pcb_quita_recurso->recursos_pedidos, id_recurso);
 }
+
+// ----------------------- Funciones EJECUTAR_INSTRUCCION ----------------------- //
+
+void atender_ejecutar_instruccion()
+{
+    contexto_ejecucion* contexto_ejecuta_instruccion = recibir_ce(cpu_dispatch_connection);
+
+    pthread_mutex_lock(&m_listaEjecutando);
+        t_pcb * pcb_ejecuta_instruccion = (t_pcb *) list_get(listaEjecutando, 0); 
+        actualizar_pcb(pcb_ejecuta_instruccion, contexto_ejecuta_instruccion);
+    pthread_mutex_unlock(&m_listaEjecutando);
+
+    enviar_ce(cpu_dispatch_connection, contexto_ejecuta_instruccion, EJECUTAR_CE, kernel_logger);
+    
+    liberar_ce(contexto_ejecuta_instruccion);
+}
 // ----------------------- Funciones WAIT_RECURSO ----------------------- //
 
 void atender_wait_recurso()
@@ -1047,6 +1059,8 @@ void rutina_io(thread_args* args)
     //pthread_mutex_unlock(&m_IO);
 }
 
+// ----------------------- Funciones CREAR_SEGMENTO ----------------------- //
+
 void atender_crear_segmento()
 {
     t_2_enteros * estructura_2_enteros = recibir_2_enteros(cpu_dispatch_connection);
@@ -1110,6 +1124,13 @@ void atender_compactacion(int id_proceso, int id_segmento, int tamanio_segmento)
             log_error(kernel_logger, "El codigo de recepcion de la compactacion del segmento es erroneo");
             break;
         }
+}
+
+// ----------------------- Funciones BORRAR_SEGMENTO ----------------------- //
+
+void atender_borrar_segmento()
+{
+
 }
 
 void manejar_memoria()
