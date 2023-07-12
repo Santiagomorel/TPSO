@@ -105,6 +105,7 @@ typedef enum
 	MARCO,		// 2do acceso mmu
 	//PAGE_FAULT,
 	OUT_OF_MEMORY,
+	NECESITO_COMPACTAR,
 	DIR_FISICA,
 	VALOR_A_RECIBIR,	
 	CONFIG_MEMORIA,
@@ -285,7 +286,9 @@ t_segmento* crear_segmento(int, int, int);
 void agregar_tabla_segmentos_a_paquete(t_paquete*, t_list*);
 
 t_ce_2enteros * recibir_ce_2enteros(int);
+void enviar_2_enteros(int client_socket, int x, int y, int codOP);
 t_2_enteros * recibir_2_enteros(int);
+void enviar_3_enteros(int client_socket, int x, int y, int z, int codOP);
 t_3_enteros * recibir_3_enteros(int);
 recive_mov_out * recibir_mov_out(int);
 void liberar_ce_2enteros(t_ce_2enteros*);

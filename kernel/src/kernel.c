@@ -1053,49 +1053,63 @@ void atender_crear_segmento()
 
     int id_segmento = estructura_2_enteros->entero1;
 
-    int tamanio = estructura_2_enteros->entero2;
+    int tamanio_segmento = estructura_2_enteros->entero2;
 
     int id_proceso = ((t_pcb *) list_get(listaEjecutando, 0))->id;
 
-    log_warning(kernel_logger, "llego aca sin explotar y el id_segmneto: %d y tamanio: %d", id_segmento, tamanio);
+    log_warning(kernel_logger, "llego aca sin explotar y el id_segmneto: %d y tamanio: %d", id_segmento, tamanio_segmento);
 
-    // enviar t_3_enteros
-    // mandar a memoria los 2 enteros
+    enviar_3_enteros(memory_connection, id_proceso, id_segmento, tamanio_segmento, CREATE_SEGMENT); // mando a memoria idP, idS, tamanio
+
     int compactacion = 1;
     while(compactacion){
         int cod_op_creacion = recibir_operacion(memory_connection);
         switch (cod_op_creacion)
         {
         case OUT_OF_MEMORY:
-            // mandamos a cpu que no se pudo crear el segmento
+            enviar_CodOp(cpu_dispatch_connection, OUT_OF_MEMORY);
             compactacion = 0;
             break;
         
         case NECESITO_COMPACTAR:
-            atender_compactacion(id_segmento, tamanio);
+            atender_compactacion(id_proceso, id_segmento, tamanio_segmento);
             break;
+
         case OK:
-            // mandamos a cpu CORRECTO
-            compactacion = 0
+            int base_segmento = recibir_entero(memory_connection, kernel_logger);
+            
+            t_segmento *nuevoElemento = crear_segmento(id_segmento, base_segmento, tamanio_segmento);
+
+            list_add(((t_pcb *) list_get(listaEjecutando, 0))->tabla_segmentos, nuevoElemento);
+            
+            enviar_CodOp(cpu_dispatch_connection, OK);
+
+            compactacion = 0;
             break;
         default:
             log_error(kernel_logger, "El codigo de recepcion de la creacion del segmento es erroneo");
             break;
         }
     }
-    // en base a una respuesta le mandamos a cpu OUT OF MEMORY / CORRECTO
-    // out of memory hace que se mate el proceso
-    // correcto vamos a recibir la base del segmento nuevo, yo tengo que actualizar la tabla de segmentos armando el nuevo segmento
-    // y agregandolo.
-    //liberar_2_enteros(estructura_crear_segmento);
+    
+    free(estructura_2_enteros); VER SI FUNCIONA
 }
 
-void atender_compactacion(int id_segmento, int tamanio)
+void atender_compactacion(int id_proceso, int id_segmento, int tamanio_segmento)
 {
-    // pedir que compacte
-    // recibir ok de la compactacion
-    // enviar a memoria los datos nuevamente
-    // una vez que recibi el ok de la compactacion enviar de vuelta la creacion del segmento
+    enviar_CodOp(memory_connection, COMPACTAR);
+
+    int cod_op_compactacion = recibir_operacion(memory_connection);
+    switch (cod_op_compactacion)
+        {
+        case OK:
+            enviar_3_enteros(memory_connection, id_proceso, id_segmento, tamanio_segmento, CREATE_SEGMENT);
+            break;
+        
+        default:
+            log_error(kernel_logger, "El codigo de recepcion de la compactacion del segmento es erroneo");
+            break;
+        }
 }
 
 void manejar_memoria()
