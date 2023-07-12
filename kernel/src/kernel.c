@@ -1055,11 +1055,47 @@ void atender_crear_segmento()
 
     int tamanio = estructura_2_enteros->entero2;
 
+    int id_proceso = ((t_pcb *) list_get(listaEjecutando, 0))->id;
+
     log_warning(kernel_logger, "llego aca sin explotar y el id_segmneto: %d y tamanio: %d", id_segmento, tamanio);
 
-    // mandar a memoria los 2 enteros, el manager de memoria es el que le envia a cpu si tiene o no las cosas
-
+    // enviar t_3_enteros
+    // mandar a memoria los 2 enteros
+    int compactacion = 1;
+    while(compactacion){
+        int cod_op_creacion = recibir_operacion(memory_connection);
+        switch (cod_op_creacion)
+        {
+        case OUT_OF_MEMORY:
+            // mandamos a cpu que no se pudo crear el segmento
+            compactacion = 0;
+            break;
+        
+        case NECESITO_COMPACTAR:
+            atender_compactacion(id_segmento, tamanio);
+            break;
+        case OK:
+            // mandamos a cpu CORRECTO
+            compactacion = 0
+            break;
+        default:
+            log_error(kernel_logger, "El codigo de recepcion de la creacion del segmento es erroneo");
+            break;
+        }
+    }
+    // en base a una respuesta le mandamos a cpu OUT OF MEMORY / CORRECTO
+    // out of memory hace que se mate el proceso
+    // correcto vamos a recibir la base del segmento nuevo, yo tengo que actualizar la tabla de segmentos armando el nuevo segmento
+    // y agregandolo.
     //liberar_2_enteros(estructura_crear_segmento);
+}
+
+void atender_compactacion(int id_segmento, int tamanio)
+{
+    // pedir que compacte
+    // recibir ok de la compactacion
+    // enviar a memoria los datos nuevamente
+    // una vez que recibi el ok de la compactacion enviar de vuelta la creacion del segmento
 }
 
 void manejar_memoria()

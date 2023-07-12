@@ -132,6 +132,7 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
                 enviar_tabla_segmentos(SOCKET_CLIENTE_KERNEL, TABLA_SEGMENTOS, nuevo_proceso);
             break;
         case CREATE_SEGMENT:
+            t_2_enteros* estructura_2_enteros = recibir_2_enteros(SOCKET_CLIENTE_KERNEL);
             /*1. Que el segmento se cree exitosamente y que la memoria nos devuelva la base del nuevo segmento
               2. Que no se tenga más espacio disponible en la memoria y por lo tanto el proceso tenga que finalizar con error Out of Memory.
               3. Que se tenga el espacio disponible, pero que el mismo no se encuentre contiguo, por lo que se deba compactar, este caso lo vamos a analizar más en detalle,
