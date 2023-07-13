@@ -785,9 +785,9 @@ recive_mov_out * recibir_mov_out(int socket)
 
 	nuevo_4_enteros->registro = leer_string(buffer, &desp);
 
-	nuevo_4_enteros->index_segmento = leer_entero(buffer, &desp);
-	
 	nuevo_4_enteros->PID = leer_entero(buffer, &desp);
+	
+	nuevo_4_enteros->size = leer_entero(buffer, &desp);
 
 	free(buffer);
 	return nuevo_4_enteros;

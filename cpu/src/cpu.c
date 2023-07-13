@@ -469,15 +469,16 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             int logical_address_mov_out = atoi(instruction[1]);
             char* register_mov_out = instruction[2]; 
             
+            int size = tamanio_registro(register_mov_out);
+
             direccion_fisica = traducir_direccion_logica(logical_address_mov_out, ce, sizeof(register_mov_out));
 
             if(sigsegv != 1){
                  log_info(cpu_logger, "Recibimos una physical address valida!");
                 char* register_value_mov_out = encontrarValorDeRegistro(register_mov_out);
-                t_segmento* segment = list_get(ce->tabla_segmentos, segmento->id_segmento);
-                int segment_index = segment->id_segmento;
+                
 
-                escribir_valor(direccion_fisica, register_value_mov_out, segment_index, ce->id);
+                escribir_valor(direccion_fisica, register_value_mov_out, ce->id, size);
                 int code_op = recibir_operacion(conexion_cpu); // Si ta todo ok prosigo, si no ta todo ok que hago?
 
                 if(code_op == MOV_OUT_OK) {  
@@ -775,12 +776,12 @@ char* encontrarValorDeRegistro(char* register_to_find_value){ //Es t_registro* o
     else return 0;
 }
 
-void escribir_valor(int physical_address, char* register_value_mov_out, int segment_index, int pid){
+void escribir_valor(int physical_address, char* register_value_mov_out, int pid, int size){
     t_paquete* package = crear_paquete_op_code(MOV_OUT);
     agregar_entero_a_paquete(package, physical_address);
     agregar_string_a_paquete(package, register_value_mov_out);
-    agregar_entero_a_paquete(package, segment_index);
     agregar_entero_a_paquete(package, pid);
+    agregar_entero_a_paquete(package, size);
     enviar_paquete(package, conexion_cpu);
 }
 /*---------------------------------- MMU ----------------------------------*/
