@@ -185,6 +185,7 @@ void rutina_io(thread_args*);
 // Declaraciones CREAR_SEGMENTO
 void atender_crear_segmento();
 void atender_compactacion(int, int, int);
+void actualizar_ts_x_proceso();
 
 // Declaraciones BORRAR_SEGMENTO
 void atender_borrar_segmento();

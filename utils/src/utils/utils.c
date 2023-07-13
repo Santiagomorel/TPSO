@@ -798,3 +798,52 @@ void liberar_ce_2enteros(t_ce_2enteros* ce_2enteros)
 	liberar_ce(ce_2enteros->ce);
 	free(ce_2enteros); //esto no se si funciona OJO 
 }
+
+void enviar_todas_tablas_segmentos(int conexion, t_list* lista_t_procesos, int codOP, t_log* logger)
+{
+	t_paquete* paquete = crear_paquete_op_code(codOP);
+
+	int cantidad_procesos = list_size(lista_t_procesos);
+	agregar_entero_a_paquete(paquete, cantidad_procesos);
+
+	for (int i = 0; i < cantidad_procesos; i++)
+	{
+		t_proceso* proceso_de_memoria = list_get(lista_t_procesos, i);
+		agregar_entero_a_paquete(paquete, proceso_de_memoria->id);
+		agregar_tabla_segmentos_a_paquete(paquete, proceso_de_memoria->tabla_segmentos);
+	}
+
+	enviar_paquete(paquete, conexion);
+	eliminar_paquete(paquete);
+}
+
+t_list* recibir_todas_tablas_segmentos(int conexion)
+{
+	t_list* lista_t_procesos = list_create();
+	int size = 0;
+	char *buffer;
+	int desp = 0;
+
+	buffer = recibir_buffer(&size, socket);
+
+	int cant_t_procesos = leer_entero(buffer, &desp);
+
+	for (int i = 0; i < cant_t_procesos; i++)
+	{
+		t_proceso* nuevoProceso = recibir_t_proceso(buffer, &desp);
+		list_add(lista_t_procesos, nuevoProceso);
+	}
+
+	free(buffer);
+	return lista_t_procesos;
+}
+
+t_proceso* recibir_t_proceso(char* buffer, int* desp)
+{
+	t_proceso* nuevoProceso = malloc(sizeof(t_proceso));
+
+	nuevoProceso->id = leer_entero(buffer, desp);
+	nuevoProceso->tabla_segmentos = leer_tabla_segmentos(buffer, desp);
+
+	return nuevoProceso;
+}
