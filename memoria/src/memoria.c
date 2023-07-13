@@ -140,7 +140,7 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
 
             if(puedoGuardar(tamanio)==1){
                 if(necesitoCompactar(tamanio)==1){
-                
+                enviar_CodOp(SOCKET_CLIENTE_KERNEL, NECESITO_COMPACTAR);
                 }
                 else{
                 //busco un espacio segun el algoritmo de ordenamiento
@@ -498,6 +498,12 @@ int tamanioTotalDisponible(void)
 
     return contador;
 }
+bool necesitoCompactar(int sizeRequerido){
+    return  
+}
+t_list* espaciosLibres(){
+    
+}
 
 // GuardarEnMemoria
 t_segmento *guardarElemento(void *elemento, int size)
@@ -725,15 +731,37 @@ void compactacion(){
 } 
 //CAMBIAR
 t_list* buscarSegmentosOcupados(){
-    t_list* lista = list_create();
-    return lista;
+    t_list* segmentos = list_create();
+
+    agregarProcesos(segmentos);
+
+    return segmentos;
 }
+void agregarProcesos(t_list* segmentos){
+    int tamanioListaProcesos = list_size(tabla_de_procesos);
+    for (int i = 0; i < tamanioListaProcesos; i++)
+    {
+        t_proceso* unProceso = list_get(tabla_de_procesos, i);
+        int tamanioListaSegmentosDelProceso = list_size(unProceso->tabla_segmentos);
+        for (int j = 1; j < tamanioListaSegmentosDelProceso; j++)
+        {
+            t_segmento* unSegmento = list_get(unProceso->tabla_segmentos, j);
+            list_add(segmentos, unSegmento);
+        }
+        
+    }
+
+}
+
 t_list* copiarContenidoSeg(t_list* segmentosNoCompactados){
 
     t_list* segmentos = list_map(segmentosNoCompactados, (void*)copiarSegmentacion);
     return segmentos;
 
 }
+
+//CHEQUEAR
+
 void* copiarSegmentacion(t_segmento* unSegmento){
 	
 	void* algo;
@@ -754,6 +782,12 @@ void* copiarSegmentacion(t_segmento* unSegmento){
     
     return algo;
 }
+
+
+//CHEQUEAR
+//VER LA ACTUALIZACION DE LA COMPACTACION
+
+
 
 void actualizarCompactacion(t_list* segmentosNoCompactados, t_list* segmentosCompactados){
     for(int i = 0; i<list_size(segmentosNoCompactados);i++){
