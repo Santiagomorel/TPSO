@@ -135,17 +135,23 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
             t_3_enteros* estructura_3_enteros = recibir_3_enteros(SOCKET_CLIENTE_KERNEL);
             int id_proceso = estructura_3_enteros->entero1;
             
-            int id_segmento = estructura_3_enteros->entero2;
+            int id_segmento_nuevo = estructura_3_enteros->entero2;
             int tamanio = estructura_3_enteros->entero3;
 
             if(puedoGuardar(tamanio)==1){
-                if(necesitoCompactar(tamanio)==1){
+                t_list segmentosDisponibles = buscarSegmentosDisponibles();
+
+                if(list_is_empty(segmentosDisponibles)){
                 enviar_CodOp(SOCKET_CLIENTE_KERNEL, NECESITO_COMPACTAR);
                 }
                 else{
                 //busco un espacio segun el algoritmo de ordenamiento
+                t_segmento* segmento_nuevo = buscarSegmentoSegunTamanio(tamanio);
+                segmento_nuevo->id_segmento=id_segmento_nuevo;
                 t_proceso* proceso_con_nuevo_segmento = buscar_proceso(id_proceso);
                 list_add(proceso_con_nuevo_segmento->tabla_segmentos, segmento_nuevo);
+//MODIFICAR PARA CREATE
+//                log_warning(log_memoria,"PID: %d - Eliminar Segmento: %d, Base: %d - TAMAÑO: %d", PID, id_segmento_elim, segmento_a_eliminar->direccion_base, segmento_a_eliminar->tamanio_segmento);
                 enviar_tabla_segmentos(SOCKET_CLIENTE_KERNEL, TABLA_SEGMENTOS, proceso_con_nuevo_segmento);
                 }
             }
@@ -184,9 +190,6 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
             int id_segmento_delete = data_delete->entero2;
             t_proceso* proceso_sin_segmento = borrar_segmento(PID,id_segmento_delete);
             enviar_tabla_segmentos(SOCKET_CLIENTE_KERNEL, TABLA_SEGMENTOS, proceso_sin_segmento);
-
-            /*Para realizar un DELETE_SEGMENT, el Kernel deberá enviarle a la Memoria el Id del segmento a eliminar y recibirá como respuesta de la Memoria la tabla de segmentos actualizada.
-            Nota: No se solicitará nunca la eliminación del segmento 0 o de un segmento inexistente.*/
             break;
         // case COMPACTAR:
         //     sleep(memoria_config.retardo_compactacion);
@@ -233,7 +236,7 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU)
             break;
         case MOV_OUT: //(Dirección Fisica, Registro): Lee el valor del Registro y lo escribe en la dirección física de memoria obtenida a partir de la Dirección Lógica.
             recive_mov_out* data_mov_out = recibir_mov_out(SOCKET_CLIENTE_CPU);
-//            void * registro = (void*)recibir_string(SOCKET_CLIENTE_CPU, log_memoria);
+            //void * registro = (void*)recibir_string(SOCKET_CLIENTE_CPU, log_memoria);
             void* registro = (void*) data_mov_out->registro;
             log_trace(log_memoria,"PID: %d - Acción: ESCRIBIR - Dirección física: %d - Tamaño: %d - Origen: CPU", data_mov_out->PID, data_mov_out->DF, data_mov_out->size); 
             ocuparBitMap(data_mov_out->DF, data_mov_out->size);
@@ -289,7 +292,7 @@ void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM)
 - Creación de Proceso: “Creación de Proceso PID: <PID>”
 - Eliminación de Proceso: “Eliminación de Proceso PID: <PID>”
 - Creación de Segmento: “PID: <PID> - Crear Segmento: <ID SEGMENTO> - Base: <DIRECCIÓN BASE> - TAMAÑO: <TAMAÑO>”
-- Eliminación de Segmento: “PID: <PID> - Eliminar Segmento: <ID SEGMENTO> - Base: <DIRECCIÓN BASE> - TAMAÑO: <TAMAÑO>”
+
 - Inicio Compactación: “Solicitud de Compactación”
 - Resultado Compactación: Por cada segmento de cada proceso se deberá imprimir una línea con el siguiente formato:
 - “PID: <PID> - Segmento: <ID SEGMENTO> - Base: <BASE> - Tamaño <TAMAÑO>”
@@ -396,12 +399,12 @@ t_proceso* borrar_segmento(int PID,int id_segmento_elim){
     bool mismoIdProc(t_proceso* unProceso){
     return (unProceso->id == PID);
     }
-
     t_proceso* proceso_del_segmento = list_find(tabla_de_procesos, mismoIdProc);
     bool mismoIdSeg(t_segmento* unSegmento){
         return (unSegmento->id_segmento == id_segmento_elim);
     }
     t_segmento* segmento_a_eliminar = list_find(proceso_del_segmento->tabla_segmentos, mismoIdSeg);
+    log_warning(log_memoria,"PID: %d - Eliminar Segmento: %d, Base: %d - TAMAÑO: %d", PID, id_segmento_elim, segmento_a_eliminar->direccion_base, segmento_a_eliminar->tamanio_segmento);
     list_remove_by_condition(proceso_del_segmento->tabla_segmentos, mismoIdSeg);
     liberarBitMap(segmento_a_eliminar->direccion_base,segmento_a_eliminar->tamanio_segmento);
     return proceso_del_segmento;
@@ -460,8 +463,6 @@ int iniciarSegmentacion(void)
 
     bitMapSegment = bitarray_create_with_mode(datos, tamanio, MSB_FIRST);
 
-    lista_procesos = list_create();
-
     return 1; // SI FALLA DEVUELVE 0
 }
 
@@ -498,12 +499,24 @@ int tamanioTotalDisponible(void)
 
     return contador;
 }
+
+/*REIVISAR EN CASO DE Q NO FUNCIONEN EL CREATE_SEGMENT
+
+
 bool necesitoCompactar(int sizeRequerido){
     return  
 }
 t_list* espaciosLibres(){
+    for (int i = 0; i < memoria_config.tam_memoria; i++)
+    {
+        if(bitarray_test_bit(bitMapSegment, 0){
+
+        }    
+    }
+    
     
 }
+*/
 
 // GuardarEnMemoria
 t_segmento *guardarElemento(void *elemento, int size)
@@ -535,9 +548,7 @@ t_segmento* buscarSegmentoSegunTamanio(int size){
     segmentosCandidatos = puedenGuardar( todosLosSegLibres , size); //ME DEVUELVE LOS SEGMENTOS QUE EL TIENEN ESPACIO NECESARIO PARA GUARDAR
     //log_info(logger,"Hay %d segmentos candidatos", list_size(segmentosCandidatos));
     if(list_is_empty(segmentosCandidatos)){
-        log_info(log_memoria,"No hay espacio suficiente para guardar, se debe compactar");
-        //compactacion(); Descomentar cuando se tenga compactacion
-        //segmento = buscarSegmentoSegunTamanio(size);
+        log_error(log_memoria,"No se ha compactado correctamente");
         
     }else if(list_size(segmentosCandidatos)== 1){
         segmento = list_get(segmentosCandidatos, 0);
@@ -560,6 +571,7 @@ t_segmento* buscarSegmentoSegunTamanio(int size){
     
     return segmento;
 }
+
 
 t_list* buscarSegmentosDisponibles(){
     

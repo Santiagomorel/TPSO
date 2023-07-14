@@ -133,7 +133,7 @@ pthread_mutex_t mutexMemoria;
 pthread_mutex_t mutexIdGlobal;
 pthread_mutex_t listaProcesos;
 
-t_list* lista_procesos;
+
 
 void iniciar_semaforos();
 
