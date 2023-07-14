@@ -690,16 +690,7 @@ void manejar_dispatch()
                 break;
             
             case EJECUTO_INSTRUCCION:
-                contexto_ejecucion* contexto_ejecuta_instruccion = recibir_ce(cpu_dispatch_connection);
-
-                pthread_mutex_lock(&m_listaEjecutando);
-                    t_pcb * pcb_ejecuta_instruccion = (t_pcb *) list_get(listaEjecutando, 0); 
-                    actualizar_pcb(pcb_ejecuta_instruccion, contexto_ejecuta_instruccion);
-                pthread_mutex_unlock(&m_listaEjecutando);
-
-                enviar_ce(cpu_dispatch_connection, contexto_ejecuta_instruccion, EJECUTAR_CE, kernel_logger);
-                
-                liberar_ce(contexto_ejecuta_instruccion);
+                atender_ejecutar_instruccion();
                 break;
 
             case WAIT_RECURSO:
@@ -717,6 +708,11 @@ void manejar_dispatch()
             case CREAR_SEGMENTO:
                 atender_crear_segmento();
                 break;
+
+            case BORRAR_SEGMENTO:
+                atender_borrar_segmento();
+                break;
+
             case -1:
                 break;
 
@@ -889,6 +885,22 @@ void sumar_instancia_exit(int id_recurso, t_pcb* pcb_quita_recurso)
 
     list_remove_element(pcb_quita_recurso->recursos_pedidos, id_recurso);
 }
+
+// ----------------------- Funciones EJECUTAR_INSTRUCCION ----------------------- //
+
+void atender_ejecutar_instruccion()
+{
+    contexto_ejecucion* contexto_ejecuta_instruccion = recibir_ce(cpu_dispatch_connection);
+
+    pthread_mutex_lock(&m_listaEjecutando);
+        t_pcb * pcb_ejecuta_instruccion = (t_pcb *) list_get(listaEjecutando, 0); 
+        actualizar_pcb(pcb_ejecuta_instruccion, contexto_ejecuta_instruccion);
+    pthread_mutex_unlock(&m_listaEjecutando);
+
+    enviar_ce(cpu_dispatch_connection, contexto_ejecuta_instruccion, EJECUTAR_CE, kernel_logger);
+    
+    liberar_ce(contexto_ejecuta_instruccion);
+}
 // ----------------------- Funciones WAIT_RECURSO ----------------------- //
 
 void atender_wait_recurso()
@@ -1016,6 +1028,8 @@ void atender_block_io()
 
     log_info(kernel_logger, "PID: [%d] - Bloqueado por: [IO]",pcb_IO->id);
     
+    agregar_a_lista_con_sems(pcb_IO, listaBloqueados, m_listaBloqueados);
+
     thread_args* argumentos = malloc(sizeof(thread_args));
     argumentos->pcb = pcb_IO;
     argumentos->bloqueo = bloqueo;
@@ -1036,6 +1050,10 @@ void rutina_io(thread_args* args)
 
     sleep(bloqueo);
     
+    pthread_mutex_lock(&m_listaBloqueados);
+        list_remove_element(listaBloqueados, pcb);
+    pthread_mutex_unlock(&m_listaBloqueados);
+
     cambiar_estado_a(pcb, READY, estadoActual(pcb));
     
     iniciar_nueva_espera_ready(pcb); // hacer cada vez que se mete en la lista de ready
@@ -1046,6 +1064,8 @@ void rutina_io(thread_args* args)
 
     //pthread_mutex_unlock(&m_IO);
 }
+
+// ----------------------- Funciones CREAR_SEGMENTO ----------------------- //
 
 void atender_crear_segmento()
 {
@@ -1092,7 +1112,7 @@ void atender_crear_segmento()
         }
     }
     
-    free(estructura_2_enteros); VER SI FUNCIONA
+    free(estructura_2_enteros); // VER SI FUNCIONA
 }
 
 void atender_compactacion(int id_proceso, int id_segmento, int tamanio_segmento)
@@ -1103,6 +1123,7 @@ void atender_compactacion(int id_proceso, int id_segmento, int tamanio_segmento)
     switch (cod_op_compactacion)
         {
         case OK:
+            actualizar_ts_x_proceso();
             enviar_3_enteros(memory_connection, id_proceso, id_segmento, tamanio_segmento, CREATE_SEGMENT);
             break;
         
@@ -1110,6 +1131,36 @@ void atender_compactacion(int id_proceso, int id_segmento, int tamanio_segmento)
             log_error(kernel_logger, "El codigo de recepcion de la compactacion del segmento es erroneo");
             break;
         }
+}
+
+void actualizar_ts_x_proceso()
+{
+    t_list* lista_ts_x_procesos = recibir_todas_tablas_segmentos(memory_connection);
+
+    t_list* lista_de_pcbs = list_create();
+
+    list_add_all(lista_de_pcbs, listaReady);
+    list_add_all(lista_de_pcbs, listaEjecutando);
+    list_add_all(lista_de_pcbs, listaBloqueados);
+    for(int i = 0; i < cantidad_instancias; i++)
+    {
+        list_add_all(lista_de_pcbs, list_get(lista_recurso, i));
+    }
+    
+    int cantidad_procesos = list_size(lista_ts_x_procesos);
+    for(int i = 0; i < cantidad_procesos; i++)
+    {
+        //list_find(lista_de_pcbs, ); TERMINAR
+    }
+    // con todas las pcbs en la lista de pcb, tengo que buscar el id que sea igual al id de la lista de ts
+    // para asi pisar los contenidos de la tabla de segmentos, y de esta manera actualizarlos.
+}
+
+// ----------------------- Funciones BORRAR_SEGMENTO ----------------------- //
+
+void atender_borrar_segmento()
+{
+
 }
 
 void manejar_memoria()

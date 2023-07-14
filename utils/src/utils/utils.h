@@ -297,5 +297,7 @@ t_3_enteros * recibir_3_enteros(int);
 recive_mov_out * recibir_mov_out(int);
 void liberar_ce_2enteros(t_ce_2enteros*);
 
-
+void enviar_todas_tablas_segmentos(int, t_list*, int, t_log*);
+t_list* recibir_todas_tablas_segmentos(int);
+t_proceso* recibir_t_proceso(char*, int*);
 #endif /* UTILS_H_ */

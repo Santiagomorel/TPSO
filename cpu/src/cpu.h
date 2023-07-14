@@ -83,7 +83,6 @@ int keyfromstring(char *key);
 
 int check_interruption;
 int sigsegv;
-int sig_f;
 int id_segmento_con_segfault;
 int desplazamiento_segfault;
 int tamanio_segfault;

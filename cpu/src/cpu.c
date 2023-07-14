@@ -304,6 +304,7 @@ int desalojo_por_yield = 0;
 int signal_recurso = 0;
 int direccion_fisica = 0;
 int direccion_logica = 0;
+int sig_f = 0;
 t_segmento* segmento;
 
 char* tiempo = "NONE";
@@ -424,18 +425,19 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
         case I_CREATE_SEGMENT:
         log_trace(cpu_logger, "Por ejecutar instruccion CREATE_SEGMENT");
         log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s", ce->id, instruction[0], instruction[1], instruction[2]);
-        //update_program_counter(ce);
 
         enviar_2_enteros(socket_kernel, atoi(instruction[1]), atoi(instruction[2]), CREAR_SEGMENTO);
 
         sig_f = recibir_respuesta_segmento();
-        //enviar_ce_con_dos_enteros(socket_kernel, ce, instruction[1], instruction[2], CREAR_SEGMENTO);
 
             break;
         case I_DELETE_SEGMENT:
         log_trace(cpu_logger, "Por ejecutar instruccion DELETE_SEGMENT");
         log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s", ce->id, instruction[0], instruction[1]);
 
+        // enviar solo el entero
+        // recibir -> ok
+        // el ce se envia despues de ejecutar el delete segment, cuando recibimos la respuesta
         enviar_ce_con_entero(socket_kernel, ce, instruction[1], BORRAR_SEGMENTO);
 
             break;
@@ -518,7 +520,7 @@ void execute_process(contexto_ejecucion* ce){
     char** decoded_instruction = malloc(sizeof(char*));
 
     log_trace(cpu_logger, "Por empezar  end_process != 1 && input_ouput != 1 && wait == 0 && desalojo_por_yield != 1 && signal_recurso != 2 && sigsev != 1"); 
-    while(end_process != 1 && input_ouput != 1 && wait == 0 && desalojo_por_yield != 1 && signal_recurso == 0 && sigsegv != 1 && sig_f != 1){
+    while(end_process != 1 && input_ouput != 1 && wait == 0 && desalojo_por_yield != 1 && signal_recurso == 0 && sigsegv != 1 && sig_f == 0){
         //Llega el ce y con el program counter buscas la instruccion que necesita
         instruction = string_duplicate(fetch_next_instruction_to_execute(ce));
         decoded_instruction = decode(instruction);
