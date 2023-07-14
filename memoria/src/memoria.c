@@ -150,36 +150,15 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
                 segmento_nuevo->id_segmento=id_segmento_nuevo;
                 t_proceso* proceso_con_nuevo_segmento = buscar_proceso(id_proceso);
                 list_add(proceso_con_nuevo_segmento->tabla_segmentos, segmento_nuevo);
-//MODIFICAR PARA CREATE
-//                log_warning(log_memoria,"PID: %d - Eliminar Segmento: %d, Base: %d - TAMAÑO: %d", PID, id_segmento_elim, segmento_a_eliminar->direccion_base, segmento_a_eliminar->tamanio_segmento);
+                log_warning(log_memoria,"Creación de Segmento: PID: %d - Crear Segmento: %d - Base: %d - TAMAÑO: %d", id_proceso, id_segmento_nuevo, segmento_nuevo->direccion_base, segmento_nuevo->tamanio_segmento);
                 enviar_tabla_segmentos(SOCKET_CLIENTE_KERNEL, TABLA_SEGMENTOS, proceso_con_nuevo_segmento);
                 }
             }
             else{
+            log_warning(log_memoria, "sin memoria");
             enviar_CodOp(SOCKET_CLIENTE_KERNEL, OUT_OF_MEMORY);
             }
-            // si se crea el segmento, me mandas el cod de operacion OK + la base del segmento creado
-            //enviar_paquete_entero(SOCKET_CLIENTE_KERNEL, base_del_segmento, OK);
-
-            // si no se crea el segmento, me mandas el cod de operacion OUT_OF_MEMORY
-            //enviar_CodOp(SOCKET_CLIENTE_KERNEL, OUT_OF_MEMORY);
-
-            // si se necesita compactar, me mandas el cod de operacion NECESITO_COMPACTAR
-            //enviar_CodOp(SOCKET_CLIENTE_KERNEL, NECESITO_COMPACTAR);
-
-            /*1. 
-
-              2. Que no se tenga más espacio disponible en la memoria y por lo tanto el proceso tenga que finalizar con error Out of Memory.
-              3. Que se tenga el espacio disponible, pero que el mismo no se encuentre contiguo, por lo que se deba compactar, este caso lo vamos a analizar más en detalle,
-                ya que involucra controlar las operaciones de File System que se estén ejecutando.*/
-
-            // resp_op codigo_respuesta_seg = crear_segmento() => lo debe agregar a la memoria, o no en caso que no pueda y retornar un codigo de respuesta
-            /*
-            if(codigo_respuesta_seg){
             
-            }*/
-            
-
             break;
 
         case DELETE_SEGMENT:
@@ -272,10 +251,19 @@ void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM)
 
         case MOV_IN: //se va a llamar distinto seguro
 
+        t_3_enteros* movin = recibir_3_enteros(SOCKET_CLIENTE_FILESYSTEM);
+        log_info(log_memoria, "PID: %d - Accion: LEER - Direccion física: %d - Tamaño: %d - Origen: FS",movin->entero1, movin->entero2,movin->entero3);
+        mov_in(SOCKET_CLIENTE_FILESYSTEM, movin->entero2, movin->entero3);
+            //FALTAN COSAS
             break;
         
         case MOV_OUT: //se va a llamar distinto seguro
-
+        recive_mov_out* data_mov_out = recibir_mov_out(SOCKET_CLIENTE_FILESYSTEM);
+            //void * registro = (void*)recibir_string(SOCKET_CLIENTE_CPU, log_memoria);
+        void* registro = (void*) data_mov_out->registro;
+        log_trace(log_memoria,"PID: %d - Acción: ESCRIBIR - Dirección física: %d - Tamaño: %d - Origen: FS", data_mov_out->PID, data_mov_out->DF, data_mov_out->size); 
+            
+            //FALTAN COSAS
             break;
 
         case -1:
@@ -291,9 +279,7 @@ void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM)
 /* LOGS NECESAIROS Y OBLIGATORIOS
 - Creación de Proceso: “Creación de Proceso PID: <PID>”
 - Eliminación de Proceso: “Eliminación de Proceso PID: <PID>”
-- Creación de Segmento: “PID: <PID> - Crear Segmento: <ID SEGMENTO> - Base: <DIRECCIÓN BASE> - TAMAÑO: <TAMAÑO>”
 
-- Inicio Compactación: “Solicitud de Compactación”
 - Resultado Compactación: Por cada segmento de cada proceso se deberá imprimir una línea con el siguiente formato:
 - “PID: <PID> - Segmento: <ID SEGMENTO> - Base: <BASE> - Tamaño <TAMAÑO>”
 - Acceso a espacio de usuario: “PID: <PID> - Acción: <LEER / ESCRIBIR> - Dirección física: <DIRECCIÓN_FÍSICA> - Tamaño: <TAMAÑO> - Origen: <CPU / FS>”
