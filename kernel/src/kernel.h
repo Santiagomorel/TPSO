@@ -34,18 +34,18 @@ typedef struct{
 typedef struct
 {
 	char* nombreArchivo;
+	uint32_t puntero; //apunta al archivo
+	uint32_t tamanioArchivo;
+}t_entradaTAAP;
+
+typedef struct
+{
+	char* nombreArchivo;
 	t_entradaTAAP* puntero; // apunta a la entrada tabla por procesos
 	uint32_t tamanioArchivo;
 	t_list *lista_block_archivo;
 	pthread_mutex_t mutex_lista_block_archivo;
 }t_entradaTGAA;
-
-typedef struct
-{
-	char* nombreArchivo;
-	uint32_t puntero; //apunta al archivo
-	uint32_t tamanioArchivo;
-}t_entradaTAAP;
 
 Kernel_config kernel_config;
 
@@ -216,7 +216,7 @@ void atender_apertura_archivo();
 char* obtener_nombre_archivo(t_entradaTGAA*);
 bool existeArchivo(char*,char*);
 void crear_entrada_TAAP(char*,t_entradaTAAP*);
-void crear_entrada_TGAA(char*,t_list* );
+void crear_entrada_TGAA(char* nombre,t_entradaTAAP* entrada);
 //Declaraciones CERRAR_ARCHIVO
 void atender_cierre_archivo();
 //Declaraciones ACTUALIZAR_PUNTERO

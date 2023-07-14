@@ -269,7 +269,7 @@ t_pcb* pcb_create(char* instrucciones, int socket_consola)
     new_pcb->tabla_segmentos = list_create();
     new_pcb->estimacion_rafaga = kernel_config.estimacion_inicial;
     new_pcb->tiempo_llegada_ready = temporal_create();
-    new_pcb->tabla_archivos_abiertos = list_create();
+    new_pcb->tabla_archivos_abiertos_por_proceso = list_create();
     
     new_pcb->salida_ejecucion = temporal_create();
     new_pcb->rafaga_ejecutada = 0;
@@ -1239,13 +1239,13 @@ void atender_apertura_archivo(){
             break;
 
         case EXISTE_ARCHIVO:
-            t_entradaTAAP* entradaTAAP = malloc(sizeof(t_entradaTAAP));
-            crear_entrada_TGAA(nombreArchivo,entradaTAAP);
-            crear_entrada_TAAP(nombreArchivo,entradaTAAP);
+            t_entradaTAAP* entradaTAAP2 = malloc(sizeof(t_entradaTAAP));
+            crear_entrada_TGAA(nombreArchivo,entradaTAAP2);
+            crear_entrada_TAAP(nombreArchivo,entradaTAAP2);
             
             list_add(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso,entradaTAAP);
-            contexto_ejecucion* contextoAEnviar = obtener_ce(pcb_en_ejecucion);
-            enviar_ce(cpu_dispatch_connection,contextoAEnviar,EJECUTAR_CE,kernel_logger);
+            contexto_ejecucion* contextoAEnviar2 = obtener_ce(pcb_en_ejecucion);
+            enviar_ce(cpu_dispatch_connection,contextoAEnviar2,EJECUTAR_CE,kernel_logger);
             break;
         default:
             log_error(kernel_logger,"CodOp invalido");
@@ -1259,7 +1259,7 @@ void atender_apertura_archivo(){
 log_trace(kernel_logger, "PID: <%d> - Abrir Archivo: <%s>",pcb_en_ejecucion->id,nombreArchivo);
 
 }
-void crear_entrada_TGAA(char*nombre,t_entradaTAAP entrada){
+void crear_entrada_TGAA(char* nombre,t_entradaTAAP* entrada){
     t_entradaTGAA* nuevaEntradaTGAA = malloc(sizeof(t_entradaTGAA));
     nuevaEntradaTGAA->nombreArchivo = nombre;
     nuevaEntradaTGAA->puntero = entrada;
@@ -1320,8 +1320,7 @@ void atender_actualizar_puntero(){
     contexto_ejecucion* contextoAEnviar = obtener_ce(pcb_en_ejecucion);
     enviar_ce(cpu_dispatch_connection,contextoAEnviar,EJECUTAR_CE,kernel_logger);
     
-log_trace(kernel_logger, "“PID: <PID> - Actualizar puntero Archivo: <NOMBRE ARCHIVO>
-- Puntero <PUNTERO>");
+    log_trace(kernel_logger, "PID: <PID> - Actualizar puntero Archivo: <NOMBRE ARCHIVO> - Puntero <PUNTERO>");
 
     
 }
@@ -1334,16 +1333,14 @@ log_trace(kernel_logger, "PID: <PID> - Archivo: <NOMBRE ARCHIVO> - Tamaño: <TAM
 // ----------------------- Funciones ESCRIBIR_ARCHIVO ----------------------- //
 void atender_escritura_archivo(){
     int id_proceso = ((t_pcb *) list_get(listaEjecutando, 0))->id;
-log_trace(kernel_logger, "PID: <PID> - Leer Archivo: <NOMBRE ARCHIVO> - Puntero <PUNTERO> -
-Dirección Memoria <DIRECCIÓN MEMORIA> - Tamaño <TAMAÑO>");
+log_trace(kernel_logger, "PID: <PID> - Leer Archivo: <NOMBRE ARCHIVO> - Puntero <PUNTERO> - Dirección Memoria <DIRECCIÓN MEMORIA> - Tamaño <TAMAÑO>");
     
 }
 // ----------------------- Funciones MODIFICAR_TAMANIO_ARCHIVO ----------------------- //
 void atender_modificar_tamanio_archivo(){
     int id_proceso = ((t_pcb *) list_get(listaEjecutando, 0))->id;
 
-log_trace(kernel_logger, "PID: <PID> - Escribir Archivo: <NOMBRE ARCHIVO> - Puntero <PUNTERO>
-- Dirección Memoria <DIRECCIÓN MEMORIA> - Tamaño <TAMAÑO>");
+log_trace(kernel_logger, "PID: <PID> - Escribir Archivo: <NOMBRE ARCHIVO> - Puntero <PUNTERO> - Dirección Memoria <DIRECCIÓN MEMORIA> - Tamaño <TAMAÑO>");
     
 }
 // ----------------------- Funciones finales ----------------------- //
