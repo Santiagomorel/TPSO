@@ -31,6 +31,22 @@ typedef struct{
     char* puerto_kernel;
 } Kernel_config;
 
+typedef struct
+{
+	char* nombreArchivo;
+	t_entradaTAAP* puntero; // apunta a la entrada tabla por procesos
+	uint32_t tamanioArchivo;
+	t_list *lista_block_archivo;
+	pthread_mutex_t mutex_lista_block_archivo;
+}t_entradaTGAA;
+
+typedef struct
+{
+	char* nombreArchivo;
+	uint32_t puntero; //apunta al archivo
+	uint32_t tamanioArchivo;
+}t_entradaTAAP;
+
 Kernel_config kernel_config;
 
 int socket_kernel;
@@ -85,6 +101,9 @@ pthread_t planificadorCP;
 pthread_t hiloDispatch;
 pthread_t hiloMemoria;
 pthread_t hiloIO;
+
+//Variables de tablas de archivos
+t_list* tablaGlobalArchivosAbiertos;
 
 // Declaraciones de parte consola
 void recibir_consola(int);
@@ -194,6 +213,10 @@ void manejar_memoria();
 
 //Declaraciones ABRIR_ARCHIVO
 void atender_apertura_archivo();
+char* obtener_nombre_archivo(t_entradaTGAA*);
+bool existeArchivo(char*,char*);
+void crear_entrada_TAAP(char*,t_entradaTAAP*);
+void crear_entrada_TGAA(char*,t_list* );
 //Declaraciones CERRAR_ARCHIVO
 void atender_cierre_archivo();
 //Declaraciones ACTUALIZAR_PUNTERO

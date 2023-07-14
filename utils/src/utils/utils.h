@@ -86,7 +86,10 @@ typedef enum
 	COMPACTAR,
 	SIN_ESPACIO,
 	ASK_COMPACTAR,
-	//  CPU->MEMORIA
+	// -------KERNEL->FILESYSTEM --------
+	CONSULTA_ARCHIVO,
+	EXISTE_ARCHIVO,
+	CREAR_ARCHIVO,
 	ENVIAR_CONFIG, 			//siendo el cpu le pido a la mem que me pase la configuracion para traducir las direcciones
 	//MMU
 	PEDIDO_INDICE_DOS, // 1er acceso
@@ -112,6 +115,9 @@ typedef enum
 	FIN_CONSOLA,		
 	OK,
     FAIL = -1,
+
+	// -------FILESYSTEM -> KERNEL --------
+	NO_EXISTE_ARCHIVO
 } op_code;
 
 typedef enum { // Los estados que puede tener un PCB
@@ -159,7 +165,7 @@ typedef struct {
 	t_list* tabla_segmentos;
 	double estimacion_rafaga;
     t_temporal* tiempo_llegada_ready;
-	t_list* tabla_archivos_abiertos;
+	t_list* tabla_archivos_abiertos_por_proceso;
 
 	t_temporal* salida_ejecucion;
 	int64_t rafaga_ejecutada;
@@ -286,7 +292,7 @@ t_list* leer_tabla_segmentos(char*, int*);
 
 t_segmento* crear_segmento(int, int, int);
 
-
+void enviar_string_entero(int,char*,int,int codOP);
 void agregar_tabla_segmentos_a_paquete(t_paquete*, t_list*);
 
 t_ce_2enteros * recibir_ce_2enteros(int);
