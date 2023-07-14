@@ -713,6 +713,30 @@ void manejar_dispatch()
                 atender_borrar_segmento();
                 break;
 
+            case ABRIR_ARCHIVO:
+                atender_apertura_archivo();
+                break;
+            
+            case CERRAR_ARCHIVO:
+                atender_cierre_archivo();
+                break;
+
+            case ACTUALIZAR_PUNTERO:
+                atender_actualizar_puntero();
+                break;
+
+            case LEER_ARCHIVO:
+                atender_leer_archivo();
+                break;
+            
+            case ESCRIBIR_ARCHIVO:
+                atender_escritura_archivo();
+                break;
+
+            case MODIFICAR_TAMAÑO_ARCHIVO:
+                atender_modificar_tamanio_archivo();
+                break;
+
             case -1:
                 break;
 
@@ -1172,6 +1196,37 @@ void manejar_memoria()
     //         // recibir el codigo y enviar la base o el codigo de error
     //     }
     // }
+}
+
+// ----------------------- Funciones ABRIR_ARCHIVO ----------------------- //
+void atender_apertura_archivo(){
+
+
+}
+// ----------------------- Funciones CERRAR_ARCHIVO ----------------------- //
+void atender_cierre_archivo(){
+
+    
+}
+// ----------------------- Funciones ACTUALIZAR_PUNTERO ----------------------- //
+void atender_actualizar_puntero(){
+
+    
+}
+// ----------------------- Funciones LEER_ARCHIVO ----------------------- //
+void atender_lectura_archivo(){
+
+    
+}
+// ----------------------- Funciones ESCRIBIR_ARCHIVO ----------------------- //
+void atender_escritura_archivo(){
+
+    
+}
+// ----------------------- Funciones MODIFICAR_TAMANIO_ARCHIVO ----------------------- //
+void atender_modificar_tamanio_archivo(){
+
+    
 }
 // ----------------------- Funciones finales ----------------------- //
 

@@ -192,6 +192,18 @@ void atender_borrar_segmento();
 // Declaraciones Memory Manager
 void manejar_memoria();
 
+//Declaraciones ABRIR_ARCHIVO
+void atender_apertura_archivo();
+//Declaraciones CERRAR_ARCHIVO
+void atender_cierre_archivo();
+//Declaraciones ACTUALIZAR_PUNTERO
+void atender_actualizar_puntero();
+//Declaraciones LEER_ARCHIVO
+void atender_leer_archivo();
+//Declaraciones ESCRIBIR_ARCHIVO
+void atender_escritura_archivo();
+//Declaraciones MODIFICAR_TAMANIO_ARCHIVO
+void atender_modificar_tamanio_archivo();
 //
 // ------------------------------------//
 
