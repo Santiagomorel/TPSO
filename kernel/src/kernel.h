@@ -187,6 +187,7 @@ void atender_crear_segmento();
 void atender_compactacion(int, int, int);
 void actualizar_ts_x_proceso();
 t_pcb* pcb_en_lista_coincide(t_list*, t_proceso*);
+void eliminar_tabla_segmentos(t_list*);
 
 // Declaraciones BORRAR_SEGMENTO
 void atender_borrar_segmento();
