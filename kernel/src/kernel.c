@@ -1147,13 +1147,25 @@ void actualizar_ts_x_proceso()
         list_add_all(lista_de_pcbs, list_get(lista_recurso, i));
     }
     
+
     int cantidad_procesos = list_size(lista_ts_x_procesos);
     for(int i = 0; i < cantidad_procesos; i++)
     {
-        //list_find(lista_de_pcbs, ); TERMINAR
+        t_proceso* proceso_i = list_get(lista_ts_x_procesos, i);
+        t_pcb* pcb_encontrado = pcb_en_lista_coincide(lista_de_pcbs, proceso_i);
+        list_re
     }
     // con todas las pcbs en la lista de pcb, tengo que buscar el id que sea igual al id de la lista de ts
     // para asi pisar los contenidos de la tabla de segmentos, y de esta manera actualizarlos.
+}
+
+t_pcb* pcb_en_lista_coincide(t_list* lista_pcbs, t_proceso* proceso_a_matchear)
+{
+    bool encontrar_pcb(t_pcb* pcb){
+        return pcb->id == proceso_a_matchear->id;
+    }
+
+    return list_find(lista_pcbs, (void*) encontrar_pcb);
 }
 
 // ----------------------- Funciones BORRAR_SEGMENTO ----------------------- //

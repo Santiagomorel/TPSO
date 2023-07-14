@@ -186,6 +186,7 @@ void rutina_io(thread_args*);
 void atender_crear_segmento();
 void atender_compactacion(int, int, int);
 void actualizar_ts_x_proceso();
+t_pcb* pcb_en_lista_coincide(t_list*, t_proceso*);
 
 // Declaraciones BORRAR_SEGMENTO
 void atender_borrar_segmento();
