@@ -1289,6 +1289,7 @@ void atender_cierre_archivo(){
     t_list* listaFiltrada = list_filter(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso,existeArchivo(nombreArchivo));
     t_entradaTAAP* entradaProceso = list_get(listaFiltrada,0);
     list_remove_element(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso,entradaProceso);
+    free(entradaProceso);
     /* necesitamos tabla de bloqueados por archivo (ashuda morel)
     
     if(tieneEncolados){
@@ -1299,6 +1300,7 @@ void atender_cierre_archivo(){
         t_list* listaFiltrada = list_filter(tablaGlobalArchivosAbiertos,existeArchivo(nombreArchivo));
     t_entradaTGAA* entradaGlobal = list_get(listaFiltrada,0);
     list_remove_element(tablaGlobalArchivosAbiertos,entradaGlobal);
+    free(entradaGlobal);
     }
 
     */
