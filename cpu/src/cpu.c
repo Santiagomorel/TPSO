@@ -304,6 +304,7 @@ int desalojo_por_yield = 0;
 int signal_recurso = 0;
 int direccion_fisica = 0;
 int direccion_logica = 0;
+int desalojo_por_archivo = 0;
 t_segmento* segmento;
 
 char* tiempo = "NONE";
@@ -346,9 +347,10 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s ", ce->id, instruction[0], instruction[1]);
             // Si rompe crear una varible char* recurso, asignandole instruccion[1] y enviar el recurso en el execute process
             
+
             enviar_ce_con_string(socket_kernel, ce, instruction[1], WAIT_RECURSO);
 
-            wait = recibir_respuesta_recurso();
+            wait = 1;
             
             break;
         case I_SIGNAL:
@@ -357,9 +359,10 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             log_trace(cpu_logger, "Por ejecutar instruccion SIGNAL");
             log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s", ce->id, instruction[0], instruction[1]);
 
+
             enviar_ce_con_string(socket_kernel, ce, instruction[1], SIGNAL_RECURSO);
 
-            signal_recurso = recibir_respuesta_recurso();
+            signal_recurso = 1;
 
             
             break;
@@ -373,7 +376,11 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
         log_trace(cpu_logger, "Por ejecutar instruccion F_OPEN");
         log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s", ce->id, instruction[0], instruction[1]);
 
-        enviar_ce_con_string(socket_kernel, ce, instruction[1], ABRIR_ARCHIVO);
+        //enviar_ce_con_string(socket_kernel, ce, instruction[1], ABRIR_ARCHIVO);
+
+        enviar_paquete_string(socket_kernel, instruction[1], ABRIR_ARCHIVO, (strlen(instruction[1])+ 1));
+
+        desalojo_por_archivo = 1;
         
             break;
         case I_F_CLOSE:
@@ -381,14 +388,24 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
         log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s", ce->id, instruction[0], instruction[1]);
 
         
-        enviar_ce_con_string(socket_kernel, ce, instruction[1], CERRAR_ARCHIVO);
+        //enviar_ce_con_string(socket_kernel, ce, instruction[1], CERRAR_ARCHIVO);
+
+        enviar_paquete_string(socket_kernel, instruction[1], CERRAR_ARCHIVO, (strlen(instruction[1])+ 1));
+
+        desalojo_por_archivo = 1;
 
             break;
         case I_F_SEEK:
         log_trace(cpu_logger, "Por ejecutar instruccion F_SEEK");
         log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s- %s", ce->id, instruction[0], instruction[1], instruction[2]);
 
-        enviar_ce_con_string_entero(socket_kernel, ce, instruction[1], instruction[2], ACTUALIZAR_PUNTERO);
+        //enviar_ce_con_string_entero(socket_kernel, ce, instruction[1], instruction[2], ACTUALIZAR_PUNTERO);
+
+        enviar_paquete_con_string_entero(socket_kernel, instruction[1], instruction[2], ACTUALIZAR_PUNTERO);
+
+        
+
+        desalojo_por_archivo = 1;
 
             break;
         case I_F_READ:
@@ -400,7 +417,12 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
         direccion_fisica = traducir_direccion_logica(direccion_logica, ce, instruction[3]);
         
 
-        enviar_ce_con_string_2_enteros(socket_kernel, ce, instruction[1], direccion_fisica, instruction[3], LEER_ARCHIVO);
+        //enviar_ce_con_string_2_enteros(socket_kernel, ce, instruction[1], direccion_fisica, instruction[3], LEER_ARCHIVO);
+
+        enviar_paquete_con_string_2_enteros(socket_kernel, instruction[1], direccion_fisica, instruction[3], LEER_ARCHIVO);
+
+
+        desalojo_por_archivo = 1;
 
             break;
         case I_F_WRITE:
@@ -411,28 +433,44 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
         direccion_fisica = traducir_direccion_logica(direccion_logica, ce, instruction[3]);
         
 
-        enviar_ce_con_string_2_enteros(socket_kernel, ce, instruction[1], direccion_fisica, instruction[3], ESCRIBIR_ARCHIVO);          
+        //enviar_ce_con_string_2_enteros(socket_kernel, ce, instruction[1], direccion_fisica, instruction[3], ESCRIBIR_ARCHIVO); 
+
+        enviar_paquete_con_string_2_enteros(socket_kernel, instruction[1], direccion_fisica, instruction[3], ESCRIBIR_ARCHIVO);
+
+        desalojo_por_archivo = 1;         
            
             break;
         case I_F_TRUNCATE:
         log_trace(cpu_logger, "Por ejecutar instruccion F_TRUNCATE");
         log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s", ce->id, instruction[0], instruction[1], instruction[2]);
 
-        enviar_ce_con_string_entero(socket_kernel, ce, instruction[1], instruction[2], MODIFICAR_TAMAÑO_ARCHIVO);
+        //enviar_ce_con_string_entero(socket_kernel, ce, instruction[1], instruction[2], MODIFICAR_TAMAÑO_ARCHIVO);
+
+        enviar_paquete_con_string_entero(socket_kernel, instruction[1], instruction[2], MODIFICAR_TAMAÑO_ARCHIVO);
+
+        desalojo_por_archivo = 1;
 
             break;
         case I_CREATE_SEGMENT:
         log_trace(cpu_logger, "Por ejecutar instruccion CREATE_SEGMENT");
         log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s", ce->id, instruction[0], instruction[1], instruction[2]);
 
-        enviar_ce_con_dos_enteros(socket_kernel, ce, instruction[1], instruction[2], CREAR_SEGMENTO);
+        //enviar_ce_con_dos_enteros(socket_kernel, ce, instruction[1], instruction[2], CREAR_SEGMENTO);
+
+        enviar_paquete_con_dos_enteros(socket_kernel, instruction[1], instruction[2], CREAR_SEGMENTO);
+
+        desalojo_por_archivo = 1;
 
             break;
         case I_DELETE_SEGMENT:
         log_trace(cpu_logger, "Por ejecutar instruccion DELETE_SEGMENT");
         log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s", ce->id, instruction[0], instruction[1]);
 
-        enviar_ce_con_entero(socket_kernel, ce, instruction[1], BORRAR_SEGMENTO);
+        //enviar_ce_con_entero(socket_kernel, ce, instruction[1], BORRAR_SEGMENTO);
+
+        enviar_paquete_entero(socket_kernel,instruction[1], BORRAR_SEGMENTO);
+
+        desalojo_por_archivo = 1;
 
             break;
         case I_MOV_IN: //MOV_IN (Registro, Dirección Lógica)
@@ -510,28 +548,26 @@ void execute_process(contexto_ejecucion* ce){
     char* instruction = malloc(sizeof(char*));
     char** decoded_instruction = malloc(sizeof(char*));
 
-    log_trace(cpu_logger, "Por empezar  end_process != 1 && input_ouput != 1 && wait == 0 && desalojo_por_yield != 1 && signal_recurso != 2 && sigsev != 1"); 
-    while(end_process != 1 && input_ouput != 1 && wait == 0 && desalojo_por_yield != 1 && signal_recurso == 0 && sigsegv != 1){
+    log_trace(cpu_logger, "Por empezar  end_process != 1 && input_ouput != 1 && wait != 0 && desalojo_por_yield != 1 && signal_recurso != 1 && sigsev != 1"); 
+    while(end_process != 1 && input_ouput != 1 && wait != 0 && desalojo_por_yield != 1 && signal_recurso !0 0 && sigsegv != 1 && desalojo_por_archivo != 1 ){
         //Llega el ce y con el program counter buscas la instruccion que necesita
         instruction = string_duplicate(fetch_next_instruction_to_execute(ce));
         decoded_instruction = decode(instruction);
 
         log_trace(cpu_logger, "Por ejecutar la instruccion decodificada %s", decoded_instruction[0]);
+        update_program_counter(ce);
         execute_instruction(decoded_instruction, ce);
-
-        if(sigsegv != 1) {   // en caso de tener seg fault no se actualiza program counter
-            update_program_counter(ce);
-        }
+ 
         
-        
+                
         log_trace(cpu_logger, "PROGRAM COUNTER: %d", ce->program_counter);
-
 
     } //si salis del while es porque te llego una interrupcion o termino el proceso o entrada y salida
     
     log_trace(cpu_logger, "SALI DEL WHILE DE EJECUCION");
-
+    
     save_context_ce(ce); // ACA GUARDAMOS EL CONTEXTO
+
     //imprimir_registros(ce->registros_cpu, cpu_logger); // para comprobar que los registros se guardaran bien
     if (end_process)
     {
@@ -564,7 +600,7 @@ void execute_process(contexto_ejecucion* ce){
         liberar_ce(ce); // VER PREGUNTAR A GUIDO
     }
     else if(wait)
-    {
+    { /*
         if(wait == 2)
         {  // Se bloquea por estar ocupado recurso
             log_trace(cpu_logger, "Bloqueado por WAIT");
@@ -580,6 +616,8 @@ void execute_process(contexto_ejecucion* ce){
             log_trace(cpu_logger, "EJECUTO_WAIT"); // Prueba
             enviar_ce(socket_kernel, ce, EJECUTO_WAIT, cpu_logger);
         }
+        */
+
         wait = 0;
 
         liberar_ce(ce);
@@ -594,7 +632,7 @@ void execute_process(contexto_ejecucion* ce){
         liberar_ce(ce);
     }
     else if (signal_recurso)
-    {
+    {/*
         if (signal_recurso == 3)
         {
             log_trace(cpu_logger, "No existe el recurso");
@@ -605,8 +643,16 @@ void execute_process(contexto_ejecucion* ce){
             log_trace(cpu_logger, "EJECUTO_SIGNAL"); // Prueba
             enviar_ce(socket_kernel, ce, EJECUTO_SIGNAL, cpu_logger);
         }
-
+*/
         signal_recurso = 0;
+
+        liberar_ce(ce);
+    }else if(desalojo_por_archivo){
+
+        log_trace(cpu_logger, "Desalojo por archivo");
+        enviar_ce(socket_kernel, ce, DESALOJO_ARCHIVO, cpu_logger);
+
+        desalojo_por_archivo = 0;
 
         liberar_ce(ce);
     }
@@ -677,8 +723,7 @@ void enviar_ce_con_string(int client_socket, contexto_ejecucion* ce, char* param
     
 }
 
-
-
+/*
 void enviar_ce_con_dos_enteros(int client_socket, contexto_ejecucion* ce, char* x, char* y, int codOP){
     t_paquete* paquete = crear_paquete_op_code(codOP);
 
@@ -689,7 +734,17 @@ void enviar_ce_con_dos_enteros(int client_socket, contexto_ejecucion* ce, char* 
     eliminar_paquete(paquete);
     
 }
+*/
+void enviar_paquete_con_dos_enteros(int client_socket, char* x, char* y, int codOP){
+    t_paquete* paquete = crear_paquete_op_code(codOP);
 
+    agregar_entero_a_paquete(paquete, atoi(x)); 
+    agregar_entero_a_paquete(paquete, atoi(y)); 
+    enviar_paquete(paquete, client_socket);
+    eliminar_paquete(paquete);
+    
+}
+/*
 void enviar_ce_con_string_entero(int client_socket, contexto_ejecucion* ce, char* parameter, char* x, int codOP){
     t_paquete* paquete = crear_paquete_op_code(codOP);
 
@@ -700,7 +755,18 @@ void enviar_ce_con_string_entero(int client_socket, contexto_ejecucion* ce, char
     eliminar_paquete(paquete);
     
 }
+*/
+void enviar_paquete_con_string_entero(int client_socket, char* parameter, char* x, int codOP){
+    t_paquete* paquete = crear_paquete_op_code(codOP);
 
+    agregar_string_a_paquete(paquete, parameter); 
+    agregar_entero_a_paquete(paquete, atoi(x));
+    enviar_paquete(paquete, client_socket);
+    eliminar_paquete(paquete);
+    
+}
+
+/*
 void enviar_ce_con_string_2_enteros(int client_socket, contexto_ejecucion* ce, char* parameter, char* x, char* y, int codOP){
     t_paquete* paquete = crear_paquete_op_code(codOP);
 
@@ -713,7 +779,18 @@ void enviar_ce_con_string_2_enteros(int client_socket, contexto_ejecucion* ce, c
     
 }
 
+*/
 
+void enviar_paquete_con_string_2_enteros(int client_socket, char* parameter, int x, char* y, int codOP){
+    t_paquete* paquete = crear_paquete_op_code(codOP);
+
+    agregar_string_a_paquete(paquete, parameter); 
+    agregar_entero_a_paquete(paquete, x);
+    agregar_entero_a_paquete(paquete, atoi(y));
+    enviar_paquete(paquete, client_socket);
+    eliminar_paquete(paquete);
+    
+}
 
 
 /*---------------------------------- PARA INSTRUCCION IO ----------------------------------*/
