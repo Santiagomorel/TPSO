@@ -207,6 +207,11 @@ typedef struct{
 } t_ce_2enteros;
 
 typedef struct{
+	contexto_ejecucion* ce;
+	char* string;
+} t_ce_string;
+
+typedef struct{
 	int entero1;
 	int entero2;
 } t_2_enteros;
@@ -291,12 +296,14 @@ t_segmento* crear_segmento(int, int, int);
 void agregar_tabla_segmentos_a_paquete(t_paquete*, t_list*);
 
 t_ce_2enteros * recibir_ce_2enteros(int);
+t_ce_string* recibir_ce_string(int);
 void enviar_2_enteros(int client_socket, int x, int y, int codOP);
 t_2_enteros * recibir_2_enteros(int);
 void enviar_3_enteros(int client_socket, int x, int y, int z, int codOP);
 t_3_enteros * recibir_3_enteros(int);
 recive_mov_out * recibir_mov_out(int);
 void liberar_ce_2enteros(t_ce_2enteros*);
+void liberar_ce_string(t_ce_string*);
 
 void enviar_todas_tablas_segmentos(int, t_list*, int, t_log*);
 t_list* recibir_todas_tablas_segmentos(int);

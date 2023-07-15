@@ -144,6 +144,7 @@ void actualizar_pcb(t_pcb*, contexto_ejecucion*);
 
 // Declaraciones de fin de proceso
 void atender_final_proceso(int);
+void finalizar_proceso(contexto_ejecucion*, int);
 void liberar_recursos_pedidos(t_pcb*);
 void enviar_Fin_consola(int);
 
@@ -161,8 +162,6 @@ void restar_instancia(int);
 void sumar_instancia(int);
 void sumar_instancia_exit(int, t_pcb*);
 
-// Declaraciones EJECUTAR_INSTRUCCION
-void atender_ejecutar_instruccion();
 // Declaraciones WAIT_RECURSO
 void atender_wait_recurso();
 int tiene_instancia_wait(int);

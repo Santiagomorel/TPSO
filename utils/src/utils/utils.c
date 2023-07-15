@@ -718,6 +718,30 @@ t_ce_2enteros * recibir_ce_2enteros(int socket)
 	return nuevo_ce_2enteros;
 }
 
+t_ce_string* recibir_ce_string(int socket)
+{
+	t_ce_string* nuevo_ce_string = malloc(sizeof(t_ce_string));
+	contexto_ejecucion *nuevoCe = malloc(sizeof(contexto_ejecucion));
+	int size = 0;
+	char *buffer;
+	int desp = 0;
+
+	buffer = recibir_buffer(&size, socket);
+
+	nuevoCe->id = leer_entero(buffer, &desp);
+	nuevoCe->instrucciones = leer_string_array(buffer, &desp); // hay que liberar antes de perder la referencia
+	nuevoCe->program_counter = leer_entero(buffer, &desp);
+	nuevoCe->registros_cpu = leer_registros(buffer, &desp); // hay que liberar antes de perder la referencia
+	nuevoCe->tabla_segmentos = leer_tabla_segmentos(buffer, &desp);
+
+	nuevo_ce_string->ce = nuevoCe;
+
+	nuevo_ce_string->string = leer_string(buffer, &desp);
+
+	free(buffer);
+	return nuevo_ce_string;
+}
+
 void enviar_2_enteros(int client_socket, int x, int y, int codOP){
     t_paquete* paquete = crear_paquete_op_code(codOP);
 
@@ -797,6 +821,13 @@ void liberar_ce_2enteros(t_ce_2enteros* ce_2enteros)
 {
 	liberar_ce(ce_2enteros->ce);
 	free(ce_2enteros); //esto no se si funciona OJO 
+}
+
+void liberar_ce_string(t_ce_string* ce_string)
+{
+	liberar_ce(ce_string->ce);
+	free(ce_string->string);
+	free(ce_string); //esto no se si funciona OJO
 }
 
 void enviar_todas_tablas_segmentos(int conexion, t_list* lista_t_procesos, int codOP, t_log* logger)

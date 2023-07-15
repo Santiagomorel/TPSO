@@ -139,13 +139,13 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
             int tamanio = estructura_3_enteros->entero3;
 
             if(puedoGuardar(tamanio)==1){
-                if(necesitoCompactar(tamanio)==1){
+                if(/*necesitoCompactar(tamanio)==1*/1){
                 
                 }
                 else{
                 //busco un espacio segun el algoritmo de ordenamiento
                 t_proceso* proceso_con_nuevo_segmento = buscar_proceso(id_proceso);
-                list_add(proceso_con_nuevo_segmento->tabla_segmentos, segmento_nuevo);
+                //list_add(proceso_con_nuevo_segmento->tabla_segmentos, segmento_nuevo);
                 enviar_tabla_segmentos(SOCKET_CLIENTE_KERNEL, TABLA_SEGMENTOS, proceso_con_nuevo_segmento);
                 }
             }
