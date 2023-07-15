@@ -1133,7 +1133,7 @@ void atender_compactacion(int id_proceso, int id_segmento, int tamanio_segmento)
         }
 }
 
-void actualizar_ts_x_proceso()
+void actualizar_ts_x_proceso() // PROBAR
 {
     t_list* lista_ts_x_procesos = recibir_todas_tablas_segmentos(memory_connection);
 
