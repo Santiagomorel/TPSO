@@ -351,7 +351,11 @@ char* obtener_nombre_archivo(t_entradaTGAA* entrada){
 }
 
 bool existeArchivo(char* nombreArchivo){
-    return strcmp(nombreEntrada,nombreArchivo) == 0;
+    t_list* nombreArchivosAbiertos= list_map(tablaGlobalArchivosAbiertos,(void*) obtener_nombre_archivo);
+    t_list* archivoEnLista = nombre_en_lista_coincide(nombreArchivosAbiertos,(char*) nombreArchivo);
+    
+     return list_is_empty(archivoEnLista) == 0;
+ 
 }
 
 char* obtenerEstado(estados estado)
@@ -734,7 +738,7 @@ void manejar_dispatch()
                 break;
 
             case LEER_ARCHIVO:
-                atender_leer_archivo();
+                atender_lectura_archivo();
                 break;
             
             case ESCRIBIR_ARCHIVO:
@@ -1209,13 +1213,13 @@ void manejar_memoria()
 // ----------------------- Funciones ABRIR_ARCHIVO ----------------------- //
 void atender_apertura_archivo(){
     char* nombreArchivo=recibir_string(cpu_dispatch_connection,kernel_logger);
-    //contexto_ejecucion* contextoDeEjecucion=recibir_ce(cpu_dispatch_connection);
+    contexto_ejecucion* contextoDeEjecucion=recibir_ce(cpu_dispatch_connection);
     t_pcb* pcb_en_ejecucion = ((t_pcb *) list_get(listaEjecutando, 0));
     t_list* nombreArchivosAbiertos= list_map(tablaGlobalArchivosAbiertos,(void*) obtener_nombre_archivo);
 
-    //actualizar_pcb(pcb_en_ejecucion,contextoDeEjecucion);
+    actualizar_pcb(pcb_en_ejecucion,contextoDeEjecucion);
     
-    if(list_any_satisfy(nombreArchivosAbiertos,(bool)existeArchivo(nombreArchivo))){
+    if(existeArchivo(nombreArchivo)){
         t_entradaTAAP* entradaTAAP3= malloc(sizeof(t_entradaTAAP));
         crear_entrada_TAAP(nombreArchivo,entradaTAAP3);
         list_add(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso,entradaTAAP3);
@@ -1277,25 +1281,34 @@ void crear_entrada_TAAP(char* nombre,t_entradaTAAP* nuevaEntrada){
 
     nuevaEntrada->nombreArchivo = nombre;
     nuevaEntrada->puntero = 0;
-    t_list* listaFiltrada = list_filter(tablaGlobalArchivosAbiertos,existeArchivo(nombre));
+    t_list* listaFiltrada = nombre_en_lista_coincide(tablaGlobalArchivosAbiertos,(char*)nombre);
     t_entradaTGAA* entradaGlobal = list_get(listaFiltrada,0);
     nuevaEntrada->tamanioArchivo = entradaGlobal ->tamanioArchivo;
 
 
 }
+
+t_list* nombre_en_lista_coincide(t_list* tabla, char* nombre)
+{
+    bool encontrar_nombre(char* nombreLista){
+        return nombre == nombreLista;
+    }
+
+    return list_filter(tabla, (void*) encontrar_nombre);
+}
 // ----------------------- Funciones CERRAR_ARCHIVO ----------------------- //
 void atender_cierre_archivo(){
     char* nombreArchivo=recibir_string(cpu_dispatch_connection,kernel_logger);
 
-    //contexto_ejecucion* contextoDeEjecucion=recibir_ce(cpu_dispatch_connection);
+    contexto_ejecucion* contextoDeEjecucion=recibir_ce(cpu_dispatch_connection);
     
     t_pcb* pcb_en_ejecucion = ((t_pcb *) list_get(listaEjecutando, 0));
 
- //actualizar_pcb(pcb_en_ejecucion,contextoDeEjecucion);
+ actualizar_pcb(pcb_en_ejecucion,contextoDeEjecucion);
 
     log_trace(kernel_logger, "PID: <PID> - Cerrar Archivo: <NOMBRE ARCHIVO>");
     
-    t_list* listaFiltrada = list_filter(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso,existeArchivo(nombreArchivo));
+    t_list* listaFiltrada = nombre_en_lista_coincide(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso,(char*) nombreArchivo);
     
     t_entradaTAAP* entradaProceso = list_get(listaFiltrada,0);
     
@@ -1309,7 +1322,7 @@ void atender_cierre_archivo(){
     }
     
     else{
-    t_list* listaFiltrada = list_filter(tablaGlobalArchivosAbiertos,existeArchivo(nombreArchivo));
+    t_list* listaFiltrada =  nombre_en_lista_coincide(tablaGlobalArchivosAbiertos,(char*) nombreArchivo);
     t_entradaTGAA* entradaGlobal = list_get(listaFiltrada,0);
     list_remove_element(tablaGlobalArchivosAbiertos,entradaGlobal);
     free(entradaGlobal);
@@ -1324,14 +1337,14 @@ void atender_actualizar_puntero(){
     
     char* nombreArchivo=recibir_string(cpu_dispatch_connection,kernel_logger);
     
-    //contexto_ejecucion* contextoDeEjecucion=recibir_ce(cpu_dispatch_connection);
+    contexto_ejecucion* contextoDeEjecucion=recibir_ce(cpu_dispatch_connection);
     
     t_pcb* pcb_en_ejecucion = ((t_pcb *) list_get(listaEjecutando, 0));
 
-    //actualizar_pcb(pcb_en_ejecucion,contextoDeEjecucion);
+    actualizar_pcb(pcb_en_ejecucion,contextoDeEjecucion);
 
     
-    t_list* listaFiltrada = list_filter(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso,existeArchivo(nombreArchivo));
+    t_list* listaFiltrada = nombre_en_lista_coincide(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso,(char*) nombreArchivo);
     
     t_entradaTAAP* entradaProceso = list_get(listaFiltrada,0);
     

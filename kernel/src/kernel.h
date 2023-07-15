@@ -214,9 +214,11 @@ void manejar_memoria();
 //Declaraciones ABRIR_ARCHIVO
 void atender_apertura_archivo();
 char* obtener_nombre_archivo(t_entradaTGAA*);
-bool existeArchivo(char*,char*);
+bool existeArchivo(char*);
+t_list* nombre_en_lista_coincide(t_list*, char* );
 void crear_entrada_TAAP(char*,t_entradaTAAP*);
-void crear_entrada_TGAA(char* nombre,t_entradaTAAP* entrada);
+void crear_entrada_TGAA(char*,t_entradaTAAP*);
+bool encontrar_nombre(char*);
 //Declaraciones CERRAR_ARCHIVO
 void atender_cierre_archivo();
 //Declaraciones ACTUALIZAR_PUNTERO
