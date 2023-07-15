@@ -549,7 +549,7 @@ void execute_process(contexto_ejecucion* ce){
     char** decoded_instruction = malloc(sizeof(char*));
 
     log_trace(cpu_logger, "Por empezar  end_process != 1 && input_ouput != 1 && wait != 0 && desalojo_por_yield != 1 && signal_recurso != 1 && sigsev != 1"); 
-    while(end_process != 1 && input_ouput != 1 && wait != 0 && desalojo_por_yield != 1 && signal_recurso !0 0 && sigsegv != 1 && desalojo_por_archivo != 1 ){
+    while(end_process != 1 && input_ouput != 1 && wait != 0 && desalojo_por_yield != 1 && signal_recurso != 0 && sigsegv != 1 && desalojo_por_archivo != 1 ){
         //Llega el ce y con el program counter buscas la instruccion que necesita
         instruction = string_duplicate(fetch_next_instruction_to_execute(ce));
         decoded_instruction = decode(instruction);
