@@ -108,6 +108,7 @@ void inicializarListasGlobales()
     listaBloqueados = list_create();
     listaEjecutando = list_create();
     listaFinalizados = list_create();
+    tablaGlobalArchivosAbiertos = list_create();
     iniciar_listas_recursos(kernel_config.recursos);
 
     listaIO = list_create();
@@ -269,7 +270,7 @@ t_pcb* pcb_create(char* instrucciones, int socket_consola)
     new_pcb->tabla_segmentos = list_create();
     new_pcb->estimacion_rafaga = kernel_config.estimacion_inicial;
     new_pcb->tiempo_llegada_ready = temporal_create();
-    new_pcb->tabla_archivos_abiertos = list_create();
+    new_pcb->tabla_archivos_abiertos_por_proceso = list_create();
     
     new_pcb->salida_ejecucion = temporal_create();
     new_pcb->rafaga_ejecutada = 0;
@@ -344,6 +345,17 @@ void cambiar_estado_a(t_pcb* a_pcb, estados nuevo_estado, estados estado_anterio
 int obtenerPid(t_pcb* pcb)
 {
     return pcb->id;
+}
+char* obtener_nombre_archivo(t_entradaTGAA* entrada){
+    return entrada->nombreArchivo;
+}
+
+bool existeArchivo(char* nombreArchivo){
+    t_list* nombreArchivosAbiertos= list_map(tablaGlobalArchivosAbiertos,(void*) obtener_nombre_archivo);
+    t_list* archivoEnLista = nombre_en_lista_coincide(nombreArchivosAbiertos,(char*) nombreArchivo);
+    
+     return list_is_empty(archivoEnLista) == 0;
+ 
 }
 
 char* obtenerEstado(estados estado)
@@ -706,6 +718,30 @@ void manejar_dispatch()
 
             case BORRAR_SEGMENTO:
                 atender_borrar_segmento();
+                break;
+
+            case ABRIR_ARCHIVO:
+                atender_apertura_archivo();
+                break;
+            
+            case CERRAR_ARCHIVO:
+                atender_cierre_archivo();
+                break;
+
+            case ACTUALIZAR_PUNTERO:
+                atender_actualizar_puntero();
+                break;
+
+            case LEER_ARCHIVO:
+                atender_lectura_archivo();
+                break;
+            
+            case ESCRIBIR_ARCHIVO:
+                atender_escritura_archivo();
+                break;
+
+            case MODIFICAR_TAMAÑO_ARCHIVO:
+                atender_modificar_tamanio_archivo();
                 break;
 
             case -1:
@@ -1195,6 +1231,174 @@ void manejar_memoria()
     //         // recibir el codigo y enviar la base o el codigo de error
     //     }
     // }
+}
+
+// ----------------------- Funciones ABRIR_ARCHIVO ----------------------- //
+void atender_apertura_archivo(){
+    char* nombreArchivo=recibir_string(cpu_dispatch_connection,kernel_logger);
+    contexto_ejecucion* contextoDeEjecucion=recibir_ce(cpu_dispatch_connection);
+    t_pcb* pcb_en_ejecucion = ((t_pcb *) list_get(listaEjecutando, 0));
+    t_list* nombreArchivosAbiertos= list_map(tablaGlobalArchivosAbiertos,(void*) obtener_nombre_archivo);
+
+    actualizar_pcb(pcb_en_ejecucion,contextoDeEjecucion);
+    
+    if(existeArchivo(nombreArchivo)){
+        t_entradaTAAP* entradaTAAP3= malloc(sizeof(t_entradaTAAP));
+        crear_entrada_TAAP(nombreArchivo,entradaTAAP3);
+        list_add(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso,entradaTAAP3);
+        // se bloqueará al proceso que ejecutó F_OPEN en la cola correspondiente a este archivo
+
+    }
+
+    else{
+        enviar_paquete_string(file_system_connection,nombreArchivo,CONSULTA_ARCHIVO,(strlen(nombreArchivo)+1));
+        
+        int existe = recibir_operacion(file_system_connection);
+
+        switch(existe){
+            case NO_EXISTE_ARCHIVO:
+            t_entradaTAAP* entradaTAAP = malloc(sizeof(t_entradaTAAP));
+            enviar_string_entero(file_system_connection,nombreArchivo,0,CREAR_ARCHIVO);
+            crear_entrada_TGAA(nombreArchivo,entradaTAAP);
+            crear_entrada_TAAP(nombreArchivo,entradaTAAP);
+            
+            list_add(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso,entradaTAAP);
+            contexto_ejecucion* contextoAEnviar = obtener_ce(pcb_en_ejecucion);
+            enviar_ce(cpu_dispatch_connection,contextoAEnviar,EJECUTAR_CE,kernel_logger);
+            
+            break;
+
+        case EXISTE_ARCHIVO:
+            t_entradaTAAP* entradaTAAP2 = malloc(sizeof(t_entradaTAAP));
+            crear_entrada_TGAA(nombreArchivo,entradaTAAP2);
+            crear_entrada_TAAP(nombreArchivo,entradaTAAP2);
+            
+            list_add(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso,entradaTAAP);
+            contexto_ejecucion* contextoAEnviar2 = obtener_ce(pcb_en_ejecucion);
+            enviar_ce(cpu_dispatch_connection,contextoAEnviar2,EJECUTAR_CE,kernel_logger);
+            break;
+        default:
+            log_error(kernel_logger,"CodOp invalido");
+            break;
+        }
+
+
+        
+    }
+
+log_trace(kernel_logger, "PID: <%d> - Abrir Archivo: <%s>",pcb_en_ejecucion->id,nombreArchivo);
+
+}
+void crear_entrada_TGAA(char* nombre,t_entradaTAAP* entrada){
+    t_entradaTGAA* nuevaEntradaTGAA = malloc(sizeof(t_entradaTGAA));
+    nuevaEntradaTGAA->nombreArchivo = nombre;
+    nuevaEntradaTGAA->puntero = entrada;
+    list_add(tablaGlobalArchivosAbiertos,nuevaEntradaTGAA);
+
+    //faltan locks para tabla  y tamanio
+    //t_list *lista_block_archivo;
+    //pthread_mutex_t mutex_lista_block_archivo;
+
+}
+void crear_entrada_TAAP(char* nombre,t_entradaTAAP* nuevaEntrada){
+
+    nuevaEntrada->nombreArchivo = nombre;
+    nuevaEntrada->puntero = 0;
+    t_list* listaFiltrada = nombre_en_lista_coincide(tablaGlobalArchivosAbiertos,(char*)nombre);
+    t_entradaTGAA* entradaGlobal = list_get(listaFiltrada,0);
+    nuevaEntrada->tamanioArchivo = entradaGlobal ->tamanioArchivo;
+
+
+}
+
+t_list* nombre_en_lista_coincide(t_list* tabla, char* nombre)
+{
+    bool encontrar_nombre(char* nombreLista){
+        return nombre == nombreLista;
+    }
+
+    return list_filter(tabla, (void*) encontrar_nombre);
+}
+// ----------------------- Funciones CERRAR_ARCHIVO ----------------------- //
+void atender_cierre_archivo(){
+    char* nombreArchivo=recibir_string(cpu_dispatch_connection,kernel_logger);
+
+    contexto_ejecucion* contextoDeEjecucion=recibir_ce(cpu_dispatch_connection);
+    
+    t_pcb* pcb_en_ejecucion = ((t_pcb *) list_get(listaEjecutando, 0));
+
+ actualizar_pcb(pcb_en_ejecucion,contextoDeEjecucion);
+
+    log_trace(kernel_logger, "PID: <PID> - Cerrar Archivo: <NOMBRE ARCHIVO>");
+    
+    t_list* listaFiltrada = nombre_en_lista_coincide(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso,(char*) nombreArchivo);
+    
+    t_entradaTAAP* entradaProceso = list_get(listaFiltrada,0);
+    
+    list_remove_element(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso,entradaProceso);
+    
+    free(entradaProceso);
+    /* necesitamos tabla de bloqueados por archivo (ashuda morel)
+    
+    if(tieneEncolados){
+
+    }
+    
+    else{
+    t_list* listaFiltrada =  nombre_en_lista_coincide(tablaGlobalArchivosAbiertos,(char*) nombreArchivo);
+    t_entradaTGAA* entradaGlobal = list_get(listaFiltrada,0);
+    list_remove_element(tablaGlobalArchivosAbiertos,entradaGlobal);
+    free(entradaGlobal);
+    }
+
+    */
+    
+}
+// ----------------------- Funciones ACTUALIZAR_PUNTERO ----------------------- //
+void atender_actualizar_puntero(){
+    int posicion = recibir_entero(cpu_dispatch_connection,kernel_logger);
+    
+    char* nombreArchivo=recibir_string(cpu_dispatch_connection,kernel_logger);
+    
+    contexto_ejecucion* contextoDeEjecucion=recibir_ce(cpu_dispatch_connection);
+    
+    t_pcb* pcb_en_ejecucion = ((t_pcb *) list_get(listaEjecutando, 0));
+
+    actualizar_pcb(pcb_en_ejecucion,contextoDeEjecucion);
+
+    
+    t_list* listaFiltrada = nombre_en_lista_coincide(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso,(char*) nombreArchivo);
+    
+    t_entradaTAAP* entradaProceso = list_get(listaFiltrada,0);
+    
+    entradaProceso->puntero = posicion;
+
+    
+    //contexto_ejecucion* contextoAEnviar = obtener_ce(pcb_en_ejecucion);
+    //enviar_ce(cpu_dispatch_connection,contextoAEnviar,EJECUTAR_CE,kernel_logger);
+    
+    log_trace(kernel_logger, "PID: <PID> - Actualizar puntero Archivo: <NOMBRE ARCHIVO> - Puntero <PUNTERO>");
+
+    
+}
+// ----------------------- Funciones LEER_ARCHIVO ----------------------- //
+void atender_lectura_archivo(){
+    int id_proceso = ((t_pcb *) list_get(listaEjecutando, 0))->id;
+log_trace(kernel_logger, "PID: <PID> - Archivo: <NOMBRE ARCHIVO> - Tamaño: <TAMAÑO>");
+    
+}
+// ----------------------- Funciones ESCRIBIR_ARCHIVO ----------------------- //
+void atender_escritura_archivo(){
+    int id_proceso = ((t_pcb *) list_get(listaEjecutando, 0))->id;
+log_trace(kernel_logger, "PID: <PID> - Leer Archivo: <NOMBRE ARCHIVO> - Puntero <PUNTERO> - Dirección Memoria <DIRECCIÓN MEMORIA> - Tamaño <TAMAÑO>");
+    
+}
+// ----------------------- Funciones MODIFICAR_TAMANIO_ARCHIVO ----------------------- //
+void atender_modificar_tamanio_archivo(){
+    int id_proceso = ((t_pcb *) list_get(listaEjecutando, 0))->id;
+
+log_trace(kernel_logger, "PID: <PID> - Escribir Archivo: <NOMBRE ARCHIVO> - Puntero <PUNTERO> - Dirección Memoria <DIRECCIÓN MEMORIA> - Tamaño <TAMAÑO>");
+    
 }
 // ----------------------- Funciones finales ----------------------- //
 

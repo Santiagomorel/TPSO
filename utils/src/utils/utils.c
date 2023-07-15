@@ -903,3 +903,12 @@ t_proceso* recibir_t_proceso(char* buffer, int* desp)
 
 	return nuevoProceso;
 }
+
+void enviar_string_entero(int client_socket, char* parameter, int x, int codOP){
+    t_paquete* paquete = crear_paquete_op_code(codOP);
+    agregar_string_a_paquete(paquete, parameter); 
+    agregar_entero_a_paquete(paquete,x);
+    enviar_paquete(paquete, client_socket);
+    eliminar_paquete(paquete);
+    
+}
