@@ -108,6 +108,7 @@ void inicializarListasGlobales()
     listaBloqueados = list_create();
     listaEjecutando = list_create();
     listaFinalizados = list_create();
+    tablaGlobalArchivosAbiertos = list_create();
     iniciar_listas_recursos(kernel_config.recursos);
 
     listaIO = list_create();
@@ -349,7 +350,7 @@ char* obtener_nombre_archivo(t_entradaTGAA* entrada){
     return entrada->nombreArchivo;
 }
 
-bool existeArchivo(char* nombreEntrada,char* nombreArchivo){
+bool existeArchivo(char* nombreArchivo){
     return strcmp(nombreEntrada,nombreArchivo) == 0;
 }
 
@@ -1208,15 +1209,17 @@ void manejar_memoria()
 // ----------------------- Funciones ABRIR_ARCHIVO ----------------------- //
 void atender_apertura_archivo(){
     char* nombreArchivo=recibir_string(cpu_dispatch_connection,kernel_logger);
-    contexto_ejecucion* contextoDeEjecucion=recibir_ce(cpu_dispatch_connection);
+    //contexto_ejecucion* contextoDeEjecucion=recibir_ce(cpu_dispatch_connection);
     t_pcb* pcb_en_ejecucion = ((t_pcb *) list_get(listaEjecutando, 0));
     t_list* nombreArchivosAbiertos= list_map(tablaGlobalArchivosAbiertos,(void*) obtener_nombre_archivo);
 
-    actualizar_pcb(pcb_en_ejecucion,contextoDeEjecucion);
+    //actualizar_pcb(pcb_en_ejecucion,contextoDeEjecucion);
     
     if(list_any_satisfy(nombreArchivosAbiertos,(bool)existeArchivo(nombreArchivo))){
-        crear_entrada_TAAP(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso,nombreArchivo);
-        //falta bloqueo por archivo.
+        t_entradaTAAP* entradaTAAP3= malloc(sizeof(t_entradaTAAP));
+        crear_entrada_TAAP(nombreArchivo,entradaTAAP3);
+        list_add(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso,entradaTAAP3);
+        // se bloqueará al proceso que ejecutó F_OPEN en la cola correspondiente a este archivo
 
     }
 
@@ -1263,12 +1266,15 @@ void crear_entrada_TGAA(char* nombre,t_entradaTAAP* entrada){
     t_entradaTGAA* nuevaEntradaTGAA = malloc(sizeof(t_entradaTGAA));
     nuevaEntradaTGAA->nombreArchivo = nombre;
     nuevaEntradaTGAA->puntero = entrada;
+    list_add(tablaGlobalArchivosAbiertos,nuevaEntradaTGAA);
+
     //faltan locks para tabla  y tamanio
     //t_list *lista_block_archivo;
     //pthread_mutex_t mutex_lista_block_archivo;
 
 }
 void crear_entrada_TAAP(char* nombre,t_entradaTAAP* nuevaEntrada){
+
     nuevaEntrada->nombreArchivo = nombre;
     nuevaEntrada->puntero = 0;
     t_list* listaFiltrada = list_filter(tablaGlobalArchivosAbiertos,existeArchivo(nombre));
@@ -1280,15 +1286,21 @@ void crear_entrada_TAAP(char* nombre,t_entradaTAAP* nuevaEntrada){
 // ----------------------- Funciones CERRAR_ARCHIVO ----------------------- //
 void atender_cierre_archivo(){
     char* nombreArchivo=recibir_string(cpu_dispatch_connection,kernel_logger);
-    contexto_ejecucion* contextoDeEjecucion=recibir_ce(cpu_dispatch_connection);
+
+    //contexto_ejecucion* contextoDeEjecucion=recibir_ce(cpu_dispatch_connection);
+    
     t_pcb* pcb_en_ejecucion = ((t_pcb *) list_get(listaEjecutando, 0));
 
- actualizar_pcb(pcb_en_ejecucion,contextoDeEjecucion);
+ //actualizar_pcb(pcb_en_ejecucion,contextoDeEjecucion);
 
     log_trace(kernel_logger, "PID: <PID> - Cerrar Archivo: <NOMBRE ARCHIVO>");
+    
     t_list* listaFiltrada = list_filter(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso,existeArchivo(nombreArchivo));
+    
     t_entradaTAAP* entradaProceso = list_get(listaFiltrada,0);
+    
     list_remove_element(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso,entradaProceso);
+    
     free(entradaProceso);
     /* necesitamos tabla de bloqueados por archivo (ashuda morel)
     
@@ -1297,7 +1309,7 @@ void atender_cierre_archivo(){
     }
     
     else{
-        t_list* listaFiltrada = list_filter(tablaGlobalArchivosAbiertos,existeArchivo(nombreArchivo));
+    t_list* listaFiltrada = list_filter(tablaGlobalArchivosAbiertos,existeArchivo(nombreArchivo));
     t_entradaTGAA* entradaGlobal = list_get(listaFiltrada,0);
     list_remove_element(tablaGlobalArchivosAbiertos,entradaGlobal);
     free(entradaGlobal);
@@ -1309,18 +1321,25 @@ void atender_cierre_archivo(){
 // ----------------------- Funciones ACTUALIZAR_PUNTERO ----------------------- //
 void atender_actualizar_puntero(){
     int posicion = recibir_entero(cpu_dispatch_connection,kernel_logger);
+    
     char* nombreArchivo=recibir_string(cpu_dispatch_connection,kernel_logger);
-    contexto_ejecucion* contextoDeEjecucion=recibir_ce(cpu_dispatch_connection);
+    
+    //contexto_ejecucion* contextoDeEjecucion=recibir_ce(cpu_dispatch_connection);
+    
     t_pcb* pcb_en_ejecucion = ((t_pcb *) list_get(listaEjecutando, 0));
 
-    actualizar_pcb(pcb_en_ejecucion,contextoDeEjecucion);
+    //actualizar_pcb(pcb_en_ejecucion,contextoDeEjecucion);
 
+    
     t_list* listaFiltrada = list_filter(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso,existeArchivo(nombreArchivo));
+    
     t_entradaTAAP* entradaProceso = list_get(listaFiltrada,0);
+    
     entradaProceso->puntero = posicion;
 
-    contexto_ejecucion* contextoAEnviar = obtener_ce(pcb_en_ejecucion);
-    enviar_ce(cpu_dispatch_connection,contextoAEnviar,EJECUTAR_CE,kernel_logger);
+    
+    //contexto_ejecucion* contextoAEnviar = obtener_ce(pcb_en_ejecucion);
+    //enviar_ce(cpu_dispatch_connection,contextoAEnviar,EJECUTAR_CE,kernel_logger);
     
     log_trace(kernel_logger, "PID: <PID> - Actualizar puntero Archivo: <NOMBRE ARCHIVO> - Puntero <PUNTERO>");
 
