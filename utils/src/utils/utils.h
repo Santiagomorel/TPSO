@@ -297,6 +297,7 @@ void agregar_tabla_segmentos_a_paquete(t_paquete*, t_list*);
 
 t_ce_2enteros * recibir_ce_2enteros(int);
 t_ce_string* recibir_ce_string(int);
+t_ce_string* recibir_ce_stringlog(int, t_log*);
 void enviar_2_enteros(int client_socket, int x, int y, int codOP);
 t_2_enteros * recibir_2_enteros(int);
 void enviar_3_enteros(int client_socket, int x, int y, int z, int codOP);

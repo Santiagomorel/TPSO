@@ -890,11 +890,13 @@ void sumar_instancia_exit(int id_recurso, t_pcb* pcb_quita_recurso)
 
 void atender_wait_recurso()
 {
-    t_ce_string* estructura_wait_recurso = recibir_ce_string(cpu_dispatch_connection);
-
+    log_warning(kernel_logger, "entro en atender wait recurso");
+    t_ce_string* estructura_wait_recurso = recibir_ce_stringlog(cpu_dispatch_connection, kernel_logger);
+    log_warning(kernel_logger, "recibo la estructura wait recurso");
     contexto_ejecucion* contexto_ejecuta_wait = estructura_wait_recurso->ce;
-
+    log_warning(kernel_logger, "saco el contexto");
     char* recurso_wait = estructura_wait_recurso->string;
+    log_warning(kernel_logger, "saco el string");
 
     if (recurso_no_existe(recurso_wait)) {
         finalizar_proceso(contexto_ejecuta_wait, EXIT_ERROR_RECURSO);

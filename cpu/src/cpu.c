@@ -295,7 +295,7 @@ char** decode(char* linea){ // separarSegunEspacios
 }
 
 /*-------------------- EXECUTE ---------------------- */
-
+int sale_proceso = 0;
 int end_process = 0;
 int input_ouput = 0;
 int check_interruption = 0;
@@ -334,7 +334,8 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
 
             enviar_ce_con_string(socket_kernel, ce, instruction[1], BLOCK_IO);
 
-            input_ouput = 1;
+            //input_ouput = 1;
+            sale_proceso = 1;
 
             break;
 
@@ -346,7 +347,8 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
 
             enviar_ce(socket_kernel, ce, SUCCESS, cpu_logger);
 
-            end_process = 1; // saca del while de ejecucion
+            //end_process = 1; // saca del while de ejecucion
+            sale_proceso = 1;
 
             break;
 
@@ -359,7 +361,8 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             
             enviar_ce_con_string(socket_kernel, ce, instruction[1], WAIT_RECURSO);
 
-            wait = 1;
+            //wait = 1;
+            sale_proceso = 1;
             
             break;
 
@@ -371,7 +374,8 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
 
             enviar_ce_con_string(socket_kernel, ce, instruction[1], SIGNAL_RECURSO);
 
-            signal_recurso = 1;
+            // signal_recurso = 1;
+            sale_proceso = 1;
             
             break;
             
@@ -381,7 +385,8 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             
             enviar_ce(socket_kernel, ce, DESALOJO_YIELD, cpu_logger);
 
-            desalojo_por_yield = 1;
+            // desalojo_por_yield = 1;
+            sale_proceso = 1;
 
             break;
 
@@ -547,8 +552,10 @@ void execute_process(contexto_ejecucion* ce){
     char* instruction = malloc(sizeof(char*));
     char** decoded_instruction = malloc(sizeof(char*));
 
-    log_trace(cpu_logger, "Por empezar  end_process != 1 && input_ouput != 1 && wait != 0 && desalojo_por_yield != 1 && signal_recurso != 1 && sigsev != 1"); 
-    while(end_process != 1 && input_ouput != 1 && wait != 1 && desalojo_por_yield != 1 && signal_recurso != 1 && sigsegv != 1 && desalojo_por_archivo != 1 ){
+    //log_trace(cpu_logger, "Por empezar  end_process != 1 && input_ouput != 1 && wait != 0 && desalojo_por_yield != 1 && signal_recurso != 1 && sigsev != 1"); 
+    log_trace(cpu_logger, "Comienza la ejecucion");
+    // while(end_process != 1 && input_ouput != 1 && wait != 1 && desalojo_por_yield != 1 && signal_recurso != 1 && sigsegv != 1 && desalojo_por_archivo != 1 ){
+    while(sale_proceso != 1){
         //Llega el ce y con el program counter buscas la instruccion que necesita
         instruction = string_duplicate(fetch_next_instruction_to_execute(ce));
         decoded_instruction = decode(instruction);
@@ -563,113 +570,114 @@ void execute_process(contexto_ejecucion* ce){
     
     log_trace(cpu_logger, "SALI DEL WHILE DE EJECUCION");
     
-    
+    sale_proceso = 0;
+//     liberar_ce(ce);
 
-    //imprimir_registros(ce->registros_cpu, cpu_logger); // para comprobar que los registros se guardaran bien
-    if (end_process)
-    {
-        end_process = 0; // IMPORTANTE: Apagar el flag para que no rompa el proximo proceso que llegue
+//     //imprimir_registros(ce->registros_cpu, cpu_logger); // para comprobar que los registros se guardaran bien
+//     if (end_process)
+//     {
+//         end_process = 0; // IMPORTANTE: Apagar el flag para que no rompa el proximo proceso que llegue
 
         
 
-        liberar_ce(ce);
+//         liberar_ce(ce);
 
-        log_trace(cpu_logger, "Enviamos paquete a dispatch: FIN PROCESO");
-    }
-    else if (input_ouput)
-    {
-        input_ouput = 0;
-        check_interruption = 0;
+//         log_trace(cpu_logger, "Enviamos paquete a dispatch: FIN PROCESO");
+//     }
+//     else if (input_ouput)
+//     {
+//         input_ouput = 0;
+//         check_interruption = 0;
 
-        log_trace(cpu_logger, "Bloqueado por IO");
+//         log_trace(cpu_logger, "Bloqueado por IO");
 
-        enviar_ce(socket_kernel, ce, BLOCK_IO, cpu_logger);
+//         enviar_ce(socket_kernel, ce, BLOCK_IO, cpu_logger);
 
-        liberar_ce(ce);
-    }
-    else if (sigsegv == 1)
-    {
-        sigsegv = 0;
+//         liberar_ce(ce);
+//     }
+//     else if (sigsegv == 1)
+//     {
+//         sigsegv = 0;
 
-        log_info(cpu_logger, "PID: %s - Error SEG_FAULT- Segmento: %s - Offset: %s - Tamaño: %s", ce->id, id_segmento_con_segfault, desplazamiento_segfault, tamanio_segfault);
-        enviar_ce(socket_kernel, ce, SEG_FAULT, cpu_logger);
+//         log_info(cpu_logger, "PID: %s - Error SEG_FAULT- Segmento: %s - Offset: %s - Tamaño: %s", ce->id, id_segmento_con_segfault, desplazamiento_segfault, tamanio_segfault);
+//         enviar_ce(socket_kernel, ce, SEG_FAULT, cpu_logger);
 
-        liberar_ce(ce); // VER PREGUNTAR A GUIDO
-    }
-    else if(wait)
-    { /*
-        if(wait == 2)
-        {  // Se bloquea por estar ocupado recurso
-            log_trace(cpu_logger, "Bloqueado por WAIT");
-            enviar_ce(socket_kernel, ce, BLOCK_WAIT, cpu_logger);
-        }
-        else if(wait == 3)
-        {
-            log_trace(cpu_logger, "No existe el recurso");
-            enviar_ce(socket_kernel, ce, EXIT_ERROR_RECURSO, cpu_logger);
-        }
-        else
-        {
-            log_trace(cpu_logger, "EJECUTO_WAIT"); // Prueba
-            enviar_ce(socket_kernel, ce, EJECUTO_INSTRUCCION, cpu_logger);
-        }
-        */
+//         liberar_ce(ce); // VER PREGUNTAR A GUIDO
+//     }
+//     else if(wait)
+//     { /*
+//         if(wait == 2)
+//         {  // Se bloquea por estar ocupado recurso
+//             log_trace(cpu_logger, "Bloqueado por WAIT");
+//             enviar_ce(socket_kernel, ce, BLOCK_WAIT, cpu_logger);
+//         }
+//         else if(wait == 3)
+//         {
+//             log_trace(cpu_logger, "No existe el recurso");
+//             enviar_ce(socket_kernel, ce, EXIT_ERROR_RECURSO, cpu_logger);
+//         }
+//         else
+//         {
+//             log_trace(cpu_logger, "EJECUTO_WAIT"); // Prueba
+//             enviar_ce(socket_kernel, ce, EJECUTO_INSTRUCCION, cpu_logger);
+//         }
+//         */
 
-        wait = 0;
+//         wait = 0;
 
-        liberar_ce(ce);
-    }
-    else if (desalojo_por_yield)
-    {
-        desalojo_por_yield = 0;
+//         liberar_ce(ce);
+//     }
+//     else if (desalojo_por_yield)
+//     {
+//         desalojo_por_yield = 0;
 
-        log_trace(cpu_logger, "Desalojado por YIELD");
+//         log_trace(cpu_logger, "Desalojado por YIELD");
         
 
-        liberar_ce(ce);
-    }
-    else if (signal_recurso)
-    {/*
-        if (signal_recurso == 3)
-        {
-            log_trace(cpu_logger, "No existe el recurso");
-            enviar_ce(socket_kernel, ce, EXIT_ERROR_RECURSO, cpu_logger);
-        }
-        else
-        {
-            log_trace(cpu_logger, "EJECUTO_SIGNAL"); // Prueba
-            enviar_ce(socket_kernel, ce, EJECUTO_INSTRUCCION, cpu_logger);
-        }
-*/
-        signal_recurso = 0;
+//         liberar_ce(ce);
+//     }
+//     else if (signal_recurso)
+//     {/*
+//         if (signal_recurso == 3)
+//         {
+//             log_trace(cpu_logger, "No existe el recurso");
+//             enviar_ce(socket_kernel, ce, EXIT_ERROR_RECURSO, cpu_logger);
+//         }
+//         else
+//         {
+//             log_trace(cpu_logger, "EJECUTO_SIGNAL"); // Prueba
+//             enviar_ce(socket_kernel, ce, EJECUTO_INSTRUCCION, cpu_logger);
+//         }
+// */
+//         signal_recurso = 0;
 
-        liberar_ce(ce);
-    }else if(desalojo_por_archivo){
+//         liberar_ce(ce);
+//     }else if(desalojo_por_archivo){
 
-        log_trace(cpu_logger, "Desalojo por archivo");
-        enviar_ce(socket_kernel, ce, DESALOJO_ARCHIVO, cpu_logger);
+//         log_trace(cpu_logger, "Desalojo por archivo");
+//         enviar_ce(socket_kernel, ce, DESALOJO_ARCHIVO, cpu_logger);
 
-        desalojo_por_archivo = 0;
+//         desalojo_por_archivo = 0;
 
-        liberar_ce(ce);
-    }
-    else if (sig_f)
-    {
-        if (sig_f == 2)
-        {
-            log_trace(cpu_logger, "No hay memoria");
-            enviar_ce(socket_kernel, ce, EXIT_OUT_OF_MEMORY, cpu_logger);
-        }
-        else
-        {
-            log_trace(cpu_logger, "EJECUTO_CREATE_SEGMENT"); // Prueba
-            enviar_ce(socket_kernel, ce, EJECUTO_INSTRUCCION, cpu_logger);
-        }
+//         liberar_ce(ce);
+//     }
+//     else if (sig_f)
+//     {
+//         if (sig_f == 2)
+//         {
+//             log_trace(cpu_logger, "No hay memoria");
+//             enviar_ce(socket_kernel, ce, EXIT_OUT_OF_MEMORY, cpu_logger);
+//         }
+//         else
+//         {
+//             log_trace(cpu_logger, "EJECUTO_CREATE_SEGMENT"); // Prueba
+//             enviar_ce(socket_kernel, ce, EJECUTO_INSTRUCCION, cpu_logger);
+//         }
 
-        sig_f = 0;
+//         sig_f = 0;
 
-        liberar_ce(ce);
-    }
+//         liberar_ce(ce);
+//     }
 }
 
 int recibir_respuesta_recurso(){
@@ -741,7 +749,8 @@ void enviar_ce_con_string(int client_socket, contexto_ejecucion* ce, char* param
     t_paquete* paquete = crear_paquete_op_code(codOP);
 
     agregar_ce_a_paquete(paquete, ce, cpu_logger);
-    agregar_string_a_paquete(paquete, parameter); 
+    agregar_a_paquete(paquete, parameter, sizeof(parameter)+1);
+    // agregar_string_a_paquete(paquete, parameter); 
     enviar_paquete(paquete, client_socket);
     eliminar_paquete(paquete);
     

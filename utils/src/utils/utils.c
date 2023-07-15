@@ -229,7 +229,7 @@ void agregar_string_a_paquete(t_paquete *paquete, char* palabra)
 {
 	paquete->buffer->stream = realloc(paquete->buffer->stream, paquete->buffer->size + sizeof(char*));
 	memcpy(paquete->buffer->stream + paquete->buffer->size, &palabra, sizeof(char*));
-	paquete->buffer->size += sizeof(char*);
+	paquete->buffer->size += (sizeof(char*));
 }
 
 
@@ -735,10 +735,35 @@ t_ce_string* recibir_ce_string(int socket)
 	nuevoCe->tabla_segmentos = leer_tabla_segmentos(buffer, &desp);
 
 	nuevo_ce_string->ce = nuevoCe;
-
+	printf("llego aca");
 	nuevo_ce_string->string = leer_string(buffer, &desp);
 
-	free(buffer);
+	return nuevo_ce_string;
+}
+
+t_ce_string* recibir_ce_stringlog(int socket, t_log* logger)
+{
+	log_error(logger, "entro aca");
+	t_ce_string* nuevo_ce_string = malloc(sizeof(t_ce_string));
+	log_error(logger, "hace el malloc del ce string");
+	contexto_ejecucion *nuevoCe = malloc(sizeof(contexto_ejecucion));
+	log_error(logger, "hace el malloc del ce");
+	int size = 0;
+	char *buffer;
+	int desp = 0;
+
+	buffer = recibir_buffer(&size, socket);
+
+	nuevoCe->id = leer_entero(buffer, &desp);
+	nuevoCe->instrucciones = leer_string_array(buffer, &desp); // hay que liberar antes de perder la referencia
+	nuevoCe->program_counter = leer_entero(buffer, &desp);
+	nuevoCe->registros_cpu = leer_registros(buffer, &desp); // hay que liberar antes de perder la referencia
+	nuevoCe->tabla_segmentos = leer_tabla_segmentos(buffer, &desp);
+	log_error(logger, "recibe el nuevo ce");
+	nuevo_ce_string->ce = nuevoCe;
+	log_error(logger, "lo asigna al tce_string");
+	nuevo_ce_string->string = leer_string(buffer, &desp);
+
 	return nuevo_ce_string;
 }
 
