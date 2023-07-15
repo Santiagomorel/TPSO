@@ -47,6 +47,9 @@ int idGlobal;
 
 
 //KERNEL
+void liberar_bitmap_segmento(t_segmento* segmento);
+void eliminar_tabla_segmentos(t_list* tabla_segmentos);
+void eliminar_proceso(t_proceso* proceso);
 void borrar_proceso(int PID);
 t_proceso* buscar_proceso(int id_proceso);
 t_proceso* borrar_segmento(int PID, int segmento);

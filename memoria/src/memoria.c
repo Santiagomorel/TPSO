@@ -134,7 +134,6 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
         case DELETE_PROCESS:
         int PID = recibir_entero(SOCKET_CLIENTE_KERNEL, log_memoria);
         borrar_proceso(PID);
-
         break;
         case CREATE_SEGMENT:
             t_3_enteros* estructura_3_enteros = recibir_3_enteros(SOCKET_CLIENTE_KERNEL);
@@ -143,7 +142,7 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
             int tamanio = estructura_3_enteros->entero3;
 
             if(puedoGuardar(tamanio)==1){
-                t_list segmentosDisponibles = buscarSegmentosDisponibles();
+                t_list* segmentosDisponibles = buscarSegmentosDisponibles();
 
                 if(list_is_empty(segmentosDisponibles)){
                 enviar_CodOp(SOCKET_CLIENTE_KERNEL, NECESITO_COMPACTAR);
@@ -169,11 +168,13 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
             // Debe recibir el id del segmento que desea eliminar
             
             t_2_enteros* data_delete = recibir_2_enteros(SOCKET_CLIENTE_KERNEL);
-            int PID = data_delete->entero1;
+            int id_proceso_delete = data_delete->entero1;
             int id_segmento_delete = data_delete->entero2;
-            t_proceso* proceso_sin_segmento = borrar_segmento(PID,id_segmento_delete);
+            t_proceso* proceso_sin_segmento = borrar_segmento(id_proceso_delete,id_segmento_delete);
             enviar_tabla_segmentos(SOCKET_CLIENTE_KERNEL, TABLA_SEGMENTOS, proceso_sin_segmento);
             break;
+
+
         // case COMPACTAR:
         //     sleep(memoria_config.retardo_compactacion);
         //     log_warning(log_memoria, "Solicitud de Compactación");
@@ -362,20 +363,32 @@ void iniciar_semaforos()
 //
 //  KERNEL
 //
+void liberar_bitmap_segmento(t_segmento* segmento){
+// liberar bitmap
+    liberarBitMap(segmento->direccion_base, segmento->tamanio_segmento);
+}
+void eliminar_tabla_segmentos(t_list* tabla_segmentos)
+{
+// liberar cada segmento de la tabla
+    list_iterate(tabla_segmentos, (void*)liberar_bitmap_segmento);
+    for (int i = 0; i < list_size(tabla_segmentos); i++)
+    {
+        free(list_get(tabla_segmentos, i));
+    }
+    
+}
+void eliminar_proceso(t_proceso* proceso){
+    // Eliminar la tabla de segmentos
+    list_clean_and_destroy_elements(proceso->tabla_segmentos, (void*)eliminar_tabla_segmentos);
+}
 
 void borrar_proceso(int PID){
-    
-    t_proceso* procesoEliminar = buscar_proceso(PID);
-    
-        // liberar bitmap
-        // liberar cada segmento de la tabla
-        // Eliminar la tabla de segmentos
         // Eliminar la instancia de la tabla de procesos => list_remove_and_destroy_by_condition
     bool mismoIdProc(t_proceso* unProceso){
-    return (unProceso->id == id_proceso);
+    return (unProceso->id == PID);
     }
     list_remove_and_destroy_by_condition(tabla_de_procesos, mismoIdProc , eliminar_proceso);
-    log_warning(log_memoria,"Eliminación de Proceso PID: %d" PID);   
+    log_warning(log_memoria,"Eliminación de Proceso PID: %d", PID);
 }
 
 
