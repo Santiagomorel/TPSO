@@ -122,19 +122,23 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
         int codigoOperacion = recibir_operacion(SOCKET_CLIENTE_KERNEL);
         switch (codigoOperacion)
         {
-            case INICIAR_ESTRUCTURAS:
-                int id_inicio_estructura = recibir_entero(SOCKET_CLIENTE_KERNEL, log_memoria);
-                t_proceso* nuevo_proceso = crear_proceso_en_memoria(id_inicio_estructura);
+        case INICIAR_ESTRUCTURAS:
+            int id_inicio_estructura = recibir_entero(SOCKET_CLIENTE_KERNEL, log_memoria);
+            t_proceso* nuevo_proceso = crear_proceso_en_memoria(id_inicio_estructura);
+            log_trace(log_memoria, "recibi el op_cod %d INICIAR_ESTRUCTURAS", codigoOperacion);
+            log_trace(log_memoria, "creando paquete con tabla de segmentos base");
+            //- Creación de Proceso: “Creación de Proceso PID: <PID>”
+            enviar_tabla_segmentos(SOCKET_CLIENTE_KERNEL, TABLA_SEGMENTOS, nuevo_proceso);
+        break;
+        
+        case DELETE_PROCESS:
+        int PID = recibir_entero(SOCKET_CLIENTE_KERNEL, log_memoria);
+        borrar_proceso(PID);
 
-                log_trace(log_memoria, "recibi el op_cod %d INICIAR_ESTRUCTURAS", codigoOperacion);
-                log_trace(log_memoria, "creando paquete con tabla de segmentos base");
-                
-                enviar_tabla_segmentos(SOCKET_CLIENTE_KERNEL, TABLA_SEGMENTOS, nuevo_proceso);
-            break;
+        break;
         case CREATE_SEGMENT:
             t_3_enteros* estructura_3_enteros = recibir_3_enteros(SOCKET_CLIENTE_KERNEL);
             int id_proceso = estructura_3_enteros->entero1;
-            
             int id_segmento_nuevo = estructura_3_enteros->entero2;
             int tamanio = estructura_3_enteros->entero3;
 
@@ -277,8 +281,6 @@ void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM)
 }
 
 /* LOGS NECESAIROS Y OBLIGATORIOS
-- Creación de Proceso: “Creación de Proceso PID: <PID>”
-- Eliminación de Proceso: “Eliminación de Proceso PID: <PID>”
 
 - Resultado Compactación: Por cada segmento de cada proceso se deberá imprimir una línea con el siguiente formato:
 - “PID: <PID> - Segmento: <ID SEGMENTO> - Base: <BASE> - Tamaño <TAMAÑO>”
@@ -301,7 +303,7 @@ t_proceso* crear_proceso_en_memoria(int id_proceso){
     generar_tabla_segmentos(nuevoProceso);
 
     pthread_mutex_lock(&listaProcesos);
-    list_add(lista_procesos, nuevoProceso);
+    list_add(tabla_de_procesos, nuevoProceso);
     pthread_mutex_unlock(&listaProcesos);
 
     return nuevoProceso;
@@ -361,6 +363,22 @@ void iniciar_semaforos()
 //  KERNEL
 //
 
+void borrar_proceso(int PID){
+    
+    t_proceso* procesoEliminar = buscar_proceso(PID);
+    
+        // liberar bitmap
+        // liberar cada segmento de la tabla
+        // Eliminar la tabla de segmentos
+        // Eliminar la instancia de la tabla de procesos => list_remove_and_destroy_by_condition
+    bool mismoIdProc(t_proceso* unProceso){
+    return (unProceso->id == id_proceso);
+    }
+    list_remove_and_destroy_by_condition(tabla_de_procesos, mismoIdProc , eliminar_proceso);
+    log_warning(log_memoria,"Eliminación de Proceso PID: %d" PID);   
+}
+
+
 //CREATE_SEGMENT
 
 //void* crear_segmento(int PID, int size){
@@ -375,8 +393,9 @@ t_proceso* buscar_proceso(int id_proceso){
     return (unProceso->id == id_proceso);
     }
 
+    pthread_mutex_lock(&listaProcesos);
     t_proceso* proceso = list_find(tabla_de_procesos, mismoIdProc);
-
+    pthread_mutex_unlock(&listaProcesos);
     return proceso;
 }
 

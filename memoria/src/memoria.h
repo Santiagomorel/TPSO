@@ -47,6 +47,7 @@ int idGlobal;
 
 
 //KERNEL
+void borrar_proceso(int PID);
 t_proceso* buscar_proceso(int id_proceso);
 t_proceso* borrar_segmento(int PID, int segmento);
 
