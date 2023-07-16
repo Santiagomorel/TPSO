@@ -87,9 +87,6 @@ int id_segmento_con_segfault;
 int desplazamiento_segfault;
 int tamanio_segfault;
 pthread_mutex_t m_execute_instruct;
-int recibir_respuesta_recurso();
-int recibir_respuesta_segmento();
-
 
 /*-------------- CICLO DE INSTRUCCION --------------------*/
 
@@ -108,6 +105,12 @@ char* fetch_value_in_memory(int physical_adress, contexto_ejecucion* ce, int siz
 void store_value_in_register(char* register_mov_in, char* value);
 char* encontrarValorDeRegistro(char* register_to_find_value);
 void escribir_valor(int physical_address, char* register_value_mov_out, int pid, int size);
+
+/* ------------- ENVIO DE PAQUETES -----------*/
+
+void enviar_paquete_con_string_entero(int client_socket, char* parameter, char* x, int codOP);
+void enviar_paquete_con_string_2_enteros(int client_socket, char* parameter, int x, char* y, int codOP);
+void enviar_paquete_con_dos_enteros(int client_socket, char* x, char* y, int codOP);
 
 int read_int(char* buffer, int* desp);
 

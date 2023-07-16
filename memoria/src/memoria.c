@@ -146,7 +146,9 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
 
                 if(list_is_empty(segmentosDisponibles)){
                 enviar_CodOp(SOCKET_CLIENTE_KERNEL, NECESITO_COMPACTAR);
-                }
+                //if(/*necesitoCompactar(tamanio)==1*/1){
+                //
+                //}
                 else{
                 //busco un espacio segun el algoritmo de ordenamiento
                 t_segmento* segmento_nuevo = buscarSegmentoSegunTamanio(tamanio);
@@ -154,6 +156,7 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
                 t_proceso* proceso_con_nuevo_segmento = buscar_proceso(id_proceso);
                 list_add(proceso_con_nuevo_segmento->tabla_segmentos, segmento_nuevo);
                 log_warning(log_memoria,"Creación de Segmento: PID: %d - Crear Segmento: %d - Base: %d - TAMAÑO: %d", id_proceso, id_segmento_nuevo, segmento_nuevo->direccion_base, segmento_nuevo->tamanio_segmento);
+                //list_add(proceso_con_nuevo_segmento->tabla_segmentos, segmento_nuevo);
                 enviar_tabla_segmentos(SOCKET_CLIENTE_KERNEL, TABLA_SEGMENTOS, proceso_con_nuevo_segmento);
                 }
             }

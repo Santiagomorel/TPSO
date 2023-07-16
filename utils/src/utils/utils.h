@@ -54,12 +54,10 @@ typedef enum
 	EJECUTAR_CE, 			//  dispatch
 	// ------- enviadas por DIspatch: (CPU->kernel) --------
 	SUCCESS,
-	EXIT_ERROR_RECURSO,
 	SEG_FAULT,
+	INVALID_RESOURCE,
 	BLOCK_IO,
-	BLOCK_WAIT,
 	WAIT_RECURSO,
-	EJECUTO_INSTRUCCION,
 	DESALOJO_YIELD,
 	SIGNAL_RECURSO,
 	ABRIR_ARCHIVO,
@@ -70,12 +68,7 @@ typedef enum
 	MODIFICAR_TAMAÑO_ARCHIVO,
 	CREAR_SEGMENTO,
 	BORRAR_SEGMENTO,
-	EXIT_OUT_OF_MEMORY,
-	// ------- KERNEL->CPU -----------
-	NO_EXISTE_RECURSO,
-	NO_LO_TENGO,
-	LO_TENGO,
-	CORRECTO,
+	DESALOJO_ARCHIVO,
 	// -------KERNEL->MEMORIA --------
 	ACCEDER_TP,
 	ACCEDER_EU,
@@ -88,7 +81,10 @@ typedef enum
 	COMPACTAR,
 	SIN_ESPACIO,
 	ASK_COMPACTAR,
-	//  CPU->MEMORIA
+	// -------KERNEL->FILESYSTEM --------
+	CONSULTA_ARCHIVO,
+	EXISTE_ARCHIVO,
+	CREAR_ARCHIVO,
 	ENVIAR_CONFIG, 			//siendo el cpu le pido a la mem que me pase la configuracion para traducir las direcciones
 	//MMU
 	PEDIDO_INDICE_DOS, // 1er acceso
@@ -114,6 +110,9 @@ typedef enum
 	FIN_CONSOLA,		
 	OK,
     FAIL = -1,
+
+	// -------FILESYSTEM -> KERNEL --------
+	NO_EXISTE_ARCHIVO
 } op_code;
 
 typedef enum { // Los estados que puede tener un PCB
@@ -161,7 +160,7 @@ typedef struct {
 	t_list* tabla_segmentos;
 	double estimacion_rafaga;
     t_temporal* tiempo_llegada_ready;
-	t_list* tabla_archivos_abiertos;
+	t_list* tabla_archivos_abiertos_por_proceso;
 
 	t_temporal* salida_ejecucion;
 	int64_t rafaga_ejecutada;
@@ -206,6 +205,11 @@ typedef struct{
 	int entero1;
 	int entero2;
 } t_ce_2enteros;
+
+typedef struct{
+	contexto_ejecucion* ce;
+	char* string;
+} t_ce_string;
 
 typedef struct{
 	int entero1;
@@ -288,16 +292,19 @@ t_list* leer_tabla_segmentos(char*, int*);
 
 t_segmento* crear_segmento(int, int, int);
 
-
+void enviar_string_entero(int,char*,int,int codOP);
 void agregar_tabla_segmentos_a_paquete(t_paquete*, t_list*);
 
 t_ce_2enteros * recibir_ce_2enteros(int);
+t_ce_string* recibir_ce_string(int);
+t_ce_string* recibir_ce_stringlog(int, t_log*);
 void enviar_2_enteros(int client_socket, int x, int y, int codOP);
 t_2_enteros * recibir_2_enteros(int);
 void enviar_3_enteros(int client_socket, int x, int y, int z, int codOP);
 t_3_enteros * recibir_3_enteros(int);
 recive_mov_out * recibir_mov_out(int);
 void liberar_ce_2enteros(t_ce_2enteros*);
+void liberar_ce_string(t_ce_string*);
 
 void enviar_todas_tablas_segmentos(int, t_list*, int, t_log*);
 t_list* recibir_todas_tablas_segmentos(int);
