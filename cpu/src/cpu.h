@@ -87,9 +87,6 @@ int id_segmento_con_segfault;
 int desplazamiento_segfault;
 int tamanio_segfault;
 pthread_mutex_t m_execute_instruct;
-int recibir_respuesta_recurso();
-int recibir_respuesta_segmento();
-
 
 /*-------------- CICLO DE INSTRUCCION --------------------*/
 

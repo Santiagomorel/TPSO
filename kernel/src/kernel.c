@@ -774,7 +774,7 @@ void atender_final_proceso(int cod_op)
     liberar_ce(contexto_a_finalizar);
 }
 
-void finalizar_proceso(contexto_ejecucion* ce, int cod_op)
+void finalizar_proceso(contexto_ejecucion* ce, int cod_op) // Saca de la lista de ejecucion, actualiza el pcb, y finaliza el proceso
 {
     pthread_mutex_lock(&m_listaEjecutando);
         t_pcb * pcb_a_finalizar = (t_pcb *) list_remove(listaEjecutando, 0);
@@ -926,16 +926,14 @@ void sumar_instancia_exit(int id_recurso, t_pcb* pcb_quita_recurso)
 
 void atender_wait_recurso()
 {
-    log_warning(kernel_logger, "entro en atender wait recurso");
-    t_ce_string* estructura_wait_recurso = recibir_ce_stringlog(cpu_dispatch_connection, kernel_logger);
-    log_warning(kernel_logger, "recibo la estructura wait recurso");
+    t_ce_string* estructura_wait_recurso = recibir_ce_string(cpu_dispatch_connection);
+
     contexto_ejecucion* contexto_ejecuta_wait = estructura_wait_recurso->ce;
-    log_warning(kernel_logger, "saco el contexto");
+
     char* recurso_wait = estructura_wait_recurso->string;
-    log_warning(kernel_logger, "saco el string");
 
     if (recurso_no_existe(recurso_wait)) {
-        finalizar_proceso(contexto_ejecuta_wait, EXIT_ERROR_RECURSO);
+        finalizar_proceso(contexto_ejecuta_wait, INVALID_RESOURCE);
     } else {
         int id_recurso = obtener_id_recurso(recurso_wait);
 
@@ -995,7 +993,7 @@ void atender_signal_recurso()
     char* recurso_signal = estructura_signal_recurso->string;
 
     if (recurso_no_existe(recurso_signal)) {
-        finalizar_proceso(contexto_ejecuta_signal, EXIT_ERROR_RECURSO);
+        finalizar_proceso(contexto_ejecuta_signal, INVALID_RESOURCE);
     } else {
         pthread_mutex_lock(&m_listaEjecutando);
             t_pcb * pcb_ejecuta_instruccion = (t_pcb *) list_get(listaEjecutando, 0); 
@@ -1105,11 +1103,13 @@ void rutina_io(thread_args* args)
 
 void atender_crear_segmento()
 {
-    t_2_enteros * estructura_2_enteros = recibir_2_enteros(cpu_dispatch_connection);
+    t_ce_2enteros* estructura_crear_segmento = recibir_ce_2enteros(cpu_dispatch_connection);
 
-    int id_segmento = estructura_2_enteros->entero1;
+    contexto_ejecucion* contexto_crea_segmento = estructura_crear_segmento->ce;
 
-    int tamanio_segmento = estructura_2_enteros->entero2;
+    int id_segmento = estructura_crear_segmento->entero1;
+
+    int tamanio_segmento = estructura_crear_segmento->entero2;
 
     int id_proceso = ((t_pcb *) list_get(listaEjecutando, 0))->id;
 
@@ -1123,7 +1123,7 @@ void atender_crear_segmento()
         switch (cod_op_creacion)
         {
         case OUT_OF_MEMORY:
-            enviar_CodOp(cpu_dispatch_connection, OUT_OF_MEMORY);
+            finalizar_proceso(contexto_crea_segmento, OUT_OF_MEMORY);
             compactacion = 0;
             break;
         
@@ -1193,8 +1193,12 @@ void actualizar_ts_x_proceso() // PROBAR
         list_clean_and_destroy_elements(pcb_encontrado->tabla_segmentos, (void*)eliminar_tabla_segmentos);
         list_add_all(pcb_encontrado->tabla_segmentos, proceso_i->tabla_segmentos);
     }
-    // con todas las pcbs en la lista de pcb, tengo que buscar el id que sea igual al id de la lista de ts
-    // para asi pisar los contenidos de la tabla de segmentos, y de esta manera actualizarlos.
+    
+    // el list_add_all que hace, hace un duplicate de la segunda lista y la concatena
+    // tiene los links de los elementos de la segunda lista
+    // alloca memoria?
+    // 
+    list_destroy(lista_de_pcbs); // fijarse si hay que usar el list_destroy_and_d_elements
 }
 
 t_pcb* pcb_en_lista_coincide(t_list* lista_pcbs, t_proceso* proceso_a_matchear)

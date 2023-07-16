@@ -626,11 +626,11 @@ char* obtenerCodOP(int cop){
 	case SEG_FAULT:
 		return "SEG_FAULT";
 		break;
+	case INVALID_RESOURCE:
+		return "INVALID_RESOURCE";
+		break;
 	case OUT_OF_MEMORY:
 		return "OUT_OF_MEMORY";
-		break;
-	case EXIT_ERROR_RECURSO:
-		return "EXIT_ERROR_RECURSO";
 		break;
 	default:
 		break;
