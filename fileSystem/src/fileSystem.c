@@ -63,9 +63,9 @@ int main(int argc, char ** argv)
 }   
 
 
-int pertenece(const int lista[],char* archivo , int longitud) {
+int pertenece_lista_fcb(FileSystem_FCB** lista,char* archivo , int longitud) {
                     for (int i = 0; i < longitud; i++) {
-                        if (lista[i] == archivo) {
+                        if (lista[i]-> nombre_archivo == archivo) {
                             return 1;
                         }
                     }
@@ -73,25 +73,37 @@ int pertenece(const int lista[],char* archivo , int longitud) {
                     }
 
 
-void recibir_kernel(int SOCKET_CLIENTE_KERNEL) {
+int contador_puntero = -1;
+
+void recibir_kernel(SOCKET_CLIENTE_KERNEL) {
+
     enviar_mensaje("recibido kernel", SOCKET_CLIENTE_KERNEL);
     while(1){
     int codigoOperacion = recibir_operacion(SOCKET_CLIENTE_KERNEL);
     char* archivo = recibir_string(SOCKET_CLIENTE_KERNEL, filesystem_logger);
     switch(codigoOperacion)
+
         {
 
             case F_OPEN: 
+    
                 int longitud = sizeof lista_fcb / sizeof lista_fcb[0];
-                int existe = pertenece(lista_fcb,archivo,longitud);
+                int existe = pertenece_lista_fcb(lista_fcb,archivo,longitud);
                 if (existe = 1 ){
+
                     enviar_CodOp(SOCKET_CLIENTE_KERNEL, OK);
+
                 }else{
+
                     crear_fcb(archivo);
-                    enviar_mensaje("No tiene FCB, por ende se creo un FCB", SOCKET_CLIENTE_KERNEL);
+                    contador_puntero++;
+                    FCB -> puntero_directo = contador_puntero;
+                    bitarray_create(bitmap)
+                    enviar_CodOp(SOCKET_CLIENTE_KERNEL, NUEVO_FCB_OK);
                     //hacer que sean log trace
                 }
 
+                log_trace(filesystem_logger, "recibi el op_cod %d F_OPEN , De", codigoOperacion);
                 break;
 
             case F_CLOSE:
@@ -143,9 +155,11 @@ void load_config(void){
 }
 
 void end_program(int socket, t_log* log, t_config* config){
+
     log_destroy(log);
     config_destroy(filesystem_config_file);
     liberar_conexion(socket);
+    
 }
 
 void crear_superbloque(){
@@ -161,10 +175,11 @@ void crear_superbloque(){
     log_trace(filesystem_logger, "levanto superbloque ");
 }
 
+
 void crear_bitmap(){
 
     bitmap = malloc(superbloque-> block_count / 8 );
-
+    
     char* ruta;
     strcpy(ruta, "../fs/bitmap.dat");
 
@@ -186,10 +201,12 @@ void crear_archivo_bloque(){
  
 
 
+
+
 void crear_fcb(char* archivo){
 
     char* ruta;
-    strcpy(ruta, "../fs/");
+    strcpy(ruta, "../fs/fcb/");
     strcat(ruta, archivo);
     
     FCB = malloc(sizeof(FileSystem_FCB));
@@ -201,12 +218,14 @@ void crear_fcb(char* archivo){
 
     list_add(lista_fcb, FCB);
 
-    // config_save(FCB);
+    config_save_in_file(filesystem.config*, ruta);
 
     return FCB;
 
 }
 
+
+bitmap = bitarray_create_with_mode(bitmap, size_t* () , MSB_FIRST)
 
 
 // hacer la t list, pasa por parametro blocksize
@@ -218,5 +237,7 @@ void crear_fcb(char* archivo){
 //El único que ya debe venir creado de antemano es el archivo de superbloque, 
 //el resto les recomendaría hacer el chequeo de si ya existen o no (y, en caso de no existir, crearlos), 
 //más que nada por comodidad si hace falta limpiar el FS actual y cambiar la configuración del superbloque entre pruebas.
+
+// puede romper por el 8
 
 

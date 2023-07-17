@@ -49,6 +49,14 @@ typedef struct{
 
 } Filesystem_config;
 
+typedef struct {
+
+		char *bitarray;
+		size_t size;
+		bit_numbering_t mode;
+
+} t_bitarray;
+
 Filesystem_config filesystem_config;
 
 t_log * filesystem_logger;
@@ -66,9 +74,9 @@ void recibir_kernel(int);
 
 FileSystem_FCB* FCB;
 t_superbloque* superbloque;
-t_bitarray* bitmap;
 t_list* archivo_bloques;
 t_list* lista_fcb;
+t_bitarray* bitmap;
 
 #endif /* FILESYSTEM_H_ */
 
