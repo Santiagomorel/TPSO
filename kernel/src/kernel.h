@@ -229,8 +229,25 @@ void atender_cierre_archivo();
 void atender_actualizar_puntero();
 //Declaraciones LEER_ARCHIVO
 void atender_leer_archivo();
+typedef struct{
+    t_pcb* pcb;
+    char* nombre;
+    int puntero;
+    int bytes;
+}thread_args_read;
+
+void rutina_read(thread_args_read*);
+
 //Declaraciones ESCRIBIR_ARCHIVO
 void atender_escritura_archivo();
+typedef struct{
+    t_pcb* pcb;
+    char* nombre;
+    int puntero;
+    int bytes;
+}thread_args_write;
+
+void rutina_write(thread_args_write*);
 
 //Declaraciones MODIFICAR_TAMANIO_ARCHIVO
 typedef struct{
