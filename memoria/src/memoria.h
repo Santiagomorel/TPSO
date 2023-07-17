@@ -35,12 +35,8 @@ Memoria_config memoria_config;
 
 t_list* tabla_de_procesos;
 
-//esta mal (casi seguro)
-typedef struct{
-    int init_direc;
-    int tamanio;
-}t_hueco;
 
+//esta mal (casi seguro)
 char* datos;
 void* MEMORIA_PRINCIPAL;
 int idGlobal;
@@ -97,6 +93,8 @@ t_segmento* segmentoMenorTamanio(t_segmento* segmento, t_segmento* otroSegmento)
 t_segmento* segmentoMayorTamanio(t_segmento* segmento, t_segmento* otroSegmento);
 
 //Compactacion
+void compactacion2();
+//el resto de compactacion puede q no vaya
 void compactacion();
 t_list* buscarSegmentosOcupados();
 t_list* copiarContenidoSeg(t_list* segmentosNoCompactados);
@@ -104,8 +102,9 @@ void* copiarSegmentacion(t_segmento* unSegmento);
 void actualizarCompactacion(t_list* segmentosNoCompactados, t_list* segmentosCompactados);
 void actualizarCadaSegmento(t_segmento* segmentoViejo, t_segmento* segmentoNuevo);
 
+
+
 //Serializacion y creacion de tablas
-t_list* generar_lista_huecos();
 void generar_tabla_segmentos();
 //Serializacion
 void enviar_tabla_segmentos(int, int, t_proceso*);

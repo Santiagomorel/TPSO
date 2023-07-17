@@ -145,10 +145,8 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
                 t_list* segmentosDisponibles = buscarSegmentosDisponibles();
 
                 if(list_is_empty(segmentosDisponibles)){
-                enviar_CodOp(SOCKET_CLIENTE_KERNEL, NECESITO_COMPACTAR);
-                //if(/*necesitoCompactar(tamanio)==1*/1){
-                //
-                //}
+                   enviar_CodOp(SOCKET_CLIENTE_KERNEL, NECESITO_COMPACTAR);
+                }
                 else{
                 //busco un espacio segun el algoritmo de ordenamiento
                 t_segmento* segmento_nuevo = buscarSegmentoSegunTamanio(tamanio);
@@ -178,11 +176,11 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
             break;
 
 
-        // case COMPACTAR:
-        //     sleep(memoria_config.retardo_compactacion);
-        //     log_warning(log_memoria, "Solicitud de Compactación");
-        //     //compactar();
-        //     break;
+         case COMPACTAR:
+             sleep(memoria_config.retardo_compactacion);
+             log_warning(log_memoria, "Solicitud de Compactación");
+             compactacion2();
+             break;
 
         // se desconecta kernel
         case -1:
@@ -285,19 +283,9 @@ void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM)
 }
 
 /* LOGS NECESAIROS Y OBLIGATORIOS
-
-- Resultado Compactación: Por cada segmento de cada proceso se deberá imprimir una línea con el siguiente formato:
-- “PID: <PID> - Segmento: <ID SEGMENTO> - Base: <BASE> - Tamaño <TAMAÑO>”
 - Acceso a espacio de usuario: “PID: <PID> - Acción: <LEER / ESCRIBIR> - Dirección física: <DIRECCIÓN_FÍSICA> - Tamaño: <TAMAÑO> - Origen: <CPU / FS>”
 */
 
-t_list *generar_lista_huecos()
-{
-    t_list *lista_huecos = list_create();
-    t_hueco *nuevoHueco /*= calcularHueco(tabla de procesos o algo)*/;
-    list_add(lista_huecos, nuevoHueco);
-    return lista_huecos;
-}
 
 t_proceso* crear_proceso_en_memoria(int id_proceso){
     t_proceso* nuevoProceso = malloc(sizeof(t_proceso));
@@ -622,7 +610,7 @@ t_segmento* buscarUnLugarLibre(int* base){
     // ACA YA LA BASE ESTA EN EL PRIMER 0 LIBRE
     tamanio = contarEspaciosLibresDesde(bitMapSegment, *base);  //TAMANIO ES EL TAMANIO DEL SEGMENTO CON 0 LIBRES //ACA MUERE
     
-    unSegmento->id_segmento = generarId();
+    unSegmento->id_segmento = generarId();// es al pedo 
     unSegmento->direccion_base = *base;
     unSegmento->tamanio_segmento = tamanio;
     
@@ -631,6 +619,8 @@ t_segmento* buscarUnLugarLibre(int* base){
 
     return unSegmento;
 }
+
+///  es al pedo ya que la cambio al final de la func
 
 int generarId(){
 	
@@ -726,11 +716,38 @@ t_segmento* segmentoWorstFit(t_list* segmentos, int size){
 }
 
 //Compactacion
+void compactacion2(){
+    int base_aux=MEMORIA_PRINCIPAL;
+    //libero todo el bitmap
+    liberarBitMap(MEMORIA_PRINCIPAL, memoria_config.tam_memoria);
+    //De todos los procesos
+
+    
+    for (int i = 0; i < list_size(tabla_de_procesos)-1; i++)
+    {
+        t_proceso* unProceso = list_get(tabla_de_procesos, i);
+        //las tablas de segmentos
+        for (int j = 0; i < list_size(unProceso->tabla_segmentos); j++)
+        {
+            t_segmento* unSegmento = list_get(unProceso->tabla_segmentos, j);
+            unSegmento->direccion_base = base_aux;
+            base_aux += unSegmento->tamanio_segmento +1;
+
+        //- Resultado Compactación: Por cada segmento de cada proceso se deberá imprimir una línea con el siguiente formato:
+        log_warning(log_memoria,"PID: %d - Segmento: %d - Base: %d - Tamaño %d", unProceso->id, unSegmento->id_segmento, unSegmento->direccion_base, unSegmento->tamanio_segmento);
+        }
+        
+    }
+    ocuparBitMap(MEMORIA_PRINCIPAL, base_aux-1);// les resto 1 por el ultimo +1 de la iteracion del for
+
+}
+
+
 void compactacion(){
     //BUSCO SEGMENTOS OCUPADOS, CON EL BITMAP EN 1
     t_list* segmentosNoCompactados = buscarSegmentosOcupados();
 
-    //SACO LO QUE TENGO GUARDADO EN ESOS SEGMENTOS,  Esta lista tiene PCB|TCB|Tareas|PCB|TCB|Tareas....
+    //SACO LO QUE TENGO GUARDADO EN ESOS SEGMENTOS
     t_list* cosasDeLosSegmentos = copiarContenidoSeg(segmentosNoCompactados); //HACER
 
     //LIMPIO EL BITMAP -> TODO EN 0
@@ -772,11 +789,11 @@ t_list* buscarSegmentosOcupados(){
 }
 void agregarProcesos(t_list* segmentos){
     int tamanioListaProcesos = list_size(tabla_de_procesos);
-    for (int i = 0; i < tamanioListaProcesos; i++)
+    for (int i = 0; i < tamanioListaProcesos-1; i++)
     {
         t_proceso* unProceso = list_get(tabla_de_procesos, i);
         int tamanioListaSegmentosDelProceso = list_size(unProceso->tabla_segmentos);
-        for (int j = 1; j < tamanioListaSegmentosDelProceso; j++)
+        for (int j = 0; j < tamanioListaSegmentosDelProceso-1; j++)
         {
             t_segmento* unSegmento = list_get(unProceso->tabla_segmentos, j);
             list_add(segmentos, unSegmento);
@@ -833,9 +850,17 @@ void actualizarCadaSegmento(t_segmento* segmentoViejo, t_segmento* segmentoNuevo
 	pthread_mutex_unlock(&mutexMemoria);
     
     //CAMBIAR A FUNCIONES QUE SIRVAN O BORRAR
-    //actualizarListaPatotas(segmentoViejo, segmentoNuevo); //si esta lo cambia, sino no hace nada
-	//actualizarListaTripulantes(segmentoViejo, segmentoNuevo); //si esta lo cambia, sino no hace nada
+    //actualizarSegmento(segmentoViejo, segmentoNuevo); //si esta lo cambia, sino no hace nada
 }
+
+//void actualizarSegmento(t_segmento* viejo, t_segmento* nuevo){
+//}
+
+
+//void actualizarBase(t_segmento* segmento, t_segmento* otroSeg){
+//
+//    segmento->base= otroSeg->base;
+//}
 
 // BitArrays
 
