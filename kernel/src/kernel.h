@@ -101,6 +101,9 @@ pthread_t planificadorCP;
 pthread_t hiloDispatch;
 pthread_t hiloMemoria;
 pthread_t hiloIO;
+pthread_t hiloTruncate;
+pthread_t hiloWrite;
+pthread_t hiloRead;
 
 //Variables de tablas de archivos
 t_list* tablaGlobalArchivosAbiertos;
@@ -228,8 +231,16 @@ void atender_actualizar_puntero();
 void atender_leer_archivo();
 //Declaraciones ESCRIBIR_ARCHIVO
 void atender_escritura_archivo();
+
 //Declaraciones MODIFICAR_TAMANIO_ARCHIVO
+typedef struct{
+    t_pcb* pcb;
+    char* nombre;
+    int tamanio;
+}thread_args_truncate;
+
 void atender_modificar_tamanio_archivo();
+void rutina_truncate(thread_args_truncate*);
 //
 // ------------------------------------//
 

@@ -1221,12 +1221,12 @@ void eliminar_tabla_segmentos(t_list* tabla_segmentos)
 
 // ----------------------- Funciones BORRAR_SEGMENTO ----------------------- //
 
-void atender_borrar_segmento()
+void atender_borrar_segmento() //TODO
 {
 
 }
 
-void manejar_memoria()
+void manejar_memoria() // ERROR ELIMINAR
 {
     log_trace(kernel_logger, "Entre por manejar dispatch");
     // while(1){
@@ -1399,11 +1399,70 @@ log_trace(kernel_logger, "PID: <PID> - Leer Archivo: <NOMBRE ARCHIVO> - Puntero 
 }
 // ----------------------- Funciones MODIFICAR_TAMANIO_ARCHIVO ----------------------- //
 void atender_modificar_tamanio_archivo(){
-    int id_proceso = ((t_pcb *) list_get(listaEjecutando, 0))->id;
 
-log_trace(kernel_logger, "PID: <PID> - Escribir Archivo: <NOMBRE ARCHIVO> - Puntero <PUNTERO> - Dirección Memoria <DIRECCIÓN MEMORIA> - Tamaño <TAMAÑO>");
+    t_ce_string_entero* estructura_mod_tam_archivo = recibir_ce_string_entero(cpu_dispatch_connection);
+
+    contexto_ejecucion* contexto_mod_tam_arch = estructura_mod_tam_archivo->ce;
+
+    char* nombre_archivo = estructura_mod_tam_archivo->string;
+    
+    int tamanio_archivo = estructura_mod_tam_archivo->entero;
+        
+    pthread_mutex_lock(&m_listaEjecutando);
+        t_pcb * pcb_mod_tam_arch = (t_pcb *) list_remove(listaEjecutando, 0);
+        actualizar_pcb(pcb_mod_tam_arch, contexto_mod_tam_arch);
+    pthread_mutex_unlock(&m_listaEjecutando);
+
+    sacar_rafaga_ejecutada(pcb_mod_tam_arch); // hacer cada vez que sale de running
+    
+    sem_post(&fin_ejecucion);
+    
+    cambiar_estado_a(pcb_mod_tam_arch, BLOCKED, estadoActual(pcb_mod_tam_arch));
+
+    log_info(kernel_logger, "PID: [%d] - Bloqueado por: [%s]",pcb_mod_tam_arch->id, nombre_archivo);
+    
+    agregar_a_lista_con_sems(pcb_mod_tam_arch, listaBloqueados, m_listaBloqueados);
+
+    thread_args_truncate* argumentos = malloc(sizeof(thread_args_truncate));
+    argumentos->pcb = pcb_mod_tam_arch;
+    argumentos->nombre = nombre_archivo;
+    argumentos->tamanio = tamanio_archivo;
+
+    //pthread_mutex_lock(&m_IO);
+    pthread_create(&hiloTruncate, NULL, (void*) rutina_truncate, (void*) (thread_args*) argumentos);
+    pthread_detach(hiloTruncate);
+
+    liberar_ce_string_entero(estructura_mod_tam_archivo);
+    
+    // enviar parametros
     
 }
+
+void rutina_truncate(thread_args_truncate* args)
+{
+    t_pcb* pcb = args->pcb;
+    char* nombre = args->nombre;
+    int tamanio = args->tamanio;
+    
+    enviar_string_2enteros(file_system_connection, nombre, pcb->id, tamanio, TRUNCATE);
+    
+    int cod_op = recibir_operacion(file_system_connection);
+
+    pthread_mutex_lock(&m_listaBloqueados);
+        list_remove_element(listaBloqueados, pcb);
+    pthread_mutex_unlock(&m_listaBloqueados);
+
+    cambiar_estado_a(pcb, READY, estadoActual(pcb));
+    
+    iniciar_nueva_espera_ready(pcb); // hacer cada vez que se mete en la lista de ready
+    
+    agregar_a_lista_con_sems(pcb, listaReady, m_listaReady);
+    
+    sem_post(&proceso_en_ready);
+
+    //pthread_mutex_unlock(&m_IO);
+}
+
 // ----------------------- Funciones finales ----------------------- //
 
 void destruirSemaforos()
