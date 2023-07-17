@@ -1404,6 +1404,7 @@ void atender_actualizar_puntero(){
 }
 // ----------------------- Funciones LEER_ARCHIVO ----------------------- //
 void atender_lectura_archivo(){
+    bloquear_FS();
     t_ce_string_2enteros* estructura_leer_archivo= recibir_ce_string_2enteros(cpu_dispatch_connection);
 
     contexto_ejecucion* ce_a_updatear = estructura_escribir_archivo->ce;
@@ -1440,6 +1441,8 @@ void atender_lectura_archivo(){
     pthread_detach(hiloRead);
 
     liberar_ce_string_2enteros(estructura_leer_archivo);
+
+    desbloquear_FS();
 }
     // enviar parametros
    
@@ -1471,6 +1474,9 @@ void atender_lectura_archivo(){
 
 // ----------------------- Funciones ESCRIBIR_ARCHIVO ----------------------- //
 void atender_escritura_archivo(){
+
+    bloquear_FS();
+
     t_ce_string_2enteros* estructura_escribir_archivo= recibir_ce_string_2enteros(cpu_dispatch_connection);
 
     contexto_ejecucion* ce_a_updatear = estructura_escribir_archivo->ce;
@@ -1507,6 +1513,8 @@ void atender_escritura_archivo(){
     pthread_detach(hiloWrite);
 
     liberar_ce_string_2enteros(estructura_mod_tam_archivo);
+
+    desbloquear_FS();
 
     // enviar parametros
     
