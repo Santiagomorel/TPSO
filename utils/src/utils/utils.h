@@ -107,11 +107,12 @@ typedef enum
 	OUT_OF_MEMORY,
 	DIR_FISICA,
 	VALOR_A_RECIBIR,	
-
+	
 	CONFIG_MEMORIA,
 	FIN_CONSOLA,		
 	OK,
     FAIL = -1,
+	NUEVO_FCB_OK,
 } op_code;
 
 typedef enum { // Los estados que puede tener un PCB
