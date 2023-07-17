@@ -82,6 +82,7 @@ pthread_mutex_t m_listaReady;
 pthread_mutex_t m_listaFinalizados;
 pthread_mutex_t* m_listaRecurso[MAX_RECURSOS];
 pthread_mutex_t m_IO;
+pthread_mutex_t m_F_operation;
 sem_t proceso_en_ready;
 sem_t fin_ejecucion;
 sem_t grado_multiprog;
@@ -99,7 +100,6 @@ t_list** lista_recurso; // lista que tiene listas de recursos
 // Variables de hilo de planificadores
 pthread_t planificadorCP;
 pthread_t hiloDispatch;
-pthread_t hiloMemoria;
 pthread_t hiloIO;
 pthread_t hiloTruncate;
 pthread_t hiloWrite;
@@ -205,15 +205,18 @@ void rutina_io(thread_args*);
 
 // Declaraciones CREAR_SEGMENTO
 void atender_crear_segmento();
+
+// Declaraciones COMPACTACION
 void atender_compactacion(int, int, int);
 void actualizar_ts_x_proceso();
 t_pcb* pcb_en_lista_coincide(t_list*, t_proceso*);
 void eliminar_tabla_segmentos(t_list*);
 
+// Variables COMPACTACION
+int f_execute;
+
 // Declaraciones BORRAR_SEGMENTO
 void atender_borrar_segmento();
-// Declaraciones Memory Manager
-void manejar_memoria();
 
 //Declaraciones ABRIR_ARCHIVO
 void atender_apertura_archivo();
@@ -223,12 +226,15 @@ t_list* nombre_en_lista_coincide(t_list*, char* );
 void crear_entrada_TAAP(char*,t_entradaTAAP*);
 void crear_entrada_TGAA(char*,t_entradaTAAP*);
 bool encontrar_nombre(char*);
+
 //Declaraciones CERRAR_ARCHIVO
 void atender_cierre_archivo();
+
 //Declaraciones ACTUALIZAR_PUNTERO
 void atender_actualizar_puntero();
+
 //Declaraciones LEER_ARCHIVO
-void atender_leer_archivo();
+void atender_lectura_archivo();
 typedef struct{
     t_pcb* pcb;
     char* nombre;
@@ -248,6 +254,10 @@ typedef struct{
 }thread_args_write;
 
 void rutina_write(thread_args_write*);
+
+//Declaraciones F_*
+void bloquear_FS();
+void desbloquear_FS();
 
 //Declaraciones MODIFICAR_TAMANIO_ARCHIVO
 typedef struct{
