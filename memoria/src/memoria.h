@@ -146,6 +146,9 @@ void eliminarLista(t_list* lista);
 void eliminarAlgo(void* algo);
 t_proceso*  crear_proceso_en_memoria(int);
 
+
+void eliminarTablaDeProcesos();
+void eliminarTablaDeSegmentos(t_proceso* proceso);
 //void enviar_tabla_segmentos();
 //void* serializar_segmento(t_segmento* segmento);
 //void* serializar_segmento(void* segmento);
