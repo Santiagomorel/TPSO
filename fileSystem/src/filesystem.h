@@ -5,10 +5,8 @@
 #include <commons/log.h>
 #include <commons/config.h>
 #include <stdbool.h>
-#include "shared_utils.h"
-#include "tests.h"
 #include "comunicacion.h"
-#include "utils.h"
+#include <utils/utils.h>
 #include "core.h"
 #include <stdlib.h>
 #include <unistd.h>
@@ -48,6 +46,7 @@ char* blocks_buffer;
 
 int socket_memoria;
 int socket_servidor_filesystem;
+int socket_fs;
 
 void levantar_loggers_filesystem();
 void levantar_config_filesystem();

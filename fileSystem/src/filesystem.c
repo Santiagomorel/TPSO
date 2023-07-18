@@ -19,7 +19,7 @@ int main(int argc, char **argv)
 		levantar_config_filesystem();
 		levantar_superbloque();
 
-		socket_memoria = establecer_conexion(IP_MEMORIA, PUERTO_MEMORIA, CONFIG_FILESYSTEM, logger_filesystem);
+		establecer_conexion(IP_MEMORIA, PUERTO_MEMORIA, CONFIG_FILESYSTEM, logger_filesystem);
 		//*********************
 		// PREPARACIÓN DE BLOQUES - TODO: Hacer logs
 		bitmap = levantar_bitmap();
@@ -42,7 +42,8 @@ int main(int argc, char **argv)
 
 		//*********************
 		// SERVIDOR
-		socket_servidor_filesystem = iniciar_servidor(logger_filesystem, PUERTO_ESCUCHA_FILESYSTEM);
+		/*
+    socket_servidor_filesystem = iniciar_servidor(logger_filesystem, PUERTO_ESCUCHA_FILESYSTEM);
 		if (socket_servidor_filesystem == -1)
 		{
 			log_error(logger_filesystem, "No se pudo iniciar el servidor en Filesystem...");
@@ -50,7 +51,7 @@ int main(int argc, char **argv)
 		}
 		log_info(logger_filesystem, "Filesystem escuchando conexiones...");
 		while (server_escuchar(logger_filesystem, socket_servidor_filesystem, (void *)procesar_conexion));
-
+*/
     pthread_t threadDispatch;
 
     pthread_create(&threadDispatch, NULL, (void *) procesar_conexion, NULL);

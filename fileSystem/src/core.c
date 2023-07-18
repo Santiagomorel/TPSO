@@ -1,6 +1,7 @@
 #include "core.h"
+#include "filesystem.h"
 
-uint32_t abrir_archivo(char f_name[30])
+uint32_t abrir_archivo(char* f_name[30])
 {
   char path[46]; // 46 viene de los caracteres de: ./fs/fcb/f_name.config
   strcpy(path, PATH_FCB);
