@@ -80,54 +80,47 @@ void recibir_kernel(SOCKET_CLIENTE_KERNEL) {
     enviar_mensaje("recibido kernel", SOCKET_CLIENTE_KERNEL);
     while(1){
     int codigoOperacion = recibir_operacion(SOCKET_CLIENTE_KERNEL);
-    char* archivo = recibir_string(SOCKET_CLIENTE_KERNEL, filesystem_logger);
+
     switch(codigoOperacion)
 
         {
-
-            case F_OPEN: 
-    
+            case CONSULTA_ARCHIVO: 
+                  char* archivo = recibir_string(SOCKET_CLIENTE_KERNEL, filesystem_logger);
                 int longitud = sizeof lista_fcb / sizeof lista_fcb[0];
                 int existe = pertenece_lista_fcb(lista_fcb,archivo,longitud);
                 if (existe = 1 ){
 
-                    enviar_CodOp(SOCKET_CLIENTE_KERNEL, OK);
+                    enviar_CodOp(SOCKET_CLIENTE_KERNEL, EXISTE_ARCHIVO);
 
                 }else{
+                    enviar_CodOp(SOCKET_CLIENTE_KERNEL, NO_EXISTE_ARCHIVO);
+                    //hacer que sean log trace
+                }
+                break;
+            
+            case F_OPEN:
 
+              char* archivo = recibir_string(SOCKET_CLIENTE_KERNEL, filesystem_logger);
                     crear_fcb(archivo);
                     contador_puntero++;
                     FCB -> puntero_directo = contador_puntero;
-                    bitarray_create(bitmap)
-                    enviar_CodOp(SOCKET_CLIENTE_KERNEL, NUEVO_FCB_OK);
-                    //hacer que sean log trace
-                }
-
-                log_trace(filesystem_logger, "recibi el op_cod %d F_OPEN , De", codigoOperacion);
-                break;
-
-            case F_CLOSE:
-                log_trace(filesystem_logger, "recibi el op_cod %d F_CLOSE , De", codigoOperacion);
-                enviar_mensaje("envio del F_CLOSE", SOCKET_CLIENTE_KERNEL);
-                break;
-
-            case F_SEEK:
-                log_trace(filesystem_logger, "recibi el op_cod %d F_SEEK , De", codigoOperacion);
-                enviar_mensaje("envio del F_SEEK", SOCKET_CLIENTE_KERNEL);
-                break;
+                      log_trace(filesystem_logger, "recibi el op_cod %d F_OPEN , De", codigoOperacion);
+            break;
 
             case F_READ:
+              char* archivo = recibir_string(SOCKET_CLIENTE_KERNEL, filesystem_logger);
                 log_trace(filesystem_logger, "recibi el op_cod %d F_READ , De", codigoOperacion);
                 enviar_mensaje("envio del F_READ", SOCKET_CLIENTE_KERNEL);
                 break;
 
             case F_WRITE:
+              char* archivo = recibir_string(SOCKET_CLIENTE_KERNEL, filesystem_logger);
                 log_trace(filesystem_logger, "recibi el op_cod %d F_WRITE , De", codigoOperacion);
                 enviar_mensaje("envio del F_WRITE", SOCKET_CLIENTE_KERNEL);
                 break;
 
             case F_TRUNCATE:
-
+                  char* archivo = recibir_string(SOCKET_CLIENTE_KERNEL, filesystem_logger);
                 log_trace(filesystem_logger, "recibi el op_cod %d F_TRUNCATE , De", codigoOperacion);
                 enviar_mensaje("envio del F_TRUNCATE", SOCKET_CLIENTE_KERNEL);
                 break;
