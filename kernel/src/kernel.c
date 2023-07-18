@@ -140,6 +140,8 @@ void iniciarSemaforos()
     pthread_mutex_init(&m_listaEjecutando, NULL);
     pthread_mutex_init(&m_contador_id, NULL);
     pthread_mutex_init(&m_IO, NULL);
+    pthread_mutex_init(&m_F_operation, NULL);
+
     sem_init(&proceso_en_ready, 0, 0);
     sem_init(&fin_ejecucion, 0, 1);
     sem_init(&grado_multiprog, 0, kernel_config.grado_max_multiprogramacion);
@@ -198,10 +200,6 @@ void iniciar_planificadores()
 
     pthread_create(&hiloDispatch, NULL, (void*)manejar_dispatch, (void*) (intptr_t)cpu_dispatch_connection);
     pthread_detach(hiloDispatch);
-
-    pthread_create(&hiloMemoria, NULL, (void*)manejar_memoria, (void*) (intptr_t)memory_connection);
-    pthread_detach(hiloMemoria);
-
 }
 
 // ----------------------- Funciones relacionadas con consola ----------------------- //
@@ -1113,8 +1111,6 @@ void atender_crear_segmento()
 
     int id_proceso = ((t_pcb *) list_get(listaEjecutando, 0))->id;
 
-    log_warning(kernel_logger, "llego aca sin explotar y el id_segmneto: %d y tamanio: %d", id_segmento, tamanio_segmento);
-
     enviar_3_enteros(memory_connection, id_proceso, id_segmento, tamanio_segmento, CREATE_SEGMENT); // mando a memoria idP, idS, tamanio
 
     int compactacion = 1;
@@ -1135,8 +1131,12 @@ void atender_crear_segmento()
             int base_segmento = recibir_entero(memory_connection, kernel_logger);
             
             t_segmento *nuevoElemento = crear_segmento(id_segmento, base_segmento, tamanio_segmento);
-
-            list_add(((t_pcb *) list_get(listaEjecutando, 0))->tabla_segmentos, nuevoElemento);
+            
+            pthread_mutex_lock(&m_listaEjecutando);
+                t_pcb * pcb_crea_segmento = (t_pcb *) list_get(listaEjecutando, 0);
+                actualizar_pcb(pcb_crea_segmento, contexto_crea_segmento);
+                list_add(pcb_crea_segmento->tabla_segmentos, nuevoElemento);
+            pthread_mutex_unlock(&m_listaEjecutando);
             
             enviar_CodOp(cpu_dispatch_connection, OK);
 
@@ -1148,25 +1148,38 @@ void atender_crear_segmento()
         }
     }
     
-    free(estructura_2_enteros); // VER SI FUNCIONA
+    liberar_ce_2enteros(estructura_crear_segmento); // VER SI FUNCIONA
 }
 
 void atender_compactacion(int id_proceso, int id_segmento, int tamanio_segmento)
 {
-    enviar_CodOp(memory_connection, COMPACTAR);
+    if (f_execute) { // si se ejecuta una instruccion f_* bloqueante
+        log_info(kernel_logger, "Compactacion: [Esperando Fin de Operaciones de FS]");
+        pthread_mutex_lock(&m_F_operation);
+        pthread_mutex_unlock(&m_F_operation); // esto me parece una warangada, pero creo que funciona
+    } else {
+        log_info(kernel_logger, "Compactacion: [Se Solicito Compactacion]");
 
-    int cod_op_compactacion = recibir_operacion(memory_connection);
-    switch (cod_op_compactacion)
-        {
-        case OK:
-            actualizar_ts_x_proceso();
-            enviar_3_enteros(memory_connection, id_proceso, id_segmento, tamanio_segmento, CREATE_SEGMENT);
-            break;
-        
-        default:
-            log_error(kernel_logger, "El codigo de recepcion de la compactacion del segmento es erroneo");
-            break;
+        enviar_CodOp(memory_connection, COMPACTAR);
+
+        int cod_op_compactacion = recibir_operacion(memory_connection);
+
+        switch (cod_op_compactacion){
+            case OK:
+                actualizar_ts_x_proceso();
+
+                log_info(kernel_logger, "Compactacion: [Finalizo el proceso de compactacion]");
+
+                enviar_3_enteros(memory_connection, id_proceso, id_segmento, tamanio_segmento, CREATE_SEGMENT);
+
+                break;
+            
+            default:
+                log_error(kernel_logger, "El codigo de recepcion de la compactacion del segmento es erroneo");
+
+                break;
         }
+    }
 }
 
 void actualizar_ts_x_proceso() // PROBAR
@@ -1178,6 +1191,7 @@ void actualizar_ts_x_proceso() // PROBAR
     list_add_all(lista_de_pcbs, listaReady);
     list_add_all(lista_de_pcbs, listaEjecutando);
     list_add_all(lista_de_pcbs, listaBloqueados);
+
     for(int i = 0; i < cantidad_instancias; i++)
     {
         list_add_all(lista_de_pcbs, list_get(lista_recurso, i));
@@ -1188,17 +1202,15 @@ void actualizar_ts_x_proceso() // PROBAR
     for(int i = 0; i < cantidad_procesos; i++)
     {
         t_proceso* proceso_i = list_get(lista_ts_x_procesos, i);
+
         t_pcb* pcb_encontrado = pcb_en_lista_coincide(lista_de_pcbs, proceso_i);
-        // eliminar la tabla de segmentos y agregarle los elementos de la lista de tsxproceso
+
         list_clean_and_destroy_elements(pcb_encontrado->tabla_segmentos, (void*)eliminar_tabla_segmentos);
+
         list_add_all(pcb_encontrado->tabla_segmentos, proceso_i->tabla_segmentos);
     }
     
-    // el list_add_all que hace, hace un duplicate de la segunda lista y la concatena
-    // tiene los links de los elementos de la segunda lista
-    // alloca memoria?
-    // 
-    list_destroy(lista_de_pcbs); // fijarse si hay que usar el list_destroy_and_d_elements
+    list_destroy(lista_de_pcbs); 
 }
 
 t_pcb* pcb_en_lista_coincide(t_list* lista_pcbs, t_proceso* proceso_a_matchear)
@@ -1221,20 +1233,25 @@ void eliminar_tabla_segmentos(t_list* tabla_segmentos)
 
 // ----------------------- Funciones BORRAR_SEGMENTO ----------------------- //
 
-void atender_borrar_segmento()
+void atender_borrar_segmento() //TODO
 {
+    t_ce_entero* estructura_borrar_segmento = recibir_ce_entero(cpu_dispatch_connection);
 
-}
+    contexto_ejecucion* contexto_borrar_segmento = estructura_borrar_segmento->ce;
 
-void manejar_memoria()
-{
-    log_trace(kernel_logger, "Entre por manejar dispatch");
-    // while(1){
-    //     int cod_op = recibir_operacion(memory_connection);
-    //     switch(cod_op){
-    //         // recibir el codigo y enviar la base o el codigo de error
-    //     }
-    // }
+    int id_segmento = estructura_borrar_segmento->entero;
+
+    int id_proceso = ((t_pcb *) list_get(listaEjecutando, 0))->id;
+
+    enviar_2_enteros(memory_connection, id_proceso, id_segmento, DELETE_SEGMENT); // mando a memoria idP, idS
+
+    recibir_operacion(memory_connection);
+    
+    // aca recibo la tabla de segmentos actualizada del proceso que mando a borrar el segmento
+
+    // enviar ce actualizado
+    
+    liberar_ce_entero(estructura_borrar_segmento); // VER SI FUNCIONA
 }
 
 // ----------------------- Funciones ABRIR_ARCHIVO ----------------------- //
@@ -1386,24 +1403,94 @@ void atender_actualizar_puntero(){
     
 }
 // ----------------------- Funciones LEER_ARCHIVO ----------------------- //
-void atender_lectura_archivo(){
+void atender_lectura_archivo(){ // agregar antes de empezar la instruccion pthread_mutex_lock(&m_F_operation); y un unlock cuando finalize (necesarios para la compactacion)
     int id_proceso = ((t_pcb *) list_get(listaEjecutando, 0))->id;
 log_trace(kernel_logger, "PID: <PID> - Archivo: <NOMBRE ARCHIVO> - Tamaño: <TAMAÑO>");
     
 }
 // ----------------------- Funciones ESCRIBIR_ARCHIVO ----------------------- //
-void atender_escritura_archivo(){
+void atender_escritura_archivo(){ // agregar antes de empezar la instruccion pthread_mutex_lock(&m_F_operation); y un unlock cuando finalize (necesarios para la compactacion)
     int id_proceso = ((t_pcb *) list_get(listaEjecutando, 0))->id;
 log_trace(kernel_logger, "PID: <PID> - Leer Archivo: <NOMBRE ARCHIVO> - Puntero <PUNTERO> - Dirección Memoria <DIRECCIÓN MEMORIA> - Tamaño <TAMAÑO>");
     
 }
+
+void bloquear_FS(){
+    f_execute = 1;
+    pthread_mutex_lock(&m_F_operation);
+}
+
+void desbloquear_FS(){
+    f_execute = 0;
+    pthread_mutex_lock(&m_F_operation);
+}
+
 // ----------------------- Funciones MODIFICAR_TAMANIO_ARCHIVO ----------------------- //
 void atender_modificar_tamanio_archivo(){
-    int id_proceso = ((t_pcb *) list_get(listaEjecutando, 0))->id;
 
-log_trace(kernel_logger, "PID: <PID> - Escribir Archivo: <NOMBRE ARCHIVO> - Puntero <PUNTERO> - Dirección Memoria <DIRECCIÓN MEMORIA> - Tamaño <TAMAÑO>");
+    t_ce_string_entero* estructura_mod_tam_archivo = recibir_ce_string_entero(cpu_dispatch_connection);
+
+    contexto_ejecucion* contexto_mod_tam_arch = estructura_mod_tam_archivo->ce;
+
+    char* nombre_archivo = estructura_mod_tam_archivo->string;
+    
+    int tamanio_archivo = estructura_mod_tam_archivo->entero;
+        
+    pthread_mutex_lock(&m_listaEjecutando);
+        t_pcb * pcb_mod_tam_arch = (t_pcb *) list_remove(listaEjecutando, 0);
+        actualizar_pcb(pcb_mod_tam_arch, contexto_mod_tam_arch);
+    pthread_mutex_unlock(&m_listaEjecutando);
+
+    sacar_rafaga_ejecutada(pcb_mod_tam_arch); // hacer cada vez que sale de running
+    
+    sem_post(&fin_ejecucion);
+    
+    cambiar_estado_a(pcb_mod_tam_arch, BLOCKED, estadoActual(pcb_mod_tam_arch));
+
+    log_info(kernel_logger, "PID: [%d] - Bloqueado por: [%s]",pcb_mod_tam_arch->id, nombre_archivo);
+    
+    agregar_a_lista_con_sems(pcb_mod_tam_arch, listaBloqueados, m_listaBloqueados);
+
+    thread_args_truncate* argumentos = malloc(sizeof(thread_args_truncate));
+    argumentos->pcb = pcb_mod_tam_arch;
+    argumentos->nombre = nombre_archivo;
+    argumentos->tamanio = tamanio_archivo;
+
+    //pthread_mutex_lock(&m_IO);
+    pthread_create(&hiloTruncate, NULL, (void*) rutina_truncate, (void*) (thread_args*) argumentos);
+    pthread_detach(hiloTruncate);
+
+    liberar_ce_string_entero(estructura_mod_tam_archivo);
+    
+    // enviar parametros
     
 }
+
+void rutina_truncate(thread_args_truncate* args)
+{
+    t_pcb* pcb = args->pcb;
+    char* nombre = args->nombre;
+    int tamanio = args->tamanio;
+    
+    enviar_string_2enteros(file_system_connection, nombre, pcb->id, tamanio, TRUNCATE);
+    
+    int cod_op = recibir_operacion(file_system_connection);
+
+    pthread_mutex_lock(&m_listaBloqueados);
+        list_remove_element(listaBloqueados, pcb);
+    pthread_mutex_unlock(&m_listaBloqueados);
+
+    cambiar_estado_a(pcb, READY, estadoActual(pcb));
+    
+    iniciar_nueva_espera_ready(pcb); // hacer cada vez que se mete en la lista de ready
+    
+    agregar_a_lista_con_sems(pcb, listaReady, m_listaReady);
+    
+    sem_post(&proceso_en_ready);
+
+    //pthread_mutex_unlock(&m_IO);
+}
+
 // ----------------------- Funciones finales ----------------------- //
 
 void destruirSemaforos()

@@ -82,15 +82,18 @@ typedef enum
 	SIN_ESPACIO,
 	ASK_COMPACTAR,
 	// -------KERNEL->FILESYSTEM --------
+	TRUNCATE,
+	WRITE,
+	READ,
 	CONSULTA_ARCHIVO,
 	EXISTE_ARCHIVO,
+	NO_EXISTE_ARCHIVO,
 	CREAR_ARCHIVO,
 	ENVIAR_CONFIG, 			//siendo el cpu le pido a la mem que me pase la configuracion para traducir las direcciones
 	//MMU
 	PEDIDO_INDICE_DOS, // 1er acceso
 	PEDIDO_MARCO,	// 2do acceso
 	PEDIDO_VALOR,
-	WRITE,
 	MOV_IN,
 	MOV_IN_OK,
 	MOV_OUT,
@@ -112,7 +115,6 @@ typedef enum
     FAIL = -1,
 
 	// -------FILESYSTEM -> KERNEL --------
-	NO_EXISTE_ARCHIVO
 } op_code;
 
 typedef enum { // Los estados que puede tener un PCB
@@ -208,13 +210,30 @@ typedef struct{
 
 typedef struct{
 	contexto_ejecucion* ce;
+	int entero;
+} t_ce_entero;
+
+typedef struct{
+	contexto_ejecucion* ce;
 	char* string;
 } t_ce_string;
+
+typedef struct{
+	contexto_ejecucion* ce;
+	char* string;
+	int entero;
+} t_ce_string_entero;
 
 typedef struct{
 	int entero1;
 	int entero2;
 } t_2_enteros;
+
+typedef struct{
+	char* string;
+	int entero1;
+	int entero2;
+} t_string_2enteros;
 
 typedef struct{
 	int entero1;
@@ -296,15 +315,20 @@ void enviar_string_entero(int,char*,int,int codOP);
 void agregar_tabla_segmentos_a_paquete(t_paquete*, t_list*);
 
 t_ce_2enteros * recibir_ce_2enteros(int);
+t_ce_entero* recibir_ce_entero(int);
 t_ce_string* recibir_ce_string(int);
-t_ce_string* recibir_ce_stringlog(int, t_log*);
+t_ce_string_entero* recibir_ce_string_entero(int);
 void enviar_2_enteros(int client_socket, int x, int y, int codOP);
 t_2_enteros * recibir_2_enteros(int);
+void enviar_string_2enteros(int, char*, int, int, int);
+t_string_2enteros* recibir_string_2enteros(int);
 void enviar_3_enteros(int client_socket, int x, int y, int z, int codOP);
 t_3_enteros * recibir_3_enteros(int);
 recive_mov_out * recibir_mov_out(int);
 void liberar_ce_2enteros(t_ce_2enteros*);
+void liberar_ce_entero(t_ce_entero*);
 void liberar_ce_string(t_ce_string*);
+void liberar_ce_string_entero(t_ce_string_entero*);
 
 void enviar_todas_tablas_segmentos(int, t_list*, int, t_log*);
 t_list* recibir_todas_tablas_segmentos(int);
