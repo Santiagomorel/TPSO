@@ -1,5 +1,5 @@
 #include "comunicacion.h"
-#include "filesystem.h"
+
 
 void procesar_conexion()
 {
@@ -22,7 +22,7 @@ void procesar_conexion()
             break;
         }
 
-        char f_name[30];
+        char* f_name;
         uint32_t archivo_ok;
         uint32_t pid;
         uint32_t f_size;
@@ -63,7 +63,7 @@ void procesar_conexion()
         case F_READ:
             t_string_4enteros* estructura_string_4enteros_l = recibir_string_4enteros(cliente_socket);
             
-            char f_name[30] = estructura_string_4enteros_l->string;
+            char* f_name = estructura_string_4enteros_l->string;
             uint32_t pid = estructura_string_4enteros_l->entero4;
             uint32_t offset = estructura_string_4enteros_l->entero1;
             uint32_t dir_fisica = estructura_string_4enteros_l->entero3;
@@ -109,7 +109,7 @@ void procesar_conexion()
         case F_WRITE:
             t_string_4enteros* estructura_string_4enteros_e = recibir_string_4enteros(cliente_socket);
 
-            char f_name2[30]= estructura_string_4enteros_e->string;
+            char* f_name2= estructura_string_4enteros_e->string;
             uint32_t pid2 = estructura_string_4enteros_e->entero4;
             uint32_t offset2 = estructura_string_4enteros_e->entero1;
             uint32_t dir_fisica2 = estructura_string_4enteros_e->entero3;

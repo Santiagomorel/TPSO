@@ -1,9 +1,9 @@
 #include "core.h"
-#include "filesystem.h"
 
-uint32_t abrir_archivo(char* f_name[30])
+
+uint32_t abrir_archivo(char* f_name)
 {
-  char path[46]; // 46 viene de los caracteres de: ./fs/fcb/f_name.config
+  char* path; // 46 viene de los caracteres de: ./fs/fcb/f_name.config
   strcpy(path, PATH_FCB);
   strcat(path, "/");
   strcat(path, f_name);
@@ -20,16 +20,16 @@ uint32_t abrir_archivo(char* f_name[30])
   return 0;
 }
 
-uint32_t crear_archivo(char f_name[30])
+uint32_t crear_archivo(char* f_name)
 {
   t_fcb *new_fcb = malloc(sizeof(t_fcb));
   strncpy(new_fcb->f_name, f_name, 29); // Si la cadena de origen tiene menos de 29 caracteres, los faltantes se llenan con caracteres nulos
-  new_fcb->f_name[29] = '\0';           // Agrega el carácter nulo al final
+  new_fcb->f_name = '\0';           // Agrega el carácter nulo al final
   new_fcb->f_size = 0;
   new_fcb->f_dp = 0;
   new_fcb->f_ip = 0;
 
-  char path[46]; // 46 viene de los caracteres de: ./fs/fcb/f_name.config
+  char* path; // 46 viene de los caracteres de: ./fs/fcb/f_name.config
   strcpy(path, PATH_FCB);
   strcat(path, "/");
   strcat(path, f_name);
@@ -135,7 +135,7 @@ void truncar_archivo(char *f_name, uint32_t new_size)
     }
   }
 
-  char path[46]; // 46 viene de los caracteres de: ./fs/fcb/f_name.config
+  char* path; // 46 viene de los caracteres de: ./fs/fcb/f_name.config
   strcpy(path, PATH_FCB);
   strcat(path, "/");
   strcat(path, f_name);

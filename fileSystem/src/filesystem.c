@@ -9,7 +9,7 @@ int main(int argc, char **argv)
 		levantar_superbloque();
 		bitmap = levantar_bitmap();
 		blocks_buffer = levantar_bloques();
-		run_tests();
+		//run_tests();
 		
 	}
 	else
@@ -73,6 +73,8 @@ void levantar_loggers_filesystem()
 
 void levantar_config_filesystem()
 {
+ 
+  
   CONFIG_FILESYSTEM = config_create("./cfg/filesystem.config");
   IP_MEMORIA = config_get_string_value(CONFIG_FILESYSTEM, "IP_MEMORIA");
   PUERTO_MEMORIA = config_get_string_value(CONFIG_FILESYSTEM, "PUERTO_MEMORIA");
@@ -82,13 +84,16 @@ void levantar_config_filesystem()
   PATH_BLOQUES = config_get_string_value(CONFIG_FILESYSTEM, "PATH_BLOQUES");
   PATH_FCB = config_get_string_value(CONFIG_FILESYSTEM, "PATH_FCB");
   RETARDO_ACCESO_BLOQUE = config_get_int_value(CONFIG_FILESYSTEM, "RETARDO_ACCESO_BLOQUE");
+
+  
 }
 
 void levantar_superbloque()
 {
+
   CONFIG_SUPERBLOQUE = config_create(PATH_SUPERBLOQUE);
-  BLOCK_SIZE = config_get_int_value(CONFIG_SUPERBLOQUE, "BLOCK_SIZE");
-  BLOCK_COUNT = config_get_int_value(CONFIG_SUPERBLOQUE, "BLOCK_COUNT");
+  BLOCK_SIZE = config_get_int_value(CONFIG_FILESYSTEM, "BLOCK_SIZE");
+  BLOCK_COUNT = config_get_int_value(CONFIG_FILESYSTEM, "BLOCK_COUNT");
   config_destroy(CONFIG_SUPERBLOQUE);
 }
 
@@ -194,7 +199,7 @@ void modificar_bloque(uint32_t puntero_a_bloque, char *bloque_nuevo)
 
 t_fcb *levantar_fcb(char *f_name)
 {
-  char path[46]; // 46 viene de los caracteres de: ./fs/fcb/f_name.config
+  char* path; // 46 viene de los caracteres de: ./fs/fcb/f_name.config
   strcpy(path, PATH_FCB);
   strcat(path, "/");
   strcat(path, f_name);
@@ -203,7 +208,7 @@ t_fcb *levantar_fcb(char *f_name)
   t_config *FCB = config_create(path);
   t_fcb *fcb = malloc(sizeof(t_fcb));
   strncpy(fcb->f_name, f_name, 29); // Si la cadena de origen tiene menos de 29 caracteres, los faltantes se llenan con caracteres nulos
-  fcb->f_name[29] = '\0';           // Agrega el carácter nulo al final
+  fcb->f_name = '\0';           // Agrega el carácter nulo al final
   fcb->f_size = config_get_int_value(FCB, "TAMANIO_ARCHIVO");
   fcb->f_dp = config_get_int_value(FCB, "PUNTERO_DIRECTO");
   fcb->f_ip = config_get_int_value(FCB, "PUNTERO_INDIRECTO");
