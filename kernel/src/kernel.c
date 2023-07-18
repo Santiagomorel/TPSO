@@ -1291,7 +1291,7 @@ void atender_apertura_archivo(){
     }
 
     else{
-        enviar_paquete_string(file_system_connection,nombreArchivo,CONSULTA_ARCHIVO,(strlen(nombreArchivo)+1));
+        enviar_paquete_string(file_system_connection,nombreArchivo,F_OPEN,(strlen(nombreArchivo)+1));
         
         int existe = recibir_operacion(file_system_connection);
 
@@ -1299,7 +1299,7 @@ void atender_apertura_archivo(){
             case NO_EXISTE_ARCHIVO:
 
             t_entradaTAAP* entradaTAAP = malloc(sizeof(t_entradaTAAP));
-            enviar_paquete_string(file_system_connection,nombreArchivo,F_OPEN,(strlen(nombreArchivo)+1));
+            enviar_paquete_string(file_system_connection,nombreArchivo,F_CREATE,(strlen(nombreArchivo)+1));
             crear_entrada_TGAA(nombreArchivo,entradaTAAP);
             crear_entrada_TAAP(nombreArchivo,entradaTAAP);
             
