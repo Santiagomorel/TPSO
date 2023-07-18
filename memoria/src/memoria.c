@@ -57,39 +57,10 @@ int main(int argc, char **argv)
     pthread_create(&atiende_cliente_KERNEL, NULL, (void *)recibir_kernel, (void *)socket_cliente_memoria_KERNEL);
     pthread_detach(atiende_cliente_KERNEL);
 
-    /*while (1)
-    {
-        log_trace(log_memoria, "esperando cliente ");
-        socket_cliente_memoria = esperar_cliente(socket_servidor_memoria, log_memoria);
-        log_trace(log_memoria, "me entro un cliente con este socket: %d", socket_cliente_memoria);
 
-        cod_mod handshake = recibir_handshake(socket_cliente_memoria);
-
-        pthread_t atiende_cliente;
-
-        switch (handshake)
-        {
-        case KERNEL:
-            pthread_create(&atiende_cliente, NULL, (void*) recibir_kernel, (void*)socket_cliente_memoria);
-            pthread_detach(atiende_cliente);
-            break;
-        case CPU:
-            pthread_create(&atiende_cliente, NULL, (void*) recibir_cpu, (void*)socket_cliente_memoria);
-            pthread_detach(atiende_cliente);
-            break;
-        case FILESYSTEM:
-            pthread_create(&atiende_cliente, NULL, (void*) recibir_fileSystem, (void*)socket_cliente_memoria);
-            pthread_detach(atiende_cliente);
-            break;
-        default:
-            log_error(log_memoria, "Modulo desconocido.");
-            break;
-        }
-    }*/
     sem_wait(&finModulo);
     log_warning(log_memoria, "FINALIZA EL MODULO DE MEMORIA");
-    free(MEMORIA_PRINCIPAL);
-    end_program(socket_servidor_memoria, log_memoria, memoria_config_file);
+    end_program();
 
     return 0;
 }
@@ -105,11 +76,16 @@ void load_config(void)
     memoria_config.algoritmo_asignacion = config_get_string_value(memoria_config_file, "ALGORITMO_ASIGNACION");
 }
 
-void end_program(int socket, t_log *log, t_config *config)
+void end_program()
 {
-    log_destroy(log);
-    config_destroy(config);
-    liberar_conexion(socket);
+    bitarray_destroy(bitMapSegment);
+    free(datos);
+    eliminarTablaDeProcesos();
+    free(MEMORIA_PRINCIPAL);
+    log_destroy(log_memoria);
+    config_destroy(memoria_config_file);
+    liberar_conexion(socket_servidor_memoria);
+
 }
 //KERNEL
 void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
@@ -742,6 +718,9 @@ void compactacion2(){
 
 }
 
+////
+//// Hasta BITARRAYS no se usa nada
+////
 
 void compactacion(){
     //BUSCO SEGMENTOS OCUPADOS, CON EL BITMAP EN 1
@@ -862,6 +841,9 @@ void actualizarCadaSegmento(t_segmento* segmentoViejo, t_segmento* segmentoNuevo
 //    segmento->base= otroSeg->base;
 //}
 
+
+
+
 // BitArrays
 
 //asiganrBits/Bytes
@@ -968,20 +950,10 @@ void eliminarAlgo(void* algo){
 }
 
 
-
-
-// Comentarios viejos// => para borrar
-
-// ---------LP entrante----------
-// case INICIAR_PCB:
-// log_trace(log_memoria, "entro una consola y envio paquete a inciar PCB");                         //particularidad de c : "a label can only be part of a statement"
-//     t_pcb* pcb_a_iniciar = iniciar_pcb(SOCKET_CLIENTE);
-// log_trace(log_memoria, "pcb iniciado PID : %d", pcb_a_iniciar->id);
-//         pthread_mutex_lock(&m_listaNuevos);
-//     list_add(listaNuevos, pcb_a_iniciar);
-//         pthread_mutex_unlock(&m_listaNuevos);
-// log_trace(log_memoria, "log enlistado: %d", pcb_a_iniciar->id);
-
-//     planificar_sig_to_ready();// usar esta funcion cada vez q se agregue un proceso a NEW o SUSPENDED-BLOCKED
-//     break;
-
+void eliminarTablaDeProcesos(){
+    list_destroy_and_destroy_elements(tabla_de_procesos, (void*)eliminarTablaDeSegmentos);
+}
+void eliminarTablaDeSegmentos(t_proceso* proceso){
+    list_destroy_and_destroy_elements(proceso->tabla_segmentos, (void*)free);
+    free(proceso);
+}
