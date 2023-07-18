@@ -225,7 +225,8 @@ typedef struct{
 typedef struct{
 	contexto_ejecucion* ce;
 	char* string;
-	int entero;
+	int entero1;
+	int entero2;
 } t_ce_string_2enteros;
 
 typedef struct{
@@ -334,7 +335,7 @@ void liberar_ce_2enteros(t_ce_2enteros*);
 void liberar_ce_entero(t_ce_entero*);
 void liberar_ce_string(t_ce_string*);
 void liberar_ce_string_entero(t_ce_string_entero*);
-
+void liberar_ce_string_2enteros(t_ce_string_2enteros*);
 void enviar_todas_tablas_segmentos(int, t_list*, int, t_log*);
 t_list* recibir_todas_tablas_segmentos(int);
 t_proceso* recibir_t_proceso(char*, int*);

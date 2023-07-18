@@ -735,13 +735,13 @@ t_ce_string_2enteros * recibir_ce_string_2enteros(int socket)
 	nuevoCe->registros_cpu = leer_registros(buffer, &desp); // hay que liberar antes de perder la referencia
 	nuevoCe->tabla_segmentos = leer_tabla_segmentos(buffer, &desp);
 
-	nuevo_ce_2enteros->ce = nuevoCe;
+	nuevo_ce_string_2enteros->ce = nuevoCe;
 
-	nuevo_ce_2enteros->entero1 = leer_entero(buffer, &desp);
+	nuevo_ce_string_2enteros->entero1 = leer_entero(buffer, &desp);
 
-	nuevo_ce_2enteros->entero2 = leer_entero(buffer, &desp);
+	nuevo_ce_string_2enteros->entero2 = leer_entero(buffer, &desp);
 
-	nuevo_ce_2enteros->string = leer_string(buffer,&desp);
+	nuevo_ce_string_2enteros->string = leer_string(buffer,&desp);
 
 	free(buffer);
 	return nuevo_ce_string_2enteros;
@@ -840,7 +840,7 @@ void enviar_string_2enteros(int client, char* string, int x, int y, int codOP)
     eliminar_paquete(paquete);
 }
 
-void enviar_string_2enteros(int client, char* string, int x, int y, int z, int codOP)
+void enviar_string_3enteros(int client, char* string, int x, int y, int z, int codOP)
 {
 	t_paquete* paquete = crear_paquete_op_code(codOP);
 
@@ -963,6 +963,13 @@ void liberar_ce_string_entero(t_ce_string_entero* ce_string_entero)
 	free(ce_string_entero->string);
 	free(ce_string_entero); //esto no se si funciona OJO
 }
+void liberar_ce_string_2enteros(t_ce_string_2enteros* ce_string_entero)
+{
+	liberar_ce(ce_string_entero->ce);
+	free(ce_string_entero->string);
+	free(ce_string_entero); //esto no se si funciona OJO
+}
+
 
 void enviar_todas_tablas_segmentos(int conexion, t_list* lista_t_procesos, int codOP, t_log* logger)
 {

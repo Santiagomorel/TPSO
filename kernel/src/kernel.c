@@ -1327,7 +1327,7 @@ void atender_apertura_archivo(){
 
         
     }
-
+liberar_ce_string_entero(estructuraApertura);
 log_trace(kernel_logger, "PID: <%d> - Abrir Archivo: <%s>",pcb_en_ejecucion->id,nombreArchivo);
 
 }
@@ -1360,10 +1360,11 @@ t_list* nombre_en_lista_coincide(t_list* tabla, char* nombre)
 }
 // ----------------------- Funciones CERRAR_ARCHIVO ----------------------- //
 void atender_cierre_archivo(){
+
     t_ce_string* estructuraCierre=recibir_ce_string(cpu_dispatch_connection);
     contexto_ejecucion* contextoDeEjecucion = estructuraCierre->ce;
     char* nombreArchivo = estructuraCierre->string;
-    
+
     pthread_mutex_lock(&m_listaEjecutando);
         t_pcb * pcb_en_ejecucion = (t_pcb *) list_remove(listaEjecutando, 0);
         actualizar_pcb(pcb_en_ejecucion, contextoDeEjecucion);
@@ -1379,17 +1380,11 @@ void atender_cierre_archivo(){
     
     free(entradaProceso);
     
-    if(usanArchivo(nombreArchivo)){
+    if(otrosUsanArchivo(nombreArchivo)){
+        t_entradaTGAA* entrada = conseguirEntradaTablaGlobal(nombreArchivo);
         t_pcb* pcb_a_ejectuar = hallarPrimerPcb(nombreArchivo);
-
-         
-    cambiar_estado_a(pcb_a_ejectuar, READY, estadoActual(pcb_a_ejectuar));
-    
-    iniciar_nueva_espera_ready(pcb_a_ejectuar); // hacer cada vez que se mete en la lista de ready
-    
-    agregar_a_lista_con_sems(pcb_a_ejectuar, listaReady, m_listaReady);
-
-
+        enviar_ce(cpu_dispatch_connection, contextoDeEjecucion, EJECUTAR_CE, kernel_logger);
+        reencolar_bloq_por_archivo(nombreArchivo,entrada);
     }
     
     else{
@@ -1399,32 +1394,25 @@ void atender_cierre_archivo(){
     free(entradaGlobal);
     }
 
-    /*     } else {
-        pthread_mutex_lock(&m_listaEjecutando);
-            t_pcb * pcb_ejecuta_instruccion = (t_pcb *) list_get(listaEjecutando, 0); 
-            actualizar_pcb(pcb_ejecuta_instruccion, contexto_ejecuta_signal);
-        pthread_mutex_unlock(&m_listaEjecutando);
-
-        enviar_ce(cpu_dispatch_connection, contexto_ejecuta_signal, EJECUTAR_CE, kernel_logger);
-
-        int id_recurso = obtener_id_recurso(recurso_signal);
-
-        sumar_instancia(id_recurso);
-        
-        log_info(kernel_logger, "PID: [%d] - Signal: [%s] - Instancias: [%d]", id_proceso_en_lista(listaEjecutando), recurso_signal, obtener_instancias_recurso(id_recurso));
-                            
-        if (tiene_que_reencolar_bloq_recurso(id_recurso)) {
-            reencolar_bloqueo_por_recurso(id_recurso);
-        }
-    }
-    liberar_ce_string(estructura_signal_recurso);
+liberar_ce_string_entero(estructuraCierre);
 }
 
-int tiene_que_reencolar_bloq_recurso(int id_recurso)
-{
-    return (kernel_config.instancias_recursos[id_recurso] <= 0);
-}
+void reencolar_bloq_por_archivo(char* nombreArchivo,t_entradaTGAA* entrada){
+    pthread_mutex_lock(&entrada->m_lista_block_archivo);
+        t_pcb * pcb_a_reencolar = hallarPrimerPcb(nombreArchivo);
+    pthread_mutex_unlock(&entrada->m_lista_block_archivo);
+    
+    cambiar_estado_a(pcb_a_reencolar, READY, estadoActual(pcb_a_reencolar));
+    
+    iniciar_nueva_espera_ready(pcb_a_reencolar); // hacer cada vez que se mete en la lista de ready
+    
+    agregar_a_lista_con_sems(pcb_a_reencolar, listaReady, m_listaReady);
+    
+    sem_post(&proceso_en_ready);
 
+
+}
+/*
 void reencolar_bloqueo_por_recurso(int id_recurso)
 {
     sem_wait(sem_recurso[id_recurso]);
@@ -1441,39 +1429,21 @@ void reencolar_bloqueo_por_recurso(int id_recurso)
     
     sem_post(&proceso_en_ready);*/
 
-
-
+t_entradaTGAA* conseguirEntradaTablaGlobal(char* nombreArchivo){
+    t_list* listaFiltrada = nombre_en_lista_coincide(tablaGlobalArchivosAbiertos,(char*)nombreArchivo);
+    return list_get(listaFiltrada,0);
 }
-//HACER MANIANA
-t_pcb* hallarPrimerPcb(nombreArchivo){
 
-    bool tieneArchivo(t_pcb* pcb){
+t_pcb* hallarPrimerPcb(char* nombreArchivo){
+    t_entradaTGAA* entradaGlobal = conseguirEntradaTablaGlobal(nombreArchivo);
 
-    bool estaUsado(char* instruccion){
-        
-    return (strcmp(instruccion,nombreArchivo)==0) ;
-
-    }
-    return list_any_satisfy(pcb -> instrucciones, (bool) estaUsado());
-    }
-
-return list_find(entrada.lista_block_archivo,tieneArchivo);
+return list_get(entradaGlobal->lista_block_archivo,0);
 }
-//HACER MANIANA
-bool usanArchivo(char* nombreArchivo) {
 
+bool otrosUsanArchivo(char* nombreArchivo) {
+t_entradaTGAA* entradaGlobal = conseguirEntradaTablaGlobal(nombreArchivo);
 
-    bool tieneArchivo(t_pcb* pcb){
-
-        bool estaUsado(char* instruccion){
-        
-            return (strcmp(instruccion,nombreArchivo)==0) ;
-
-        }
-        return list_any_satisfy(pcb -> instrucciones, (void*) estaUsado);
-    }
-
-return list_any_satisfy(lis, (void*) tieneArchivo);
+return list_is_empty(entradaGlobal->lista_block_archivo) == 0;
 }
 
 
@@ -1481,11 +1451,13 @@ return list_any_satisfy(lis, (void*) tieneArchivo);
 
 // ----------------------- Funciones ACTUALIZAR_PUNTERO ----------------------- //
 void atender_actualizar_puntero(){
-    int posicion = recibir_entero(cpu_dispatch_connection,kernel_logger);
+    t_ce_string_entero* estructura_actualizacion = recibir_ce_string_entero(cpu_dispatch_connection);
+
+    int posicion = estructura_actualizacion->entero;
     
-    char* nombreArchivo=recibir_string(cpu_dispatch_connection,kernel_logger);
+    char* nombreArchivo=estructura_actualizacion->string;
     
-    contexto_ejecucion* contextoDeEjecucion=recibir_ce(cpu_dispatch_connection);
+    contexto_ejecucion* contextoDeEjecucion=estructura_actualizacion->ce;
 
     pthread_mutex_lock(&m_listaEjecutando);
     t_pcb * pcb_en_ejecucion = (t_pcb *) list_remove(listaEjecutando, 0);
@@ -1502,9 +1474,10 @@ void atender_actualizar_puntero(){
     
     //contexto_ejecucion* contextoAEnviar = obtener_ce(pcb_en_ejecucion);
     //enviar_ce(cpu_dispatch_connection,contextoAEnviar,EJECUTAR_CE,kernel_logger);
-    
+    //falta liberar algo?
     log_trace(kernel_logger, "PID: <PID> - Actualizar puntero Archivo: <NOMBRE ARCHIVO> - Puntero <PUNTERO>");
 
+liberar_ce_string_entero(estructura_actualizacion);
     
 }
 // ----------------------- Funciones LEER_ARCHIVO ----------------------- //
@@ -1543,15 +1516,13 @@ void atender_lectura_archivo(){
     argumentos->puntero = puntero_archivo;
     argumentos->bytes = bytes_a_leer;
 
-    //pthread_mutex_lock(&m_IO);
     pthread_create(&hiloRead, NULL, (void*) rutina_read, (void*) (thread_args_read*) argumentos);
     pthread_detach(hiloRead);
 
-    liberar_ce_string_2enteros(estructura_leer_archivo); //crear estructura (solo liberar ce/string)
+    liberar_ce_string_2enteros(estructura_leer_archivo);
 
     desbloquear_FS();
 }
-    // enviar parametros
    
    void rutina_read(thread_args_read* args)
 {
@@ -1576,7 +1547,6 @@ void atender_lectura_archivo(){
     
     sem_post(&proceso_en_ready);
 
-    //pthread_mutex_unlock(&m_IO);
 }
 
 // ----------------------- Funciones ESCRIBIR_ARCHIVO ----------------------- //
@@ -1615,7 +1585,6 @@ void atender_escritura_archivo(){
     argumentos->puntero = puntero_archivo;
     argumentos->bytes = bytes_a_leer;
 
-    //pthread_mutex_lock(&m_IO);
     pthread_create(&hiloWrite, NULL, (void*) rutina_write, (void*) (thread_args_write*) argumentos);
     pthread_detach(hiloWrite);
 
@@ -1623,11 +1592,9 @@ void atender_escritura_archivo(){
 
     desbloquear_FS();
 
-    // enviar parametros
-    
 }
 
-void rutina_write(thread_args_truncate* args)
+void rutina_write(thread_args_write* args)
 {
     t_pcb* pcb = args->pcb;
     char* nombre = args->nombre;
@@ -1650,7 +1617,6 @@ void rutina_write(thread_args_truncate* args)
     
     sem_post(&proceso_en_ready);
 
-    //pthread_mutex_unlock(&m_IO);
 }
 
 void bloquear_FS(){
@@ -1694,13 +1660,11 @@ void atender_modificar_tamanio_archivo(){
     argumentos->nombre = nombre_archivo;
     argumentos->tamanio = tamanio_archivo;
 
-    //pthread_mutex_lock(&m_IO);
     pthread_create(&hiloTruncate, NULL, (void*) rutina_truncate, (void*) (thread_args*) argumentos);
     pthread_detach(hiloTruncate);
 
     liberar_ce_string_entero(estructura_mod_tam_archivo);
     
-    // enviar parametros
     
 }
 
@@ -1725,8 +1689,6 @@ void rutina_truncate(thread_args_truncate* args)
     agregar_a_lista_con_sems(pcb, listaReady, m_listaReady);
     
     sem_post(&proceso_en_ready);
-
-    //pthread_mutex_unlock(&m_IO);
 }
 
 // ----------------------- Funciones finales ----------------------- //

@@ -230,8 +230,11 @@ t_entradaTGAA* obtenerEntrada(char* );
 
 //Declaraciones CERRAR_ARCHIVO
 void atender_cierre_archivo();
-bool usaArchivo(char*);
-bool tieneArchivo(t_pcb*);
+t_entradaTGAA* conseguirEntradaTablaGlobal(char*);
+void reencolar_bloq_por_archivo(char* ,t_entradaTGAA*);
+bool otrosUsanArchivo(char*);
+t_pcb* hallarPrimerPcb(char*);
+
 //Declaraciones ACTUALIZAR_PUNTERO
 void atender_actualizar_puntero();
 
