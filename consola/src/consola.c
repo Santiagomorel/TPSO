@@ -7,7 +7,7 @@ int main(int argc, char ** argv)
 
 	// ----------------------- creo el log de la consola ----------------------- //
 
-	consola_logger = init_logger("./runlogs/consola.log", "Consola", 1, LOG_LEVEL_INFO);
+	consola_logger = init_logger("./runlogs/consola.log", "Consola", 1, LOG_LEVEL_TRACE);
 
 	// ----------------------- levanto la configuracion de la consola ----------------------- //
 
@@ -73,8 +73,9 @@ int main(int argc, char ** argv)
 
 	//recibir mensaje llegada de datos desde kernel
 	int codOperacion = recibir_operacion(conexion);
+	log_trace(consola_logger, "el codigo de operacion que llega es: %d", codOperacion);
 	if(codOperacion == MENSAJE){
-	recibir_mensaje(conexion,consola_logger);
+		recibir_mensaje(conexion,consola_logger);
 	}
 	else{
 		log_info(consola_logger, "Hubo un problema al enviar el paquete");

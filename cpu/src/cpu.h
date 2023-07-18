@@ -26,7 +26,7 @@ int socket_kernel;
 void load_config(void);
 void leer_consola(t_log*);
 void paquete(int);
-void terminar_programa(int, t_log*, t_config*);
+void terminar_programa(t_log*, t_config*);
 
 /*-------------- CONEXIONES ------------*/
 void establecer_conexion(char* , char* , t_config*, t_log*);
@@ -43,15 +43,16 @@ t_registro* registros;
 #define REQUEST 0
 #define RESPONSE 1
 
+void init_registers();
 void set_registers(contexto_ejecucion* ce);
 void save_context_ce(contexto_ejecucion* ce);
 void add_value_to_register(char* registerToModify, char* valueToAdd);
+void add_two_registers(char* registerToModify, char* registroParaSumarleAlOtroRegistro);
 void enviar_ce_con_string(int client_socket, contexto_ejecucion* ce, char* parameter, int codOP);
 void enviar_ce_con_string_entero(int client_socket, contexto_ejecucion* ce, char* parameter, char* x, int codOP);
 void enviar_ce_con_dos_enteros(int client_socket, contexto_ejecucion* ce, char* x, char* y, int codOP);
 void enviar_ce_con_entero(int client_socket, contexto_ejecucion* ce, char* parameter, int codOP);
 void enviar_ce_con_string_2_enteros(int client_socket, contexto_ejecucion* ce, char* parameter, char* x, char* y, int codOP);
-
 
 /*------------------- INSTRUCCIONES --------------------*/
 
@@ -87,7 +88,7 @@ int desplazamiento_segfault;
 int tamanio_segfault;
 pthread_mutex_t m_execute_instruct;
 int recibir_respuesta_recurso();
-
+int recibir_respuesta_segmento();
 
 
 /*-------------- CICLO DE INSTRUCCION --------------------*/
@@ -103,11 +104,19 @@ void execute_process(contexto_ejecucion* ce);
 
 
 int traducir_direccion_logica(int logical_address, contexto_ejecucion* ce, int valor_a_sumar);
-char* fetch_value_in_memory(int physical_adress, contexto_ejecucion* ce);
+char* fetch_value_in_memory(int physical_adress, contexto_ejecucion* ce, int size);
 void store_value_in_register(char* register_mov_in, char* value);
 char* encontrarValorDeRegistro(char* register_to_find_value);
-void escribir_valor(int physical_address, char* register_value_mov_out, int segment_index, int pid);
+void escribir_valor(int physical_address, char* register_value_mov_out, int pid, int size);
+
+/* ------------- ENVIO DE PAQUETES -----------*/
+
+void enviar_paquete_con_string_entero(int client_socket, char* parameter, char* x, int codOP);
+void enviar_paquete_con_string_2_enteros(int client_socket, char* parameter, int x, char* y, int codOP);
+void enviar_paquete_con_dos_enteros(int client_socket, char* x, char* y, int codOP);
 
 int read_int(char* buffer, int* desp);
+
+tamanio_registro(char* registro);
 
 #endif

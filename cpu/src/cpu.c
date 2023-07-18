@@ -42,11 +42,6 @@ int main(int argc, char ** argv) {
 	establecer_conexion(cpu_config.ip_memoria, cpu_config.puerto_memoria, cpu_config_file, cpu_logger);
     
 /*---------------------- CONEXION CON KERNEL ---------------------*/
-/*
-	socket_cpu = iniciar_servidor(cpu_config.puerto_escucha, cpu_logger);
-	esperar_cliente(socket_cpu, cpu_logger);
-	handshake_servidor(socket_cpu);
-*/
     pthread_t threadDispatch;
 
     pthread_create(&threadDispatch, NULL, (void *) process_dispatch, NULL);
@@ -55,7 +50,7 @@ int main(int argc, char ** argv) {
     
 
 /*---------------------- TERMINO CPU ---------------------*/
-	terminar_programa(conexion_cpu, cpu_logger, cpu_config_file);
+	terminar_programa(cpu_logger, cpu_config_file);
 
 	return 0;
 
@@ -85,6 +80,7 @@ void establecer_conexion(char * ip_memoria, char* puerto_memoria, t_config* conf
 	// Enviamos al servidor el valor de ip como mensaje si es que levanta el cliente
 	if((conexion_cpu = crear_conexion(ip_memoria, puerto_memoria)) == -1){
 		log_trace(logger, "Error al conectar con Memoria. El servidor no esta activo");
+        free(conexion_cpu);
 		exit(-1);
 	}else{
 		//handshake_cliente(conexion_cpu);
@@ -139,7 +135,7 @@ void leer_consola(t_log* logger)
 
 
 
-void terminar_programa(int conexion, t_log* logger, t_config* config)
+void terminar_programa(t_log* logger, t_config* config)
 {
 
 	if(logger != NULL){
@@ -150,7 +146,7 @@ void terminar_programa(int conexion, t_log* logger, t_config* config)
 		config_destroy(config);
 	}
 
-	liberar_conexion(conexion);
+	liberar_conexion(conexion_cpu);
 }
 
 
@@ -170,13 +166,12 @@ void process_dispatch() {
 	while (1) {
 		int op_code = recibir_operacion(socket_kernel);
         log_trace(cpu_logger, "Codigo de operacion recibido de kernel: %d", op_code);
-        contexto_ejecucion* ce; //hay que hacer un free del contexto de ejecucion una vez termine de ejecutar
 
 		switch (op_code) {
             case EJECUTAR_CE: 
-                ce = recibir_ce(socket_kernel);
+                contexto_ejecucion* ce = recibir_ce(socket_kernel);
                 log_trace(cpu_logger, "Llego correctamente el CE con id: %d", ce->id);
-                imprimir_ce(ce, cpu_logger);
+                //imprimir_ce(ce, cpu_logger);
                 execute_process(ce);
                 break;   
             case -1:
@@ -185,7 +180,7 @@ void process_dispatch() {
                 pthread_exit(NULL);
                 break;
             default:
-                log_error(cpu_logger, "Codigo de operacion desconocido");
+                log_debug(cpu_logger, "Codigo de operacion desconocido");
                 //exit(1);
                 break;     
 	    }
@@ -300,7 +295,7 @@ char** decode(char* linea){ // separarSegunEspacios
 }
 
 /*-------------------- EXECUTE ---------------------- */
-
+int sale_proceso = 0;
 int end_process = 0;
 int input_ouput = 0;
 int check_interruption = 0;
@@ -309,6 +304,8 @@ int desalojo_por_yield = 0;
 int signal_recurso = 0;
 int direccion_fisica = 0;
 int direccion_logica = 0;
+int sig_f = 0;
+int desalojo_por_archivo = 0;
 t_segmento* segmento;
 
 char* tiempo = "NONE";
@@ -316,7 +313,7 @@ char* tiempo = "NONE";
 void execute_instruction(char** instruction, contexto_ejecucion* ce){
 
 
-     switch(keyfromstring(instruction[0])){
+    switch(keyfromstring(instruction[0])){
         case I_SET: 
             // SET (Registro, Valor)
             log_trace(cpu_logger, "Por ejecutar instruccion SET");
@@ -325,119 +322,159 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             sleep(atoi(cpu_config.retardo_instruccion)/1000);
 
             add_value_to_register(instruction[1], instruction[2]);
+
+            save_context_ce(ce); // ACA GUARDAMOS EL CONTEXTO
+
             break;
+
         case I_IO:
             // I/O (Tiempo)
             log_trace(cpu_logger, "Por ejecutar instruccion I/O");
             log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s", ce->id, instruction[0], instruction[1]);
-              
-            enviar_paquete_string(socket_kernel, instruction[1], BLOCK_IO, strlen(instruction[1])+1);
 
-            input_ouput = 1;
+            enviar_ce_con_string(socket_kernel, ce, instruction[1], BLOCK_IO);
+
+            //input_ouput = 1;
+            sale_proceso = 1;
+
             break;
+
          case I_EXIT:
             //EXIT: Esta instrucción representa la syscall de finalización del proceso.
             //Se deberá devolver el ce actualizado al Kernel para su finalización.
             log_trace(cpu_logger, "Instruccion EXIT ejecutada");
             log_info(cpu_logger, "PID: %d - Ejecutando: %s", ce->id, instruction[0]);
-            
-            end_process = 1;
+
+            enviar_ce(socket_kernel, ce, SUCCESS, cpu_logger);
+
+            //end_process = 1; // saca del while de ejecucion
+            sale_proceso = 1;
+
             break;
+
         case I_WAIT:
             // WAIT (Recurso)
             //Esta instruccion asigna un recurso pasado por parametro
             log_trace(cpu_logger, "Por ejecutar instruccion WAIT");
             log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s ", ce->id, instruction[0], instruction[1]);
             // Si rompe crear una varible char* recurso, asignandole instruccion[1] y enviar el recurso en el execute process
+            
+            enviar_ce_con_string(socket_kernel, ce, instruction[1], WAIT_RECURSO);
 
-            enviar_paquete_string(socket_kernel, instruction[1], WAIT_RECURSO, strlen(instruction[1])+1);
-            log_warning(cpu_logger, "ENVIO EL PAQUETE STRING Y ESPERO RESPUESTA");
-
-            wait = recibir_respuesta_recurso();
+            //wait = 1;
+            sale_proceso = 1;
             
             break;
+
         case I_SIGNAL:
             // SIGNAL (Recurso)
             //Esta instruccion libera un recurso pasado por parametro
             log_trace(cpu_logger, "Por ejecutar instruccion SIGNAL");
             log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s", ce->id, instruction[0], instruction[1]);
 
-            enviar_paquete_string(socket_kernel, instruction[1], SIGNAL_RECURSO, strlen(instruction[1])+1);
+            enviar_ce_con_string(socket_kernel, ce, instruction[1], SIGNAL_RECURSO);
 
-            signal_recurso = recibir_respuesta_recurso();
+            // signal_recurso = 1;
+            sale_proceso = 1;
+            
             break;
+            
         case I_YIELD:
             log_trace(cpu_logger, "Por ejecutar instruccion YIELD");
             log_info(cpu_logger, "PID: %d - Ejecutando: %s", ce->id, instruction[0]);
             
-            desalojo_por_yield = 1;
+            enviar_ce(socket_kernel, ce, DESALOJO_YIELD, cpu_logger);
+
+            // desalojo_por_yield = 1;
+            sale_proceso = 1;
+
             break;
+
         case I_F_OPEN:
-        log_trace(cpu_logger, "Por ejecutar instruccion F_OPEN");
-        log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s", ce->id, instruction[0], instruction[1]);
+            log_trace(cpu_logger, "Por ejecutar instruccion F_OPEN");
+            log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s", ce->id, instruction[0], instruction[1]);
 
-        enviar_ce_con_string(socket_kernel, ce, instruction[1], ABRIR_ARCHIVO);
+            enviar_ce_con_string(socket_kernel, ce, instruction[1], ABRIR_ARCHIVO);
+
+            desalojo_por_archivo = 1;
         
             break;
+
         case I_F_CLOSE:
-        log_trace(cpu_logger, "Por ejecutar instruccion F_CLOSE");
-        log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s", ce->id, instruction[0], instruction[1]);
+            log_trace(cpu_logger, "Por ejecutar instruccion F_CLOSE");
+            log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s", ce->id, instruction[0], instruction[1]);
 
-        
-        enviar_ce_con_string(socket_kernel, ce, instruction[1], CERRAR_ARCHIVO);
+            
+            enviar_ce_con_string(socket_kernel, ce, instruction[1], CERRAR_ARCHIVO);
+
+            desalojo_por_archivo = 1;
 
             break;
+
         case I_F_SEEK:
-        log_trace(cpu_logger, "Por ejecutar instruccion F_SEEK");
-        log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s- %s", ce->id, instruction[0], instruction[1], instruction[2]);
+            log_trace(cpu_logger, "Por ejecutar instruccion F_SEEK");
+            log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s- %s", ce->id, instruction[0], instruction[1], instruction[2]);
 
-        enviar_ce_con_string_entero(socket_kernel, ce, instruction[1], instruction[2], ACTUALIZAR_PUNTERO);
+            enviar_ce_con_string_entero(socket_kernel, ce, instruction[1], instruction[2], ACTUALIZAR_PUNTERO);
+
+            desalojo_por_archivo = 1;
 
             break;
+
         case I_F_READ:
-        log_trace(cpu_logger, "Por ejecutar instruccion F_READ");
-        log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s - %s", ce->id, instruction[0], instruction[1], instruction[2], instruction[3]);
-        
+            log_trace(cpu_logger, "Por ejecutar instruccion F_READ");
+            log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s - %s", ce->id, instruction[0], instruction[1], instruction[2], instruction[3]);
+            
+            direccion_logica = atoi(instruction[2]);
+            direccion_fisica = traducir_direccion_logica(direccion_logica, ce, instruction[3]);
+            
+            enviar_ce_con_string_2_enteros(socket_kernel, ce, instruction[1], direccion_fisica, instruction[3], LEER_ARCHIVO);
 
-        direccion_logica = atoi(instruction[2]);
-        direccion_fisica = traducir_direccion_logica(direccion_logica, ce, instruction[3]);
-        
-
-        enviar_ce_con_string_2_enteros(socket_kernel, ce, instruction[1], direccion_fisica, instruction[3], LEER_ARCHIVO);
+            desalojo_por_archivo = 1;
 
             break;
         case I_F_WRITE:
-        log_trace(cpu_logger, "Por ejecutar instruccion F_WRITE");
-        log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s - %s", ce->id, instruction[0], instruction[1], instruction[2], instruction[3]);
-           
-        direccion_logica = atoi(instruction[2]);
-        direccion_fisica = traducir_direccion_logica(direccion_logica, ce, instruction[3]);
-        
+            log_trace(cpu_logger, "Por ejecutar instruccion F_WRITE");
+            log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s - %s", ce->id, instruction[0], instruction[1], instruction[2], instruction[3]);
+            
+            direccion_logica = atoi(instruction[2]);
+            direccion_fisica = traducir_direccion_logica(direccion_logica, ce, instruction[3]);
 
-        enviar_ce_con_string_2_enteros(socket_kernel, ce, instruction[1], direccion_fisica, instruction[3], ESCRIBIR_ARCHIVO);          
-           
+            enviar_ce_con_string_2_enteros(socket_kernel, ce, instruction[1], direccion_fisica, instruction[3], ESCRIBIR_ARCHIVO); 
+
+            desalojo_por_archivo = 1;
+            
             break;
         case I_F_TRUNCATE:
-        log_trace(cpu_logger, "Por ejecutar instruccion F_TRUNCATE");
-        log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s", ce->id, instruction[0], instruction[1], instruction[2]);
+            log_trace(cpu_logger, "Por ejecutar instruccion F_TRUNCATE");
+            log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s", ce->id, instruction[0], instruction[1], instruction[2]);
 
-        enviar_ce_con_string_entero(socket_kernel, ce, instruction[1], instruction[2], MODIFICAR_TAMAÑO_ARCHIVO);
+            enviar_ce_con_string_entero(socket_kernel, ce, instruction[1], instruction[2], MODIFICAR_TAMAÑO_ARCHIVO);
+
+            desalojo_por_archivo = 1;
 
             break;
+
         case I_CREATE_SEGMENT:
-        log_trace(cpu_logger, "Por ejecutar instruccion CREATE_SEGMENT");
-        log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s", ce->id, instruction[0], instruction[1], instruction[2]);
+            log_trace(cpu_logger, "Por ejecutar instruccion CREATE_SEGMENT");
+            log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s", ce->id, instruction[0], instruction[1], instruction[2]);
 
-        enviar_ce_con_dos_enteros(socket_kernel, ce, instruction[1], instruction[2], CREAR_SEGMENTO);
+            enviar_ce_con_dos_enteros(socket_kernel, ce, instruction[1], instruction[2], CREAR_SEGMENTO);
+
+            desalojo_por_archivo = 1;
 
             break;
+
         case I_DELETE_SEGMENT:
-        log_trace(cpu_logger, "Por ejecutar instruccion DELETE_SEGMENT");
-        log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s", ce->id, instruction[0], instruction[1]);
+            log_trace(cpu_logger, "Por ejecutar instruccion DELETE_SEGMENT");
+            log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s", ce->id, instruction[0], instruction[1]);
 
-        enviar_ce_con_entero(socket_kernel, ce, instruction[1], BORRAR_SEGMENTO);
+            enviar_ce_con_entero(socket_kernel, ce, instruction[1], BORRAR_SEGMENTO);
+
+            desalojo_por_archivo = 1;
 
             break;
+
         case I_MOV_IN: //MOV_IN (Registro, Dirección Lógica)
             log_info(cpu_logger, "Instruccion MOV_IN ejecutada");
             log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s", ce->id, instruction[0], instruction[1], instruction[2]);
@@ -445,12 +482,14 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             char* register_mov_in = instruction[1];
             int logical_address_mov_in = atoi(instruction[2]);
 
-            direccion_fisica = traducir_direccion_logica(logical_address_mov_in, ce, sizeof(register_mov_in));
+            int size_movin = tamanio_registro(register_mov_in);    
+            direccion_fisica = traducir_direccion_logica(logical_address_mov_in, ce, sizeof(register_mov_in));//fijarse si el sizeof(register_mov_in) es correcto
 
+            
             //------------SI NO TENEMOS SEG FAULT EJECUTAMOS LO DEMAS ------------ //
             if(sigsegv != 1){
                 
-                char* value = fetch_value_in_memory(direccion_fisica, ce);
+                char* value = fetch_value_in_memory(direccion_fisica, ce, size_movin);
 
                 store_value_in_register(register_mov_in, value);
                 log_info(cpu_logger, "PID: %d - Acción: LEER - Segmento: %d - Dirección Fisica: %d",
@@ -459,6 +498,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             }
 
             break;
+
         case I_MOV_OUT: ///MOV_OUT (Dirección Lógica, Registro):
             log_info(cpu_logger, "Ejecutando Instruccion MOV_OUT ");
             log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s", ce->id, instruction[0], instruction[1], instruction[2]);
@@ -466,40 +506,39 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             int logical_address_mov_out = atoi(instruction[1]);
             char* register_mov_out = instruction[2]; 
             
+            int size_movout = tamanio_registro(register_mov_out);
+
             direccion_fisica = traducir_direccion_logica(logical_address_mov_out, ce, sizeof(register_mov_out));
 
             if(sigsegv != 1){
                  log_info(cpu_logger, "Recibimos una physical address valida!");
                 char* register_value_mov_out = encontrarValorDeRegistro(register_mov_out);
-                t_segmento* segment = list_get(ce->tabla_segmentos, segmento->id_segmento);
-                int segment_index = segment->id_segmento;
-
-                escribir_valor(direccion_fisica, register_value_mov_out, segment_index, ce->id);
+                
+                escribir_valor(direccion_fisica, register_value_mov_out, ce->id, size_movout);
                 int code_op = recibir_operacion(conexion_cpu); // Si ta todo ok prosigo, si no ta todo ok que hago?
 
                 if(code_op == MOV_OUT_OK) {  
-                log_info(cpu_logger,"Todo OK Prosiga");
-                
-                int size = 0;
-                int desp = 0;
+                    log_info(cpu_logger,"Todo OK Prosiga");
+                    
+                    int size = 0;
+                    int desp = 0;
 
-                void * buffer = recibir_buffer(&size, conexion_cpu);
+                    void * buffer = recibir_buffer(&size, conexion_cpu);
 
                     log_info(cpu_logger, "Leo buffer: %d", leer_entero(buffer, &desp));
-                    log_info(cpu_logger, "PID: %d - Acción: ESCRIBIR - Segmento: %d -  Dirección Fisica: %d",
-                        ce->id, segmento->id_segmento, direccion_fisica);
-
-    } else {
-        log_error(conexion_cpu, "CODIGO DE OPERACION INVALIDO");
-    }
+                    log_info(cpu_logger, "PID: %d - Acción: ESCRIBIR - Segmento: %d -  Dirección Fisica: %d", ce->id, segmento->id_segmento, direccion_fisica);
+                }
+                else {
+                    log_error(conexion_cpu, "CODIGO DE OPERACION INVALIDO");
+                }
 
             }
-
             break;
+
         default:
             log_info(cpu_logger, "No ejecute nada");
             break;
-}
+    }
 }
 
 
@@ -513,90 +552,132 @@ void execute_process(contexto_ejecucion* ce){
     char* instruction = malloc(sizeof(char*));
     char** decoded_instruction = malloc(sizeof(char*));
 
-    log_trace(cpu_logger, "Por empezar  end_process != 1 && input_ouput != 1 && wait == 0 && desalojo_por_yield != 1 && signal_recurso != 2 && sigsev != 1"); 
-    while(end_process != 1 && input_ouput != 1 && wait == 0 && desalojo_por_yield != 1 && signal_recurso == 0 && sigsegv != 1){
+    //log_trace(cpu_logger, "Por empezar  end_process != 1 && input_ouput != 1 && wait != 0 && desalojo_por_yield != 1 && signal_recurso != 1 && sigsev != 1"); 
+    log_trace(cpu_logger, "Comienza la ejecucion");
+    // while(end_process != 1 && input_ouput != 1 && wait != 1 && desalojo_por_yield != 1 && signal_recurso != 1 && sigsegv != 1 && desalojo_por_archivo != 1 ){
+    while(sale_proceso != 1){
         //Llega el ce y con el program counter buscas la instruccion que necesita
         instruction = string_duplicate(fetch_next_instruction_to_execute(ce));
         decoded_instruction = decode(instruction);
 
         log_trace(cpu_logger, "Por ejecutar la instruccion decodificada %s", decoded_instruction[0]);
-        execute_instruction(decoded_instruction, ce);
-
-        if(sigsegv != 1) {   // en caso de tener seg fault no se actualiza program counter
-            update_program_counter(ce);
-        }
-        
-        
+        update_program_counter(ce);
+        execute_instruction(decoded_instruction, ce);        
+                
         log_trace(cpu_logger, "PROGRAM COUNTER: %d", ce->program_counter);
-
 
     } //si salis del while es porque te llego una interrupcion o termino el proceso o entrada y salida
     
     log_trace(cpu_logger, "SALI DEL WHILE DE EJECUCION");
-
-
-    save_context_ce(ce); // ACA GUARDAMOS EL CONTEXTO
-    //imprimir_registros(ce->registros_cpu, cpu_logger); // para comprobar que los registros se guardaran bien
-    if(end_process) {
-        end_process = 0; // IMPORTANTE: Apagar el flag para que no rompa el proximo proceso que llegue
-        enviar_ce(socket_kernel, ce, SUCCESS, cpu_logger);
-        liberar_ce(ce);
-        log_trace(cpu_logger, "Enviamos paquete a dispatch: FIN PROCESO");
-    } 
-    else if(input_ouput) {
-        input_ouput = 0;
-        check_interruption = 0;
-        // log_trace(cpu_logger, "Tiempo: %s", tiempo);
-        log_trace(cpu_logger, "Bloqueado por IO");
-        enviar_ce(socket_kernel, ce, BLOCK_IO, cpu_logger);
-        liberar_ce(ce);
-    }
     
-    else if(sigsegv == 1){
-        sigsegv = 0;
-        check_interruption = 0;
-        log_info(cpu_logger, "Error: Segmentation Fault (SEG_FAULT), enviando para terminar proceso");
-        send_ce_package(socket_cpu, ce, SEG_FAULT); //FALTA SEG_FAULT EN UTILS.H
-        log_info(cpu_logger, "PID: %s - Error SEG_FAULT- Segmento: %s - Offset: %s - Tamaño: %s", ce->id,
-         id_segmento_con_segfault, desplazamiento_segfault, tamanio_segfault);
-        enviar_ce(socket_kernel, ce, SEG_FAULT, cpu_logger); 
-    }
-    else if(check_interruption) {
-        check_interruption = 0;
-        log_trace(cpu_logger, "Entro por check interrupt");
-        enviar_ce(socket_kernel, ce, EJECUTAR_INTERRUPCION, cpu_logger); 
-    }
-    else if(wait){
-        if(wait == 2){  // Se bloquea por estar ocupado recurso
-            log_trace(cpu_logger, "Bloqueado por WAIT");
-            enviar_ce(socket_kernel, ce, BLOCK_WAIT, cpu_logger);
-        }else if(wait == 3){
-            log_trace(cpu_logger, "No existe el recurso");
-            enviar_ce(socket_kernel, ce, EXIT_ERROR_RECURSO, cpu_logger);
-        }else{
-            enviar_ce(socket_kernel, ce, EJECUTO_WAIT, cpu_logger);
-        }
-        wait = 0;
-        liberar_ce(ce);
+    sale_proceso = 0;
+//     liberar_ce(ce);
+
+//     //imprimir_registros(ce->registros_cpu, cpu_logger); // para comprobar que los registros se guardaran bien
+//     if (end_process)
+//     {
+//         end_process = 0; // IMPORTANTE: Apagar el flag para que no rompa el proximo proceso que llegue
+
         
-    }else if(desalojo_por_yield){
-        desalojo_por_yield = 0;
-        log_trace(cpu_logger, "Desalojado por YIELD");
-        enviar_ce(socket_kernel, ce, DESALOJO_YIELD, cpu_logger);
-        liberar_ce(ce);
-    }else if(signal_recurso){
 
-        if(signal_recurso == 3){
-        log_trace(cpu_logger, "No existe el recurso");
-        enviar_ce(socket_kernel, ce, EXIT_ERROR_RECURSO, cpu_logger);
-    }else{
-        log_trace(cpu_logger, "Tengo el recurso"); // Prueba
-        enviar_ce(socket_kernel, ce, EJECUTO_SIGNAL, cpu_logger);
-    }
-        signal_recurso = 0;
-        liberar_ce(ce);
+//         liberar_ce(ce);
 
-    }
+//         log_trace(cpu_logger, "Enviamos paquete a dispatch: FIN PROCESO");
+//     }
+//     else if (input_ouput)
+//     {
+//         input_ouput = 0;
+//         check_interruption = 0;
+
+//         log_trace(cpu_logger, "Bloqueado por IO");
+
+//         enviar_ce(socket_kernel, ce, BLOCK_IO, cpu_logger);
+
+//         liberar_ce(ce);
+//     }
+//     else if (sigsegv == 1)
+//     {
+//         sigsegv = 0;
+
+//         log_info(cpu_logger, "PID: %s - Error SEG_FAULT- Segmento: %s - Offset: %s - Tamaño: %s", ce->id, id_segmento_con_segfault, desplazamiento_segfault, tamanio_segfault);
+//         enviar_ce(socket_kernel, ce, SEG_FAULT, cpu_logger);
+
+//         liberar_ce(ce); // VER PREGUNTAR A GUIDO
+//     }
+//     else if(wait)
+//     { /*
+//         if(wait == 2)
+//         {  // Se bloquea por estar ocupado recurso
+//             log_trace(cpu_logger, "Bloqueado por WAIT");
+//             enviar_ce(socket_kernel, ce, BLOCK_WAIT, cpu_logger);
+//         }
+//         else if(wait == 3)
+//         {
+//             log_trace(cpu_logger, "No existe el recurso");
+//             enviar_ce(socket_kernel, ce, EXIT_ERROR_RECURSO, cpu_logger);
+//         }
+//         else
+//         {
+//             log_trace(cpu_logger, "EJECUTO_WAIT"); // Prueba
+//             enviar_ce(socket_kernel, ce, EJECUTO_INSTRUCCION, cpu_logger);
+//         }
+//         */
+
+//         wait = 0;
+
+//         liberar_ce(ce);
+//     }
+//     else if (desalojo_por_yield)
+//     {
+//         desalojo_por_yield = 0;
+
+//         log_trace(cpu_logger, "Desalojado por YIELD");
+        
+
+//         liberar_ce(ce);
+//     }
+//     else if (signal_recurso)
+//     {/*
+//         if (signal_recurso == 3)
+//         {
+//             log_trace(cpu_logger, "No existe el recurso");
+//             enviar_ce(socket_kernel, ce, EXIT_ERROR_RECURSO, cpu_logger);
+//         }
+//         else
+//         {
+//             log_trace(cpu_logger, "EJECUTO_SIGNAL"); // Prueba
+//             enviar_ce(socket_kernel, ce, EJECUTO_INSTRUCCION, cpu_logger);
+//         }
+// */
+//         signal_recurso = 0;
+
+//         liberar_ce(ce);
+//     }else if(desalojo_por_archivo){
+
+//         log_trace(cpu_logger, "Desalojo por archivo");
+//         enviar_ce(socket_kernel, ce, DESALOJO_ARCHIVO, cpu_logger);
+
+//         desalojo_por_archivo = 0;
+
+//         liberar_ce(ce);
+//     }
+//     else if (sig_f)
+//     {
+//         if (sig_f == 2)
+//         {
+//             log_trace(cpu_logger, "No hay memoria");
+//             enviar_ce(socket_kernel, ce, EXIT_OUT_OF_MEMORY, cpu_logger);
+//         }
+//         else
+//         {
+//             log_trace(cpu_logger, "EJECUTO_CREATE_SEGMENT"); // Prueba
+//             enviar_ce(socket_kernel, ce, EJECUTO_INSTRUCCION, cpu_logger);
+//         }
+
+//         sig_f = 0;
+
+//         liberar_ce(ce);
+//     }
 }
 
 int recibir_respuesta_recurso(){
@@ -607,6 +688,16 @@ int recibir_respuesta_recurso(){
     }else if (codigo_op == NO_LO_TENGO){
         return 2;
     }else if(codigo_op == LO_TENGO){
+        return 1;
+    }
+}
+
+int recibir_respuesta_segmento(){
+    int codigo_op = recibir_operacion(socket_kernel);
+
+    if(codigo_op == OUT_OF_MEMORY){
+        return 2;
+    }else if(codigo_op == OK){
         return 1;
     }
 }
@@ -658,7 +749,8 @@ void enviar_ce_con_string(int client_socket, contexto_ejecucion* ce, char* param
     t_paquete* paquete = crear_paquete_op_code(codOP);
 
     agregar_ce_a_paquete(paquete, ce, cpu_logger);
-    agregar_string_a_paquete(paquete, parameter); 
+    agregar_a_paquete(paquete, parameter, sizeof(parameter)+1);
+    // agregar_string_a_paquete(paquete, parameter); 
     enviar_paquete(paquete, client_socket);
     eliminar_paquete(paquete);
     
@@ -669,6 +761,15 @@ void enviar_ce_con_dos_enteros(int client_socket, contexto_ejecucion* ce, char* 
     t_paquete* paquete = crear_paquete_op_code(codOP);
 
     agregar_ce_a_paquete(paquete, ce, cpu_logger);
+    agregar_entero_a_paquete(paquete, atoi(x)); 
+    agregar_entero_a_paquete(paquete, atoi(y)); 
+    enviar_paquete(paquete, client_socket);
+    eliminar_paquete(paquete);
+}
+
+void enviar_paquete_con_dos_enteros(int client_socket, char* x, char* y, int codOP){
+    t_paquete* paquete = crear_paquete_op_code(codOP);
+
     agregar_entero_a_paquete(paquete, atoi(x)); 
     agregar_entero_a_paquete(paquete, atoi(y)); 
     enviar_paquete(paquete, client_socket);
@@ -687,6 +788,17 @@ void enviar_ce_con_string_entero(int client_socket, contexto_ejecucion* ce, char
     
 }
 
+void enviar_paquete_con_string_entero(int client_socket, char* parameter, char* x, int codOP){
+    t_paquete* paquete = crear_paquete_op_code(codOP);
+
+    agregar_string_a_paquete(paquete, parameter); 
+    agregar_entero_a_paquete(paquete, atoi(x));
+    enviar_paquete(paquete, client_socket);
+    eliminar_paquete(paquete);
+    
+}
+
+
 void enviar_ce_con_string_2_enteros(int client_socket, contexto_ejecucion* ce, char* parameter, char* x, char* y, int codOP){
     t_paquete* paquete = crear_paquete_op_code(codOP);
 
@@ -699,7 +811,16 @@ void enviar_ce_con_string_2_enteros(int client_socket, contexto_ejecucion* ce, c
     
 }
 
+void enviar_paquete_con_string_2_enteros(int client_socket, char* parameter, int x, char* y, int codOP){
+    t_paquete* paquete = crear_paquete_op_code(codOP);
 
+    agregar_string_a_paquete(paquete, parameter); 
+    agregar_entero_a_paquete(paquete, x);
+    agregar_entero_a_paquete(paquete, atoi(y));
+    enviar_paquete(paquete, client_socket);
+    eliminar_paquete(paquete);
+    
+}
 
 
 /*---------------------------------- PARA INSTRUCCION IO ----------------------------------*/
@@ -732,12 +853,12 @@ char* encontrarValorDeRegistro(char* register_to_find_value){ //Es t_registro* o
     else return 0;
 }
 
-void escribir_valor(int physical_address, char* register_value_mov_out, int segment_index, int pid){
+void escribir_valor(int physical_address, char* register_value_mov_out, int pid, int size){
     t_paquete* package = crear_paquete_op_code(MOV_OUT);
     agregar_entero_a_paquete(package, physical_address);
     agregar_string_a_paquete(package, register_value_mov_out);
-    agregar_entero_a_paquete(package, segment_index);
     agregar_entero_a_paquete(package, pid);
+    agregar_entero_a_paquete(package, size);
     enviar_paquete(package, conexion_cpu);
 }
 /*---------------------------------- MMU ----------------------------------*/
@@ -771,11 +892,14 @@ int traducir_direccion_logica(int logical_address, contexto_ejecucion* ce, int v
       return (segment->direccion_base + desplazamiento_segmento);
 }
 
-char* fetch_value_in_memory(int physical_adress, contexto_ejecucion* ce){
+char* fetch_value_in_memory(int physical_adress, contexto_ejecucion* ce, int size){
 
     t_paquete* package = crear_paquete_op_code(MOV_IN); 
+    agregar_entero_a_paquete(package, ce->id);
     agregar_entero_a_paquete(package, physical_adress);
-    agregar_ce_a_paquete(package,ce, cpu_logger);
+    agregar_entero_a_paquete(package, size);
+    //agregar_ce_a_paquete(package,ce, cpu_logger);
+    
     enviar_paquete(package, conexion_cpu);
     eliminar_paquete(package);
     log_info(cpu_logger, "MOV IN enviado");    
@@ -785,11 +909,11 @@ char* fetch_value_in_memory(int physical_adress, contexto_ejecucion* ce){
     
 
     char* value_received;    
-    int size = 0, desp = 0;
+    int sizeb = 0, desp = 0;
 
     if(code_op == MOV_IN_OK) {  
         log_info(cpu_logger,"ENTRE CARAJO");
-        void* buffer = recibir_buffer(&size, conexion_cpu);
+        void* buffer = recibir_buffer(&sizeb, conexion_cpu);
         value_received = leer_string(buffer, &desp); //AVERIGUAR BIEN ESTO
         log_info(conexion_cpu, "EL VALOR DEL REGISTRO RECIBIDO ES: %d", value_received);
     } else {
@@ -815,4 +939,18 @@ int read_int(char* buffer, int* desp) {
 	memcpy(&ret, buffer + (*desp), sizeof(int));
 	(*desp)+=sizeof(int);
 	return ret;
+}
+int tamanio_registro(char* registro){
+    if (strcmp(registro, "AX") == 0) return 4;
+    else if (strcmp(registro, "BX") == 0) return 4;
+    else if (strcmp(registro, "CX") == 0) return 4;
+    else if (strcmp(registro, "DX") == 0) return 4;
+    else if (strcmp(registro, "EAX") == 0) return 8;
+    else if (strcmp(registro, "EBX") == 0) return 8;
+    else if (strcmp(registro, "ECX") == 0) return 8;
+    else if (strcmp(registro, "EDX") == 0) return 8;
+    else if (strcmp(registro, "RAX") == 0) return 16;
+    else if (strcmp(registro, "RBX") == 0) return 16;
+    else if (strcmp(registro, "RCX") == 0) return 16;
+    else if (strcmp(registro, "RDX") == 0) return 16;
 }

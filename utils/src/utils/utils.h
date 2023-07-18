@@ -45,7 +45,6 @@ void recieve_handshake(int);
 
 typedef enum
 {
-	
 	MENSAJE,
 	PAQUETE,
 	INICIAR_PCB,
@@ -53,19 +52,16 @@ typedef enum
 	//RECIBIR_PCB,
 	// -------  CPU->kernel --------
 	EJECUTAR_CE, 			//  dispatch
-	EJECUTAR_INTERRUPCION,	// 	interrupt
 	// ------- enviadas por DIspatch: (CPU->kernel) --------
 	SUCCESS,
 	EXIT_ERROR_RECURSO,
 	SEG_FAULT,
-	DESALOJO_PCB,  			// TODO RUSO
 	BLOCK_IO,
 	BLOCK_WAIT,
 	WAIT_RECURSO,
-	EJECUTO_WAIT,
+	EJECUTO_INSTRUCCION,
 	DESALOJO_YIELD,
 	SIGNAL_RECURSO,
-	EJECUTO_SIGNAL,
 	ABRIR_ARCHIVO,
 	CERRAR_ARCHIVO,
 	LEER_ARCHIVO,
@@ -74,19 +70,27 @@ typedef enum
 	MODIFICAR_TAMAÑO_ARCHIVO,
 	CREAR_SEGMENTO,
 	BORRAR_SEGMENTO,
+	EXIT_OUT_OF_MEMORY,
+	DESALOJO_ARCHIVO,
 	// ------- KERNEL->CPU -----------
 	NO_EXISTE_RECURSO,
 	NO_LO_TENGO,
 	LO_TENGO,
+	CORRECTO,
 	// -------KERNEL->MEMORIA --------
 	ACCEDER_TP,
 	ACCEDER_EU,
 	INICIAR_PROCESO,
-	SUSPENDER_PROCESO,
+	SUSPENDER_PROCESO, // esto no va
 	CREATE_SEGMENT,
 	DELETE_SEGMENT,
 	COMPACTAR,
-	//  CPU->MEMORIA
+	SIN_ESPACIO,
+	ASK_COMPACTAR,
+	// -------KERNEL->FILESYSTEM --------
+	CONSULTA_ARCHIVO,
+	EXISTE_ARCHIVO,
+	CREAR_ARCHIVO,
 	ENVIAR_CONFIG, 			//siendo el cpu le pido a la mem que me pase la configuracion para traducir las direcciones
 	//MMU
 	PEDIDO_INDICE_DOS, // 1er acceso
@@ -105,13 +109,16 @@ typedef enum
 	MARCO,		// 2do acceso mmu
 	//PAGE_FAULT,
 	OUT_OF_MEMORY,
+	NECESITO_COMPACTAR,
 	DIR_FISICA,
 	VALOR_A_RECIBIR,	
-
 	CONFIG_MEMORIA,
 	FIN_CONSOLA,		
 	OK,
     FAIL = -1,
+
+	// -------FILESYSTEM -> KERNEL --------
+	NO_EXISTE_ARCHIVO
 } op_code;
 
 typedef enum { // Los estados que puede tener un PCB
@@ -128,6 +135,8 @@ typedef struct{
 	int direccion_base;		//falta definir tipo
 	int tamanio_segmento;
 } t_segmento;
+
+
 
 typedef struct{
 	char* archivo;
@@ -157,7 +166,7 @@ typedef struct {
 	t_list* tabla_segmentos;
 	double estimacion_rafaga;
     t_temporal* tiempo_llegada_ready;
-	t_list* tabla_archivos_abiertos;
+	t_list* tabla_archivos_abiertos_por_proceso;
 
 	t_temporal* salida_ejecucion;
 	int64_t rafaga_ejecutada;
@@ -187,6 +196,8 @@ typedef struct{
 	t_list* tabla_segmentos;
 }t_proceso;
 
+
+
 typedef struct {
 	int id;
 	char** instrucciones;
@@ -195,7 +206,34 @@ typedef struct {
 	t_list* tabla_segmentos;
 } contexto_ejecucion;
 
+typedef struct{
+	contexto_ejecucion* ce;
+	int entero1;
+	int entero2;
+} t_ce_2enteros;
 
+typedef struct{
+	contexto_ejecucion* ce;
+	char* string;
+} t_ce_string;
+
+typedef struct{
+	int entero1;
+	int entero2;
+} t_2_enteros;
+
+typedef struct{
+	int entero1;
+	int entero2;
+	int entero3;
+} t_3_enteros;
+
+typedef struct{
+	int DF;
+	char* registro;
+	int PID;
+	int size;
+} recive_mov_out;
 
 int crear_conexion(char* ip, char* puerto);
 void enviar_mensaje(char* mensaje, int socket_cliente);
@@ -239,7 +277,7 @@ void enviar_paquete_string(int, char*, int, int);
 void enviar_paquete_entero(int , int , int );
 
 void enviar_ce(int, contexto_ejecucion *, int, t_log*);
-void enviar_CodOp(int, int);
+void enviar_CodOp(int socket, int codOP);
 void enviar_paquete_entero(int, int, int);
 
 void agregar_ce_a_paquete(t_paquete *, contexto_ejecucion *, t_log*);
@@ -260,6 +298,21 @@ t_list* leer_tabla_segmentos(char*, int*);
 
 t_segmento* crear_segmento(int, int, int);
 
-
+void enviar_string_entero(int,char*,int,int codOP);
 void agregar_tabla_segmentos_a_paquete(t_paquete*, t_list*);
+
+t_ce_2enteros * recibir_ce_2enteros(int);
+t_ce_string* recibir_ce_string(int);
+t_ce_string* recibir_ce_stringlog(int, t_log*);
+void enviar_2_enteros(int client_socket, int x, int y, int codOP);
+t_2_enteros * recibir_2_enteros(int);
+void enviar_3_enteros(int client_socket, int x, int y, int z, int codOP);
+t_3_enteros * recibir_3_enteros(int);
+recive_mov_out * recibir_mov_out(int);
+void liberar_ce_2enteros(t_ce_2enteros*);
+void liberar_ce_string(t_ce_string*);
+
+void enviar_todas_tablas_segmentos(int, t_list*, int, t_log*);
+t_list* recibir_todas_tablas_segmentos(int);
+t_proceso* recibir_t_proceso(char*, int*);
 #endif /* UTILS_H_ */

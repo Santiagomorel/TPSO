@@ -87,7 +87,7 @@ int main(int argc, char **argv)
         }
     }*/
     sem_wait(&finModulo);
-
+    log_warning(log_memoria, "FINALIZA EL MODULO DE MEMORIA");
     free(MEMORIA_PRINCIPAL);
     end_program(socket_servidor_memoria, log_memoria, memoria_config_file);
 
@@ -111,7 +111,7 @@ void end_program(int socket, t_log *log, t_config *config)
     config_destroy(config);
     liberar_conexion(socket);
 }
-
+//KERNEL
 void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
 {
 
@@ -124,21 +124,45 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
         {
             case INICIAR_ESTRUCTURAS:
                 int id_inicio_estructura = recibir_entero(SOCKET_CLIENTE_KERNEL, log_memoria);
-
                 t_proceso* nuevo_proceso = crear_proceso_en_memoria(id_inicio_estructura);
 
                 log_trace(log_memoria, "recibi el op_cod %d INICIAR_ESTRUCTURAS", codigoOperacion);
                 log_trace(log_memoria, "creando paquete con tabla de segmentos base");
                 
                 enviar_tabla_segmentos(SOCKET_CLIENTE_KERNEL, TABLA_SEGMENTOS, nuevo_proceso);
-
-            // enviar_mensaje("enviado nueva tabla de segmentos", SOCKET_CLIENTE_KERNEL);
-            enviar_tabla_segmentos(SOCKET_CLIENTE_KERNEL, TABLA_SEGMENTOS, log_memoria);
-
             break;
-
         case CREATE_SEGMENT:
-            /*1. Que el segmento se cree exitosamente y que la memoria nos devuelva la base del nuevo segmento
+            t_3_enteros* estructura_3_enteros = recibir_3_enteros(SOCKET_CLIENTE_KERNEL);
+            int id_proceso = estructura_3_enteros->entero1;
+            
+            int id_segmento = estructura_3_enteros->entero2;
+            int tamanio = estructura_3_enteros->entero3;
+
+            if(puedoGuardar(tamanio)==1){
+                if(/*necesitoCompactar(tamanio)==1*/1){
+                
+                }
+                else{
+                //busco un espacio segun el algoritmo de ordenamiento
+                t_proceso* proceso_con_nuevo_segmento = buscar_proceso(id_proceso);
+                //list_add(proceso_con_nuevo_segmento->tabla_segmentos, segmento_nuevo);
+                enviar_tabla_segmentos(SOCKET_CLIENTE_KERNEL, TABLA_SEGMENTOS, proceso_con_nuevo_segmento);
+                }
+            }
+            else{
+            enviar_CodOp(SOCKET_CLIENTE_KERNEL, OUT_OF_MEMORY);
+            }
+            // si se crea el segmento, me mandas el cod de operacion OK + la base del segmento creado
+            //enviar_paquete_entero(SOCKET_CLIENTE_KERNEL, base_del_segmento, OK);
+
+            // si no se crea el segmento, me mandas el cod de operacion OUT_OF_MEMORY
+            //enviar_CodOp(SOCKET_CLIENTE_KERNEL, OUT_OF_MEMORY);
+
+            // si se necesita compactar, me mandas el cod de operacion NECESITO_COMPACTAR
+            //enviar_CodOp(SOCKET_CLIENTE_KERNEL, NECESITO_COMPACTAR);
+
+            /*1. 
+
               2. Que no se tenga más espacio disponible en la memoria y por lo tanto el proceso tenga que finalizar con error Out of Memory.
               3. Que se tenga el espacio disponible, pero que el mismo no se encuentre contiguo, por lo que se deba compactar, este caso lo vamos a analizar más en detalle,
                 ya que involucra controlar las operaciones de File System que se estén ejecutando.*/
@@ -146,14 +170,20 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
             // resp_op codigo_respuesta_seg = crear_segmento() => lo debe agregar a la memoria, o no en caso que no pueda y retornar un codigo de respuesta
             /*
             if(codigo_respuesta_seg){
-
+            
             }*/
+            
 
             break;
 
         case DELETE_SEGMENT:
             // Debe recibir el id del segmento que desea eliminar
-            // tabla_segmentos_sin_segmento = borrar_segmento(id_segmento);
+            
+            t_2_enteros* data_delete = recibir_2_enteros(SOCKET_CLIENTE_KERNEL);
+            int PID = data_delete->entero1;
+            int id_segmento_delete = data_delete->entero2;
+            t_proceso* proceso_sin_segmento = borrar_segmento(PID,id_segmento_delete);
+            enviar_tabla_segmentos(SOCKET_CLIENTE_KERNEL, TABLA_SEGMENTOS, proceso_sin_segmento);
 
             /*Para realizar un DELETE_SEGMENT, el Kernel deberá enviarle a la Memoria el Id del segmento a eliminar y recibirá como respuesta de la Memoria la tabla de segmentos actualizada.
             Nota: No se solicitará nunca la eliminación del segmento 0 o de un segmento inexistente.*/
@@ -163,6 +193,7 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
         //     log_warning(log_memoria, "Solicitud de Compactación");
         //     //compactar();
         //     break;
+
         // se desconecta kernel
         case -1:
             log_warning(log_memoria, "se desconecto kernel");
@@ -174,6 +205,7 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
         }
     }
 }
+//CPU
 void recibir_cpu(int SOCKET_CLIENTE_CPU)
 {
 
@@ -190,15 +222,26 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU)
             recibir_mensaje(SOCKET_CLIENTE_CPU, log_memoria);
             break;
 
-        case MOV_IN: //(Registro, Dirección Lógica): Lee el valor de memoria correspondiente a la Dirección Lógica y lo almacena en el Registro.
+        case MOV_IN: //(Registro, Direc_base ,size): Lee el valor de memoria correspondiente a la Dirección Lógica y lo almacena en el Registro.
+            //falta el PID
+            //PID|direc_base|size
+            //int PID = recibir_entero(SOCKET_CLIENTE_CPU, log_memoria)
+            t_3_enteros* movin = recibir_3_enteros(SOCKET_CLIENTE_CPU);
+            log_info(log_memoria, "PID: %d - Accion: LEER - Direccion física: %d - Tamaño: %d - Origen: CPU",movin->entero1, movin->entero2,movin->entero3);
+            mov_in(SOCKET_CLIENTE_CPU, movin->entero2, movin->entero3);
 
-            // t_paquete* paquete_ok = crear_paquete_op_code(MOV_IN_OK);
-            // enviar_paquete(paquete_ok);
             break;
-        case MOV_OUT: //(Dirección Lógica, Registro): Lee el valor del Registro y lo escribe en la dirección física de memoria obtenida a partir de la Dirección Lógica.
+        case MOV_OUT: //(Dirección Fisica, Registro): Lee el valor del Registro y lo escribe en la dirección física de memoria obtenida a partir de la Dirección Lógica.
+            recive_mov_out* data_mov_out = recibir_mov_out(SOCKET_CLIENTE_CPU);
+//            void * registro = (void*)recibir_string(SOCKET_CLIENTE_CPU, log_memoria);
+            void* registro = (void*) data_mov_out->registro;
+            log_trace(log_memoria,"PID: %d - Acción: ESCRIBIR - Dirección física: %d - Tamaño: %d - Origen: CPU", data_mov_out->PID, data_mov_out->DF, data_mov_out->size); 
+            ocuparBitMap(data_mov_out->DF, data_mov_out->size);
+            ocuparMemoria(registro, data_mov_out->DF, data_mov_out->size);
 
-            // t_paquete* paquete_ok = crear_paquete_op_code(MOV_OUT_OK);
-            // enviar_paquete(paquete_ok);
+            //falta chequear que el tipo que se pide para los size este bien
+            enviar_CodOp(SOCKET_CLIENTE_CPU, MOV_OUT_OK);
+        
         case -1:
             log_warning(log_memoria, "se desconecto CPU");
         break;
@@ -208,6 +251,7 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU)
         }
     }
 }
+//FILESYSTEM
 void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM)
 {
 
@@ -223,9 +267,14 @@ void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM)
 
             break;
 
-        // case CREATE_FILE:
-        //
-        //     break;
+        case MOV_IN: //se va a llamar distinto seguro
+
+            break;
+        
+        case MOV_OUT: //se va a llamar distinto seguro
+
+            break;
+
         case -1:
                 log_warning(log_memoria, "se desconecto FILESYSTEM");
             break;
@@ -280,11 +329,8 @@ void generar_tabla_segmentos(t_proceso* proceso){
 
 void enviar_tabla_segmentos(int conexion, int codOP, t_proceso* proceso) {
 	t_paquete* paquete = crear_paquete_op_code(codOP);
-
 	agregar_entero_a_paquete(paquete, list_size(proceso->tabla_segmentos));
-
 	agregar_tabla_a_paquete(paquete, proceso, log_memoria);
-
 	enviar_paquete(paquete, conexion);
 
 	eliminar_paquete(paquete);
@@ -322,6 +368,64 @@ void iniciar_semaforos()
     pthread_mutex_init(&mutexIdGlobal, NULL);
     pthread_mutex_init(&listaProcesos, NULL);
 }
+//
+//  KERNEL
+//
+
+//CREATE_SEGMENT
+
+//void* crear_segmento(int PID, int size){
+//    if()
+//}
+
+//DELETE_SEGMENT
+
+t_proceso* buscar_proceso(int id_proceso){
+    
+    bool mismoIdProc(t_proceso* unProceso){
+    return (unProceso->id == id_proceso);
+    }
+
+    t_proceso* proceso = list_find(tabla_de_procesos, mismoIdProc);
+
+    return proceso;
+}
+
+t_proceso* borrar_segmento(int PID,int id_segmento_elim){
+    
+    bool mismoIdProc(t_proceso* unProceso){
+    return (unProceso->id == PID);
+    }
+
+    t_proceso* proceso_del_segmento = list_find(tabla_de_procesos, mismoIdProc);
+    bool mismoIdSeg(t_segmento* unSegmento){
+        return (unSegmento->id_segmento == id_segmento_elim);
+    }
+    t_segmento* segmento_a_eliminar = list_find(proceso_del_segmento->tabla_segmentos, mismoIdSeg);
+    list_remove_by_condition(proceso_del_segmento->tabla_segmentos, mismoIdSeg);
+    liberarBitMap(segmento_a_eliminar->direccion_base,segmento_a_eliminar->tamanio_segmento);
+    return proceso_del_segmento;
+    
+}
+
+//
+//  CPU
+//
+
+void mov_in(int socket_cliente,int direc_fisica, int size/*sizeof(t_registro)*/){
+    //para guido: antes de enviar la direccion fisica, castearla a void* si es q no esta hecha
+    char* registro;
+    memcpy(registro, MEMORIA_PRINCIPAL+direc_fisica ,size);
+    t_paquete* paquete_ok = crear_paquete_op_code(MOV_IN_OK);
+    agregar_string_a_paquete(paquete_ok, registro);
+    enviar_paquete(paquete_ok ,socket_cliente);
+
+    eliminar_paquete(paquete_ok);
+    //ocuparMemoria(registro, direc_logica, size);
+    //ocuparBitMap(direc_logica, size);
+}
+
+
 
 //
 //  SEGMENTACION
@@ -334,10 +438,12 @@ int iniciarSegmentacion(void)
     if (MEMORIA_PRINCIPAL == NULL)
     {
         // NO SE RESERVO LA MEMORIA
+        log_error(log_memoria, "no se ha podido reserar meemoria");
         return 0;
     }
 
     // LISTAS
+    tabla_de_procesos = list_create();
     // tablaDeSegmentosDePatotas = list_create();
     // tablaDeSegmentosDeTripulantes = list_create();
 
@@ -426,6 +532,7 @@ t_segmento* buscarSegmentoSegunTamanio(int size){
         log_info(log_memoria,"No hay espacio suficiente para guardar, se debe compactar");
         //compactacion(); Descomentar cuando se tenga compactacion
         //segmento = buscarSegmentoSegunTamanio(size);
+        
     }else if(list_size(segmentosCandidatos)== 1){
         segmento = list_get(segmentosCandidatos, 0);
     }else{
@@ -434,11 +541,11 @@ t_segmento* buscarSegmentoSegunTamanio(int size){
 
     }
     
-    int mismoId(t_segmento* unSegmento){
+    int mismoIdSeg(t_segmento* unSegmento){
         return (unSegmento->id_segmento == segmento->id_segmento);
     }
     
-    list_remove_by_condition(todosLosSegLibres, (void*)mismoId); //Saco el segmento de la lista asi las puedo eliminar
+    list_remove_by_condition(todosLosSegLibres, (void*)mismoIdSeg); //Saco el segmento de la lista asi las puedo eliminar
     
 	//list_destroy(todosLosSegLibres);
 	//list_destroy(segmentosCandidatos);
@@ -510,7 +617,7 @@ t_list* puedenGuardar(t_list* segmentos, int size){
 void guardarEnMemoria(void *elemento, t_segmento *segmento, int size)
 {
 
-    ocuparBitMap(bitMapSegment, segmento->direccion_base, size);
+    ocuparBitMap(segmento->direccion_base, size);
     ocuparMemoria(elemento, segmento->direccion_base, size);
 }
 
@@ -533,7 +640,9 @@ t_segmento* elegirSegCriterio(t_list* segmentos, int size){
         segmento = list_get(segmentos,0); //FIRST FIT DEVUELVE EL PRIMER SEGMENTO DONDE PUEDE GUARDARSE
     }else if(strcmp(memoria_config.algoritmo_asignacion,"BEST") == 0){
     	log_info(log_memoria,"Entre por BEST");
-        segmento = segmentoBestFit(segmentos, size); // => Falta agregar la funcion
+        segmento = segmentoBestFit(segmentos, size);
+    }else if(strcmp(memoria_config.algoritmo_asignacion,"WORST") == 0){
+        segmento = segmentoWorstFit(segmentos, size);
     }
 
     return segmento;
@@ -562,6 +671,103 @@ t_segmento* segmentoMenorTamanio(t_segmento* segmento, t_segmento* otroSegmento)
         return segmento;
     }else
         return otroSegmento; 
+}
+t_segmento* segmentoMayorTamanio(t_segmento* segmento, t_segmento* otroSegmento){
+
+    if(segmento->tamanio_segmento > otroSegmento->tamanio_segmento){
+        return segmento;
+    }else
+        return otroSegmento; 
+}
+t_segmento* segmentoWorstFit(t_list* segmentos, int size){
+    
+    t_segmento* segmento;
+
+    return segmento = list_get_maximum(segmentos, (void*)segmentoMayorTamanio);
+}
+
+//Compactacion
+void compactacion(){
+    //BUSCO SEGMENTOS OCUPADOS, CON EL BITMAP EN 1
+    t_list* segmentosNoCompactados = buscarSegmentosOcupados();
+
+    //SACO LO QUE TENGO GUARDADO EN ESOS SEGMENTOS,  Esta lista tiene PCB|TCB|Tareas|PCB|TCB|Tareas....
+    t_list* cosasDeLosSegmentos = copiarContenidoSeg(segmentosNoCompactados); //HACER
+
+    //LIMPIO EL BITMAP -> TODO EN 0
+    liberarBitMap(0, memoria_config.tam_memoria);
+
+    int cantidadS = list_size(segmentosNoCompactados);
+
+    //NUEVA LISTA DE SEGMENTOS
+    t_list* segmentosCompactados = list_create();
+
+    //GUARDO LA LISTA COSASDELOSSEGMENTOS EN LA MEMORIA, EN ORDEN, TODOS PEGADOS
+    for(int i =0 ; i<cantidadS ; i++){
+        //AGARRO UNO
+        t_segmento* miSegmento = list_get(segmentosNoCompactados, i);
+        
+        //LO GUARDO 
+        t_segmento* nuevoSegmento = guardarElemento(list_get(cosasDeLosSegmentos,i), miSegmento->tamanio_segmento);
+        
+        //LO AGREGO A LA NUEVA LISTA
+        list_add(segmentosCompactados, nuevoSegmento);
+    }
+
+    //ACTUALIZO LOS SEGMENTOS VIEJOS NO COMPACTADOS
+    actualizarCompactacion(segmentosNoCompactados, segmentosCompactados); //HACER
+
+    //LIBERO LISTAS
+    eliminarLista(cosasDeLosSegmentos);   
+    list_destroy(segmentosCompactados);
+    list_destroy(segmentosNoCompactados);
+    
+} 
+//CAMBIAR
+t_list* buscarSegmentosOcupados(){
+    t_list* lista = list_create();
+    return lista;
+}
+t_list* copiarContenidoSeg(t_list* segmentosNoCompactados){
+
+    t_list* segmentos = list_map(segmentosNoCompactados, (void*)copiarSegmentacion);
+    return segmentos;
+
+}
+void* copiarSegmentacion(t_segmento* unSegmento){
+	
+	void* algo;
+    //if(unSegmento->limite == 21){       //TRIPU
+    //    algo = malloc(sizeof(t_tcb));
+    //}else if(unSegmento->limite == 8){  //PATOTA
+    //    algo = malloc(sizeof(t_pcb));
+    //}else{                              //TAREAS
+    //    algo = malloc(unSegmento->limite);
+    //}
+
+    algo = malloc(unSegmento->tamanio_segmento);
+    //CHEQUEAR
+	pthread_mutex_lock(&mutexMemoria);
+	memcpy(algo,MEMORIA_PRINCIPAL + unSegmento->direccion_base, unSegmento->tamanio_segmento); //COPIA EN ALGO DESDE HASTA TAL LUGAR
+	//CHEQUEAR
+    pthread_mutex_unlock(&mutexMemoria);
+    
+    return algo;
+}
+
+void actualizarCompactacion(t_list* segmentosNoCompactados, t_list* segmentosCompactados){
+    for(int i = 0; i<list_size(segmentosNoCompactados);i++){
+        actualizarCadaSegmento(list_get(segmentosNoCompactados, i), list_get(segmentosCompactados,i));
+    }
+}
+void actualizarCadaSegmento(t_segmento* segmentoViejo, t_segmento* segmentoNuevo){
+    pthread_mutex_lock(&mutexMemoria);		
+	log_info(log_memoria, "El segmento %d ahora tiene base %p",segmentoViejo->id_segmento, MEMORIA_PRINCIPAL + segmentoNuevo->direccion_base);
+	pthread_mutex_unlock(&mutexMemoria);
+    
+    //CAMBIAR A FUNCIONES QUE SIRVAN O BORRAR
+    //actualizarListaPatotas(segmentoViejo, segmentoNuevo); //si esta lo cambia, sino no hace nada
+	//actualizarListaTripulantes(segmentoViejo, segmentoNuevo); //si esta lo cambia, sino no hace nada
 }
 
 // BitArrays
@@ -600,7 +806,7 @@ int bitsToBytes(int bits){
 
 // bitMaps
 
-void ocuparBitMap(t_bitarray *segmentoBitMap, int base, int size)
+void ocuparBitMap(int base, int size)
 {
 
     pthread_mutex_lock(&mutexBitMapSegment);
@@ -611,7 +817,7 @@ void ocuparBitMap(t_bitarray *segmentoBitMap, int base, int size)
     pthread_mutex_unlock(&mutexBitMapSegment);
 }
 
-void liberarBitMap(t_bitarray *segmentoBitMap, int base, int size)
+void liberarBitMap(int base, int size)
 {
 
     pthread_mutex_lock(&mutexBitMapSegment);
@@ -668,6 +874,8 @@ void eliminarAlgo(void* algo){
 	free(algo);
 	
 }
+
+
 
 
 // Comentarios viejos// => para borrar

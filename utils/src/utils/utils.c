@@ -70,7 +70,7 @@ void recibir_mensaje(int socket_cliente, t_log *logger)
 {
 	int size;
 	char *buffer = recibir_buffer(&size, socket_cliente);
-	log_trace(logger, "Me llego el mensaje %s", buffer);
+	log_warning(logger, "Me llego el mensaje %s", buffer);
 	free(buffer);
 }
 
@@ -144,10 +144,12 @@ int crear_conexion(char *ip, char *puerto)
 
 	if (connect(socket_cliente, server_info->ai_addr, server_info->ai_addrlen) == -1)
 	{
+		free(socket_cliente);
 		return -1;
 	}
 
 	freeaddrinfo(server_info);
+	
 
 	return socket_cliente;
 }
@@ -227,7 +229,7 @@ void agregar_string_a_paquete(t_paquete *paquete, char* palabra)
 {
 	paquete->buffer->stream = realloc(paquete->buffer->stream, paquete->buffer->size + sizeof(char*));
 	memcpy(paquete->buffer->stream + paquete->buffer->size, &palabra, sizeof(char*));
-	paquete->buffer->size += sizeof(char*);
+	paquete->buffer->size += (sizeof(char*));
 }
 
 
@@ -688,4 +690,225 @@ t_segmento *crear_segmento(int id_seg, int base, int tamanio)
     unSegmento->direccion_base = base;
     unSegmento->tamanio_segmento = tamanio;
     return unSegmento;
+}
+
+t_ce_2enteros * recibir_ce_2enteros(int socket)
+{
+	t_ce_2enteros* nuevo_ce_2enteros = malloc(sizeof(t_ce_2enteros));
+	contexto_ejecucion *nuevoCe = malloc(sizeof(contexto_ejecucion));
+	int size = 0;
+	char *buffer;
+	int desp = 0;
+
+	buffer = recibir_buffer(&size, socket);
+
+	nuevoCe->id = leer_entero(buffer, &desp);
+	nuevoCe->instrucciones = leer_string_array(buffer, &desp); // hay que liberar antes de perder la referencia
+	nuevoCe->program_counter = leer_entero(buffer, &desp);
+	nuevoCe->registros_cpu = leer_registros(buffer, &desp); // hay que liberar antes de perder la referencia
+	nuevoCe->tabla_segmentos = leer_tabla_segmentos(buffer, &desp);
+
+	nuevo_ce_2enteros->ce = nuevoCe;
+
+	nuevo_ce_2enteros->entero1 = leer_entero(buffer, &desp);
+
+	nuevo_ce_2enteros->entero2 = leer_entero(buffer, &desp);
+
+	free(buffer);
+	return nuevo_ce_2enteros;
+}
+
+t_ce_string* recibir_ce_string(int socket)
+{
+	t_ce_string* nuevo_ce_string = malloc(sizeof(t_ce_string));
+	contexto_ejecucion *nuevoCe = malloc(sizeof(contexto_ejecucion));
+	int size = 0;
+	char *buffer;
+	int desp = 0;
+
+	buffer = recibir_buffer(&size, socket);
+
+	nuevoCe->id = leer_entero(buffer, &desp);
+	nuevoCe->instrucciones = leer_string_array(buffer, &desp); // hay que liberar antes de perder la referencia
+	nuevoCe->program_counter = leer_entero(buffer, &desp);
+	nuevoCe->registros_cpu = leer_registros(buffer, &desp); // hay que liberar antes de perder la referencia
+	nuevoCe->tabla_segmentos = leer_tabla_segmentos(buffer, &desp);
+
+	nuevo_ce_string->ce = nuevoCe;
+	printf("llego aca");
+	nuevo_ce_string->string = leer_string(buffer, &desp);
+
+	return nuevo_ce_string;
+}
+
+t_ce_string* recibir_ce_stringlog(int socket, t_log* logger)
+{
+	log_error(logger, "entro aca");
+	t_ce_string* nuevo_ce_string = malloc(sizeof(t_ce_string));
+	log_error(logger, "hace el malloc del ce string");
+	contexto_ejecucion *nuevoCe = malloc(sizeof(contexto_ejecucion));
+	log_error(logger, "hace el malloc del ce");
+	int size = 0;
+	char *buffer;
+	int desp = 0;
+
+	buffer = recibir_buffer(&size, socket);
+
+	nuevoCe->id = leer_entero(buffer, &desp);
+	nuevoCe->instrucciones = leer_string_array(buffer, &desp); // hay que liberar antes de perder la referencia
+	nuevoCe->program_counter = leer_entero(buffer, &desp);
+	nuevoCe->registros_cpu = leer_registros(buffer, &desp); // hay que liberar antes de perder la referencia
+	nuevoCe->tabla_segmentos = leer_tabla_segmentos(buffer, &desp);
+	log_error(logger, "recibe el nuevo ce");
+	nuevo_ce_string->ce = nuevoCe;
+	log_error(logger, "lo asigna al tce_string");
+	nuevo_ce_string->string = leer_string(buffer, &desp);
+
+	return nuevo_ce_string;
+}
+
+void enviar_2_enteros(int client_socket, int x, int y, int codOP){
+    t_paquete* paquete = crear_paquete_op_code(codOP);
+
+    agregar_entero_a_paquete(paquete, x); 
+    agregar_entero_a_paquete(paquete, y); 
+    enviar_paquete(paquete, client_socket);
+    eliminar_paquete(paquete);
+}
+
+void enviar_3_enteros(int client_socket, int x, int y, int z, int codOP){
+    t_paquete* paquete = crear_paquete_op_code(codOP);
+
+    agregar_entero_a_paquete(paquete, x); 
+    agregar_entero_a_paquete(paquete, y);
+	agregar_entero_a_paquete(paquete, z); 
+    enviar_paquete(paquete, client_socket);
+    eliminar_paquete(paquete);
+}
+
+t_2_enteros * recibir_2_enteros(int socket)
+{
+	t_2_enteros* nuevo_2_enteros = malloc(sizeof(t_2_enteros));
+	int size = 0;
+	char *buffer;
+	int desp = 0;
+
+	buffer = recibir_buffer(&size, socket);
+
+	nuevo_2_enteros->entero1 = leer_entero(buffer, &desp);
+
+	nuevo_2_enteros->entero2 = leer_entero(buffer, &desp);
+
+	free(buffer);
+	return nuevo_2_enteros;
+}
+t_3_enteros * recibir_3_enteros(int socket)
+{
+	t_3_enteros* nuevo_3_enteros = malloc(sizeof(t_3_enteros));
+	int size = 0;
+	char *buffer;
+	int desp = 0;
+
+	buffer = recibir_buffer(&size, socket);
+
+	nuevo_3_enteros->entero1 = leer_entero(buffer, &desp);
+
+	nuevo_3_enteros->entero2 = leer_entero(buffer, &desp);
+
+	nuevo_3_enteros->entero3 = leer_entero(buffer, &desp);
+
+	free(buffer);
+	return nuevo_3_enteros;
+}
+
+recive_mov_out * recibir_mov_out(int socket)
+{
+	recive_mov_out* nuevo_4_enteros = malloc(sizeof(recive_mov_out));
+	int size = 0;
+	char *buffer;
+	int desp = 0;
+
+	buffer = recibir_buffer(&size, socket);
+
+	nuevo_4_enteros->DF = leer_entero(buffer, &desp);
+
+	nuevo_4_enteros->registro = leer_string(buffer, &desp);
+
+	nuevo_4_enteros->PID = leer_entero(buffer, &desp);
+	
+	nuevo_4_enteros->size = leer_entero(buffer, &desp);
+
+	free(buffer);
+	return nuevo_4_enteros;
+}
+
+void liberar_ce_2enteros(t_ce_2enteros* ce_2enteros)
+{
+	liberar_ce(ce_2enteros->ce);
+	free(ce_2enteros); //esto no se si funciona OJO 
+}
+
+void liberar_ce_string(t_ce_string* ce_string)
+{
+	liberar_ce(ce_string->ce);
+	free(ce_string->string);
+	free(ce_string); //esto no se si funciona OJO
+}
+
+void enviar_todas_tablas_segmentos(int conexion, t_list* lista_t_procesos, int codOP, t_log* logger)
+{
+	t_paquete* paquete = crear_paquete_op_code(codOP);
+
+	int cantidad_procesos = list_size(lista_t_procesos);
+	agregar_entero_a_paquete(paquete, cantidad_procesos);
+
+	for (int i = 0; i < cantidad_procesos; i++)
+	{
+		t_proceso* proceso_de_memoria = list_get(lista_t_procesos, i);
+		agregar_entero_a_paquete(paquete, proceso_de_memoria->id);
+		agregar_tabla_segmentos_a_paquete(paquete, proceso_de_memoria->tabla_segmentos);
+	}
+
+	enviar_paquete(paquete, conexion);
+	eliminar_paquete(paquete);
+}
+
+t_list* recibir_todas_tablas_segmentos(int conexion)
+{
+	t_list* lista_t_procesos = list_create();
+	int size = 0;
+	char *buffer;
+	int desp = 0;
+
+	buffer = recibir_buffer(&size, socket);
+
+	int cant_t_procesos = leer_entero(buffer, &desp);
+
+	for (int i = 0; i < cant_t_procesos; i++)
+	{
+		t_proceso* nuevoProceso = recibir_t_proceso(buffer, &desp);
+		list_add(lista_t_procesos, nuevoProceso);
+	}
+
+	free(buffer);
+	return lista_t_procesos;
+}
+
+t_proceso* recibir_t_proceso(char* buffer, int* desp)
+{
+	t_proceso* nuevoProceso = malloc(sizeof(t_proceso));
+
+	nuevoProceso->id = leer_entero(buffer, desp);
+	nuevoProceso->tabla_segmentos = leer_tabla_segmentos(buffer, desp);
+
+	return nuevoProceso;
+}
+
+void enviar_string_entero(int client_socket, char* parameter, int x, int codOP){
+    t_paquete* paquete = crear_paquete_op_code(codOP);
+    agregar_string_a_paquete(paquete, parameter); 
+    agregar_entero_a_paquete(paquete,x);
+    enviar_paquete(paquete, client_socket);
+    eliminar_paquete(paquete);
+    
 }

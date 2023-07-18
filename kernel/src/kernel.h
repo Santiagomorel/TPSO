@@ -31,6 +31,22 @@ typedef struct{
     char* puerto_kernel;
 } Kernel_config;
 
+typedef struct
+{
+	char* nombreArchivo;
+	uint32_t puntero; //apunta al archivo
+	uint32_t tamanioArchivo;
+}t_entradaTAAP;
+
+typedef struct
+{
+	char* nombreArchivo;
+	t_entradaTAAP* puntero; // apunta a la entrada tabla por procesos
+	uint32_t tamanioArchivo;
+	t_list *lista_block_archivo;
+	pthread_mutex_t mutex_lista_block_archivo;
+}t_entradaTGAA;
+
 Kernel_config kernel_config;
 
 int socket_kernel;
@@ -65,6 +81,7 @@ pthread_mutex_t m_listaEjecutando;
 pthread_mutex_t m_listaReady;
 pthread_mutex_t m_listaFinalizados;
 pthread_mutex_t* m_listaRecurso[MAX_RECURSOS];
+pthread_mutex_t m_IO;
 sem_t proceso_en_ready;
 sem_t fin_ejecucion;
 sem_t grado_multiprog;
@@ -82,6 +99,11 @@ t_list** lista_recurso; // lista que tiene listas de recursos
 // Variables de hilo de planificadores
 pthread_t planificadorCP;
 pthread_t hiloDispatch;
+pthread_t hiloMemoria;
+pthread_t hiloIO;
+
+//Variables de tablas de archivos
+t_list* tablaGlobalArchivosAbiertos;
 
 // Declaraciones de parte consola
 void recibir_consola(int);
@@ -138,9 +160,15 @@ void copiar_tabla_segmentos_pcb_a_ce(t_pcb*, contexto_ejecucion*);
 // Declaraciones Dispatch Manager
 void manejar_dispatch();
 void actualizar_pcb(t_pcb*, contexto_ejecucion*);
+
+// Declaraciones de fin de proceso
+void atender_final_proceso(int);
+void finalizar_proceso(contexto_ejecucion*, int);
+void liberar_recursos_pedidos(t_pcb*);
 void enviar_Fin_consola(int);
 
 // Declaraciones DESALOJO_YIELD
+void atender_desalojo_yield();
 void sacar_rafaga_ejecutada(t_pcb*);
 void iniciar_nueva_espera_ready(t_pcb*);
 
@@ -151,15 +179,57 @@ int id_proceso_en_lista(t_list*);
 int obtener_instancias_recurso(int);
 void restar_instancia(int);
 void sumar_instancia(int);
+void sumar_instancia_exit(int, t_pcb*);
 
 // Declaraciones WAIT_RECURSO
+void atender_wait_recurso();
 int tiene_instancia_wait(int);
 void bloqueo_proceso_en_recurso(t_pcb*, int);
 
 // Declaraciones SIGNAL_RECURSO
+void atender_signal_recurso();
 int tiene_que_reencolar_bloq_recurso(int);
 void reencolar_bloqueo_por_recurso(int);
 
+// Declaraciones BLOCK_IO
+typedef struct{
+    t_pcb* pcb;
+    int bloqueo;
+}thread_args;
+
+void atender_block_io();
+void rutina_io(thread_args*);
+
+// Declaraciones CREAR_SEGMENTO
+void atender_crear_segmento();
+void atender_compactacion(int, int, int);
+void actualizar_ts_x_proceso();
+t_pcb* pcb_en_lista_coincide(t_list*, t_proceso*);
+void eliminar_tabla_segmentos(t_list*);
+
+// Declaraciones BORRAR_SEGMENTO
+void atender_borrar_segmento();
+// Declaraciones Memory Manager
+void manejar_memoria();
+
+//Declaraciones ABRIR_ARCHIVO
+void atender_apertura_archivo();
+char* obtener_nombre_archivo(t_entradaTGAA*);
+bool existeArchivo(char*);
+t_list* nombre_en_lista_coincide(t_list*, char* );
+void crear_entrada_TAAP(char*,t_entradaTAAP*);
+void crear_entrada_TGAA(char*,t_entradaTAAP*);
+bool encontrar_nombre(char*);
+//Declaraciones CERRAR_ARCHIVO
+void atender_cierre_archivo();
+//Declaraciones ACTUALIZAR_PUNTERO
+void atender_actualizar_puntero();
+//Declaraciones LEER_ARCHIVO
+void atender_leer_archivo();
+//Declaraciones ESCRIBIR_ARCHIVO
+void atender_escritura_archivo();
+//Declaraciones MODIFICAR_TAMANIO_ARCHIVO
+void atender_modificar_tamanio_archivo();
 //
 // ------------------------------------//
 
