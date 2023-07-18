@@ -1485,15 +1485,20 @@ void atender_lectura_archivo(){
 
     bloquear_FS();
 
-    t_ce_string_2enteros* estructura_leer_archivo= recibir_ce_string_2enteros(cpu_dispatch_connection);
+    t_ce_string_3enteros* estructura_leer_archivo= recibir_ce_string_3enteros(cpu_dispatch_connection);
 
     contexto_ejecucion* ce_a_updatear = estructura_leer_archivo->ce;
 
     char* nombre_archivo = estructura_leer_archivo->string;
     
-    int puntero_archivo = estructura_leer_archivo->entero1;
+    int offset = estructura_leer_archivo ->entero1;
 
     int bytes_a_leer = estructura_leer_archivo->entero2;
+
+    int puntero_archivo = estructura_leer_archivo->entero3;
+
+    
+
         
     pthread_mutex_lock(&m_listaEjecutando);
         t_pcb * pcb_lectura = (t_pcb *) list_remove(listaEjecutando, 0);
@@ -1515,6 +1520,7 @@ void atender_lectura_archivo(){
     argumentos->nombre = nombre_archivo;
     argumentos->puntero = puntero_archivo;
     argumentos->bytes = bytes_a_leer;
+    argumentos->offset = offset;
 
     pthread_create(&hiloRead, NULL, (void*) rutina_read, (void*) (thread_args_read*) argumentos);
     pthread_detach(hiloRead);
@@ -1530,8 +1536,9 @@ void atender_lectura_archivo(){
     char* nombre = args->nombre;
     int puntero = args->puntero;
     int bytes = args->bytes;
+    int offset = args->offset;
     
-    enviar_string_3enteros(file_system_connection, nombre, pcb->id, puntero,bytes, F_READ);
+    enviar_string_4enteros(file_system_connection, nombre, pcb->id, puntero,bytes, offset, F_READ);
     
     int cod_op = recibir_operacion(file_system_connection);
 
@@ -1674,7 +1681,7 @@ void rutina_truncate(thread_args_truncate* args)
     char* nombre = args->nombre;
     int tamanio = args->tamanio;
     
-    enviar_string_2enteros(file_system_connection, nombre, pcb->id, tamanio, F_TRUNCATE);
+    enviar_string_entero(file_system_connection, nombre, tamanio, F_TRUNCATE);
     
     int cod_op = recibir_operacion(file_system_connection);
 

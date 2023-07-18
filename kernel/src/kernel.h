@@ -245,6 +245,7 @@ typedef struct{
     char* nombre;
     int puntero;
     int bytes;
+    int offset;
 }thread_args_read;
 
 void rutina_read(thread_args_read*);
