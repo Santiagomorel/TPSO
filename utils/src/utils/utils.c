@@ -353,6 +353,7 @@ char* leer_string(char *buffer, int *desplazamiento) // Lee un string en base a 
 	return valor;
 }
 
+
 char **leer_string_array(char *buffer, int *desp)
 {
 	int length = leer_entero(buffer, desp);
@@ -716,6 +717,65 @@ t_ce_2enteros * recibir_ce_2enteros(int socket)
 
 	free(buffer);
 	return nuevo_ce_2enteros;
+
+}
+
+t_ce_string_2enteros * recibir_ce_string_2enteros(int socket)
+{
+	t_ce_string_2enteros* nuevo_ce_string_2enteros = malloc(sizeof(t_ce_string_2enteros));
+	contexto_ejecucion *nuevoCe = malloc(sizeof(contexto_ejecucion));
+	int size = 0;
+	char *buffer;
+	int desp = 0;
+
+	buffer = recibir_buffer(&size, socket);
+
+	nuevoCe->id = leer_entero(buffer, &desp);
+	nuevoCe->instrucciones = leer_string_array(buffer, &desp); // hay que liberar antes de perder la referencia
+	nuevoCe->program_counter = leer_entero(buffer, &desp);
+	nuevoCe->registros_cpu = leer_registros(buffer, &desp); // hay que liberar antes de perder la referencia
+	nuevoCe->tabla_segmentos = leer_tabla_segmentos(buffer, &desp);
+
+	nuevo_ce_string_2enteros->ce = nuevoCe;
+
+	nuevo_ce_string_2enteros->entero1 = leer_entero(buffer, &desp);
+
+	nuevo_ce_string_2enteros->entero2 = leer_entero(buffer, &desp);
+
+	nuevo_ce_string_2enteros->string = leer_string(buffer,&desp);
+
+	free(buffer);
+	return nuevo_ce_string_2enteros;
+}
+
+t_ce_string_3enteros * recibir_ce_string_3enteros(int socket)
+{
+	t_ce_string_3enteros* nuevo_ce_string_3enteros = malloc(sizeof(t_ce_string_3enteros));
+	contexto_ejecucion *nuevoCe = malloc(sizeof(contexto_ejecucion));
+	int size = 0;
+	char *buffer;
+	int desp = 0;
+
+	buffer = recibir_buffer(&size, socket);
+
+	nuevoCe->id = leer_entero(buffer, &desp);
+	nuevoCe->instrucciones = leer_string_array(buffer, &desp); // hay que liberar antes de perder la referencia
+	nuevoCe->program_counter = leer_entero(buffer, &desp);
+	nuevoCe->registros_cpu = leer_registros(buffer, &desp); // hay que liberar antes de perder la referencia
+	nuevoCe->tabla_segmentos = leer_tabla_segmentos(buffer, &desp);
+
+	nuevo_ce_string_3enteros->ce = nuevoCe;
+
+	nuevo_ce_string_3enteros->entero1 = leer_entero(buffer, &desp);
+
+	nuevo_ce_string_3enteros->entero2 = leer_entero(buffer, &desp);
+
+	nuevo_ce_string_3enteros->entero3 = leer_entero(buffer, &desp);
+
+	nuevo_ce_string_3enteros->string = leer_string(buffer,&desp);
+
+	free(buffer);
+	return nuevo_ce_string_3enteros;
 }
 
 t_ce_entero* recibir_ce_entero(int socket){
@@ -811,6 +871,41 @@ void enviar_string_2enteros(int client, char* string, int x, int y, int codOP)
     eliminar_paquete(paquete);
 }
 
+void enviar_3enteros(int client, int x, int y, int z, int codOP)
+{
+	t_paquete* paquete = crear_paquete_op_code(codOP);
+
+    agregar_entero_a_paquete(paquete, x); 
+    agregar_entero_a_paquete(paquete, y); 
+	agregar_entero_a_paquete(paquete, z); 
+    enviar_paquete(paquete, client);
+    eliminar_paquete(paquete);
+}
+
+void enviar_string_3enteros(int client, char* string, int x, int y, int z, int codOP)
+{
+	t_paquete* paquete = crear_paquete_op_code(codOP);
+
+	agregar_a_paquete(paquete, string, sizeof(string)+1); 
+    agregar_entero_a_paquete(paquete, x); 
+    agregar_entero_a_paquete(paquete, y); 
+	agregar_entero_a_paquete(paquete, z); 
+    enviar_paquete(paquete, client);
+    eliminar_paquete(paquete);
+}
+void enviar_string_4enteros(int client, char* string, int x, int y, int z, int j, int codOP)
+{
+	t_paquete* paquete = crear_paquete_op_code(codOP);
+
+	agregar_a_paquete(paquete, string, sizeof(string)+1); 
+    agregar_entero_a_paquete(paquete, x); 
+    agregar_entero_a_paquete(paquete, y); 
+	agregar_entero_a_paquete(paquete, z); 
+	agregar_entero_a_paquete(paquete, j);
+    enviar_paquete(paquete, client);
+    eliminar_paquete(paquete);
+}
+
 t_string_2enteros* recibir_string_2enteros(int)
 {
 	t_string_2enteros* nuevo_string_2enteros = malloc(sizeof(t_string_2enteros));
@@ -825,6 +920,46 @@ t_string_2enteros* recibir_string_2enteros(int)
 	nuevo_string_2enteros->entero1 = leer_entero(buffer, &desp);
 
 	nuevo_string_2enteros->entero2 = leer_entero(buffer, &desp);
+
+	free(buffer);
+	return nuevo_string_2enteros;
+}
+
+t_string_4enteros* recibir_string_4enteros(int)
+{
+	t_string_4enteros* nuevo_string_4enteros = malloc(sizeof(t_string_4enteros));
+	int size = 0;
+	char *buffer;
+	int desp = 0;
+
+	buffer = recibir_buffer(&size, socket);
+
+	nuevo_string_4enteros->string = leer_string(buffer, &desp);
+
+	nuevo_string_4enteros->entero1 = leer_entero(buffer, &desp);
+
+	nuevo_string_4enteros->entero2 = leer_entero(buffer, &desp);
+
+	nuevo_string_4enteros->entero3 = leer_entero(buffer, &desp);
+
+	nuevo_string_4enteros->entero4 = leer_entero(buffer, &desp);
+
+	free(buffer);
+	return nuevo_string_4enteros;
+}
+
+t_string_entero* recibir_string_entero(int)
+{
+	t_string_entero* nuevo_string_2enteros = malloc(sizeof(t_string_entero));
+	int size = 0;
+	char *buffer;
+	int desp = 0;
+
+	buffer = recibir_buffer(&size, socket);
+
+	nuevo_string_2enteros->string = leer_string(buffer, &desp);
+
+	nuevo_string_2enteros->entero1 = leer_entero(buffer, &desp);
 
 	free(buffer);
 	return nuevo_string_2enteros;
@@ -921,6 +1056,15 @@ void liberar_ce_string_entero(t_ce_string_entero* ce_string_entero)
 	free(ce_string_entero->string);
 	free(ce_string_entero); //esto no se si funciona OJO
 }
+void liberar_ce_string_2enteros(t_ce_string_2enteros* ce_string_entero)
+{
+	liberar_ce(ce_string_entero->ce);
+	free(ce_string_entero->string);
+	free(ce_string_entero); //esto no se si funciona OJO
+}
+
+
+
 
 void enviar_todas_tablas_segmentos(int conexion, t_list* lista_t_procesos, int codOP, t_log* logger)
 {

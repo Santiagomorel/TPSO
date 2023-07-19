@@ -356,6 +356,15 @@ bool existeArchivo(char* nombreArchivo){
  
 }
 
+t_entradaTGAA* obtenerEntrada(char* nombreArchivo) {
+    
+    bool buscarArchivo(t_entradaTGAA* entrada){
+    return strcmp(entrada->nombreArchivo, nombreArchivo) == 0;
+    }
+
+    return list_find(tablaGlobalArchivosAbiertos,(void*) buscarArchivo);
+}
+
 char* obtenerEstado(estados estado)
 {
     switch(estado)
@@ -1256,30 +1265,41 @@ void atender_borrar_segmento() //TODO
 
 // ----------------------- Funciones ABRIR_ARCHIVO ----------------------- //
 void atender_apertura_archivo(){
-    char* nombreArchivo=recibir_string(cpu_dispatch_connection,kernel_logger);
-    contexto_ejecucion* contextoDeEjecucion=recibir_ce(cpu_dispatch_connection);
-    t_pcb* pcb_en_ejecucion = ((t_pcb *) list_get(listaEjecutando, 0));
+
+   t_ce_string* estructuraApertura=recibir_ce_string(cpu_dispatch_connection);
+    contexto_ejecucion* contextoDeEjecucion = estructuraApertura->ce;
+    char* nombreArchivo = estructuraApertura->string;
     t_list* nombreArchivosAbiertos= list_map(tablaGlobalArchivosAbiertos,(void*) obtener_nombre_archivo);
 
-    actualizar_pcb(pcb_en_ejecucion,contextoDeEjecucion);
+    pthread_mutex_lock(&m_listaEjecutando);
+        t_pcb * pcb_en_ejecucion = (t_pcb *) list_remove(listaEjecutando, 0);
+        actualizar_pcb(pcb_en_ejecucion, contextoDeEjecucion);
+    pthread_mutex_unlock(&m_listaEjecutando);
     
     if(existeArchivo(nombreArchivo)){
         t_entradaTAAP* entradaTAAP3= malloc(sizeof(t_entradaTAAP));
         crear_entrada_TAAP(nombreArchivo,entradaTAAP3);
         list_add(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso,entradaTAAP3);
-        // se bloqueará al proceso que ejecutó F_OPEN en la cola correspondiente a este archivo
+        t_entradaTGAA* entradaEncontrada = obtenerEntrada(nombreArchivo);
+
+        sacar_rafaga_ejecutada(pcb_en_ejecucion);
+        cambiar_estado_a(pcb_en_ejecucion, BLOCKED, estadoActual(pcb_en_ejecucion));
+        log_info(kernel_logger, "PID: [%d] - Bloqueado por: [%s]",pcb_en_ejecucion->id, nombreArchivo);
+        sem_post(&fin_ejecucion);
+        agregar_a_lista_con_sems(pcb_en_ejecucion,entradaEncontrada->lista_block_archivo,entradaEncontrada->m_lista_block_archivo);
 
     }
 
     else{
-        enviar_paquete_string(file_system_connection,nombreArchivo,CONSULTA_ARCHIVO,(strlen(nombreArchivo)+1));
+        enviar_paquete_string(file_system_connection,nombreArchivo,F_OPEN,(strlen(nombreArchivo)+1));
         
         int existe = recibir_operacion(file_system_connection);
 
         switch(existe){
             case NO_EXISTE_ARCHIVO:
+
             t_entradaTAAP* entradaTAAP = malloc(sizeof(t_entradaTAAP));
-            enviar_string_entero(file_system_connection,nombreArchivo,0,CREAR_ARCHIVO);
+            enviar_paquete_string(file_system_connection,nombreArchivo,F_CREATE,(strlen(nombreArchivo)+1));
             crear_entrada_TGAA(nombreArchivo,entradaTAAP);
             crear_entrada_TAAP(nombreArchivo,entradaTAAP);
             
@@ -1294,11 +1314,12 @@ void atender_apertura_archivo(){
             crear_entrada_TGAA(nombreArchivo,entradaTAAP2);
             crear_entrada_TAAP(nombreArchivo,entradaTAAP2);
             
-            list_add(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso,entradaTAAP);
+            list_add(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso,entradaTAAP2);
             contexto_ejecucion* contextoAEnviar2 = obtener_ce(pcb_en_ejecucion);
             enviar_ce(cpu_dispatch_connection,contextoAEnviar2,EJECUTAR_CE,kernel_logger);
             break;
         default:
+
             log_error(kernel_logger,"CodOp invalido");
             break;
         }
@@ -1306,7 +1327,7 @@ void atender_apertura_archivo(){
 
         
     }
-
+liberar_ce_string_entero(estructuraApertura);
 log_trace(kernel_logger, "PID: <%d> - Abrir Archivo: <%s>",pcb_en_ejecucion->id,nombreArchivo);
 
 }
@@ -1314,12 +1335,10 @@ void crear_entrada_TGAA(char* nombre,t_entradaTAAP* entrada){
     t_entradaTGAA* nuevaEntradaTGAA = malloc(sizeof(t_entradaTGAA));
     nuevaEntradaTGAA->nombreArchivo = nombre;
     nuevaEntradaTGAA->puntero = entrada;
+    
+    nuevaEntradaTGAA->lista_block_archivo = list_create();
+    pthread_mutex_init(&(nuevaEntradaTGAA->m_lista_block_archivo),NULL);
     list_add(tablaGlobalArchivosAbiertos,nuevaEntradaTGAA);
-
-    //faltan locks para tabla  y tamanio
-    //t_list *lista_block_archivo;
-    //pthread_mutex_t mutex_lista_block_archivo;
-
 }
 void crear_entrada_TAAP(char* nombre,t_entradaTAAP* nuevaEntrada){
 
@@ -1328,7 +1347,6 @@ void crear_entrada_TAAP(char* nombre,t_entradaTAAP* nuevaEntrada){
     t_list* listaFiltrada = nombre_en_lista_coincide(tablaGlobalArchivosAbiertos,(char*)nombre);
     t_entradaTGAA* entradaGlobal = list_get(listaFiltrada,0);
     nuevaEntrada->tamanioArchivo = entradaGlobal ->tamanioArchivo;
-
 
 }
 
@@ -1342,15 +1360,17 @@ t_list* nombre_en_lista_coincide(t_list* tabla, char* nombre)
 }
 // ----------------------- Funciones CERRAR_ARCHIVO ----------------------- //
 void atender_cierre_archivo(){
-    char* nombreArchivo=recibir_string(cpu_dispatch_connection,kernel_logger);
 
-    contexto_ejecucion* contextoDeEjecucion=recibir_ce(cpu_dispatch_connection);
-    
-    t_pcb* pcb_en_ejecucion = ((t_pcb *) list_get(listaEjecutando, 0));
+    t_ce_string* estructuraCierre=recibir_ce_string(cpu_dispatch_connection);
+    contexto_ejecucion* contextoDeEjecucion = estructuraCierre->ce;
+    char* nombreArchivo = estructuraCierre->string;
 
- actualizar_pcb(pcb_en_ejecucion,contextoDeEjecucion);
+    pthread_mutex_lock(&m_listaEjecutando);
+        t_pcb * pcb_en_ejecucion = (t_pcb *) list_remove(listaEjecutando, 0);
+        actualizar_pcb(pcb_en_ejecucion, contextoDeEjecucion);
+    pthread_mutex_unlock(&m_listaEjecutando);
 
-    log_trace(kernel_logger, "PID: <PID> - Cerrar Archivo: <NOMBRE ARCHIVO>");
+    log_trace(kernel_logger, "PID: <%d> - Cerrar Archivo: <%s>",pcb_en_ejecucion->id,nombreArchivo);
     
     t_list* listaFiltrada = nombre_en_lista_coincide(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso,(char*) nombreArchivo);
     
@@ -1359,10 +1379,12 @@ void atender_cierre_archivo(){
     list_remove_element(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso,entradaProceso);
     
     free(entradaProceso);
-    /* necesitamos tabla de bloqueados por archivo (ashuda morel)
     
-    if(tieneEncolados){
-
+    if(otrosUsanArchivo(nombreArchivo)){
+        t_entradaTGAA* entrada = conseguirEntradaTablaGlobal(nombreArchivo);
+        t_pcb* pcb_a_ejectuar = hallarPrimerPcb(nombreArchivo);
+        enviar_ce(cpu_dispatch_connection, contextoDeEjecucion, EJECUTAR_CE, kernel_logger);
+        reencolar_bloq_por_archivo(nombreArchivo,entrada);
     }
     
     else{
@@ -1372,20 +1394,75 @@ void atender_cierre_archivo(){
     free(entradaGlobal);
     }
 
-    */
-    
+liberar_ce_string_entero(estructuraCierre);
 }
+
+void reencolar_bloq_por_archivo(char* nombreArchivo,t_entradaTGAA* entrada){
+    pthread_mutex_lock(&entrada->m_lista_block_archivo);
+        t_pcb * pcb_a_reencolar = hallarPrimerPcb(nombreArchivo);
+    pthread_mutex_unlock(&entrada->m_lista_block_archivo);
+    
+    cambiar_estado_a(pcb_a_reencolar, READY, estadoActual(pcb_a_reencolar));
+    
+    iniciar_nueva_espera_ready(pcb_a_reencolar); // hacer cada vez que se mete en la lista de ready
+    
+    agregar_a_lista_con_sems(pcb_a_reencolar, listaReady, m_listaReady);
+    
+    sem_post(&proceso_en_ready);
+
+
+}
+/*
+void reencolar_bloqueo_por_recurso(int id_recurso)
+{
+    sem_wait(sem_recurso[id_recurso]);
+
+    pthread_mutex_lock(m_listaRecurso[id_recurso]);
+        t_pcb * pcb_a_reencolar = (t_pcb *) list_remove(lista_recurso[id_recurso], 0); // inicializar pcb y despues liberarlo
+    pthread_mutex_unlock(m_listaRecurso[id_recurso]);
+    
+    cambiar_estado_a(pcb_a_reencolar, READY, estadoActual(pcb_a_reencolar));
+    
+    iniciar_nueva_espera_ready(pcb_a_reencolar); // hacer cada vez que se mete en la lista de ready
+    
+    agregar_a_lista_con_sems(pcb_a_reencolar, listaReady, m_listaReady);
+    
+    sem_post(&proceso_en_ready);*/
+
+t_entradaTGAA* conseguirEntradaTablaGlobal(char* nombreArchivo){
+    t_list* listaFiltrada = nombre_en_lista_coincide(tablaGlobalArchivosAbiertos,(char*)nombreArchivo);
+    return list_get(listaFiltrada,0);
+}
+
+t_pcb* hallarPrimerPcb(char* nombreArchivo){
+    t_entradaTGAA* entradaGlobal = conseguirEntradaTablaGlobal(nombreArchivo);
+
+return list_get(entradaGlobal->lista_block_archivo,0);
+}
+
+bool otrosUsanArchivo(char* nombreArchivo) {
+t_entradaTGAA* entradaGlobal = conseguirEntradaTablaGlobal(nombreArchivo);
+
+return list_is_empty(entradaGlobal->lista_block_archivo) == 0;
+}
+
+
+
+
 // ----------------------- Funciones ACTUALIZAR_PUNTERO ----------------------- //
 void atender_actualizar_puntero(){
-    int posicion = recibir_entero(cpu_dispatch_connection,kernel_logger);
-    
-    char* nombreArchivo=recibir_string(cpu_dispatch_connection,kernel_logger);
-    
-    contexto_ejecucion* contextoDeEjecucion=recibir_ce(cpu_dispatch_connection);
-    
-    t_pcb* pcb_en_ejecucion = ((t_pcb *) list_get(listaEjecutando, 0));
+    t_ce_string_entero* estructura_actualizacion = recibir_ce_string_entero(cpu_dispatch_connection);
 
-    actualizar_pcb(pcb_en_ejecucion,contextoDeEjecucion);
+    int posicion = estructura_actualizacion->entero;
+    
+    char* nombreArchivo=estructura_actualizacion->string;
+    
+    contexto_ejecucion* contextoDeEjecucion=estructura_actualizacion->ce;
+
+    pthread_mutex_lock(&m_listaEjecutando);
+    t_pcb * pcb_en_ejecucion = (t_pcb *) list_remove(listaEjecutando, 0);
+    actualizar_pcb(pcb_en_ejecucion, contextoDeEjecucion);
+    pthread_mutex_unlock(&m_listaEjecutando);
 
     
     t_list* listaFiltrada = nombre_en_lista_coincide(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso,(char*) nombreArchivo);
@@ -1397,22 +1474,156 @@ void atender_actualizar_puntero(){
     
     //contexto_ejecucion* contextoAEnviar = obtener_ce(pcb_en_ejecucion);
     //enviar_ce(cpu_dispatch_connection,contextoAEnviar,EJECUTAR_CE,kernel_logger);
-    
+    //falta liberar algo?
     log_trace(kernel_logger, "PID: <PID> - Actualizar puntero Archivo: <NOMBRE ARCHIVO> - Puntero <PUNTERO>");
 
+liberar_ce_string_entero(estructura_actualizacion);
     
 }
 // ----------------------- Funciones LEER_ARCHIVO ----------------------- //
-void atender_lectura_archivo(){ // agregar antes de empezar la instruccion pthread_mutex_lock(&m_F_operation); y un unlock cuando finalize (necesarios para la compactacion)
-    int id_proceso = ((t_pcb *) list_get(listaEjecutando, 0))->id;
-log_trace(kernel_logger, "PID: <PID> - Archivo: <NOMBRE ARCHIVO> - Tamaño: <TAMAÑO>");
+void atender_lectura_archivo(){
+
+    bloquear_FS();
+
+    t_ce_string_3enteros* estructura_leer_archivo= recibir_ce_string_3enteros(cpu_dispatch_connection);
+
+    contexto_ejecucion* ce_a_updatear = estructura_leer_archivo->ce;
+
+    char* nombre_archivo = estructura_leer_archivo->string;
     
+    int offset = estructura_leer_archivo ->entero1;
+
+    int bytes_a_leer = estructura_leer_archivo->entero2;
+
+    int puntero_archivo = estructura_leer_archivo->entero3;
+
+    
+
+        
+    pthread_mutex_lock(&m_listaEjecutando);
+        t_pcb * pcb_lectura = (t_pcb *) list_remove(listaEjecutando, 0);
+        actualizar_pcb(pcb_lectura, ce_a_updatear);
+    pthread_mutex_unlock(&m_listaEjecutando);
+
+    sacar_rafaga_ejecutada(pcb_lectura); // hacer cada vez que sale de running
+    
+    sem_post(&fin_ejecucion);
+    
+    cambiar_estado_a(pcb_lectura, BLOCKED, estadoActual(pcb_lectura));
+
+    log_info(kernel_logger, "PID: [%d] - Bloqueado por: [%s]",pcb_lectura->id, nombre_archivo);
+    
+    agregar_a_lista_con_sems(pcb_lectura, listaBloqueados, m_listaBloqueados);
+
+    thread_args_read* argumentos = malloc(sizeof(thread_args_read));
+    argumentos->pcb = pcb_lectura;
+    argumentos->nombre = nombre_archivo;
+    argumentos->puntero = puntero_archivo;
+    argumentos->bytes = bytes_a_leer;
+    argumentos->offset = offset;
+
+    pthread_create(&hiloRead, NULL, (void*) rutina_read, (void*) (thread_args_read*) argumentos);
+    pthread_detach(hiloRead);
+
+    liberar_ce_string_2enteros(estructura_leer_archivo);
+
+    desbloquear_FS();
 }
-// ----------------------- Funciones ESCRIBIR_ARCHIVO ----------------------- //
-void atender_escritura_archivo(){ // agregar antes de empezar la instruccion pthread_mutex_lock(&m_F_operation); y un unlock cuando finalize (necesarios para la compactacion)
-    int id_proceso = ((t_pcb *) list_get(listaEjecutando, 0))->id;
-log_trace(kernel_logger, "PID: <PID> - Leer Archivo: <NOMBRE ARCHIVO> - Puntero <PUNTERO> - Dirección Memoria <DIRECCIÓN MEMORIA> - Tamaño <TAMAÑO>");
+   
+   void rutina_read(thread_args_read* args)
+{
+    t_pcb* pcb = args->pcb;
+    char* nombre = args->nombre;
+    int puntero = args->puntero;
+    int bytes = args->bytes;
+    int offset = args->offset;
     
+    enviar_string_4enteros(file_system_connection, nombre, pcb->id, puntero,bytes, offset, F_READ);
+    
+    int cod_op = recibir_operacion(file_system_connection);
+
+    pthread_mutex_lock(&m_listaBloqueados);
+        list_remove_element(listaBloqueados, pcb);
+    pthread_mutex_unlock(&m_listaBloqueados);
+
+    cambiar_estado_a(pcb, READY, estadoActual(pcb));
+    
+    iniciar_nueva_espera_ready(pcb); // hacer cada vez que se mete en la lista de ready
+    
+    agregar_a_lista_con_sems(pcb, listaReady, m_listaReady);
+    
+    sem_post(&proceso_en_ready);
+
+}
+
+// ----------------------- Funciones ESCRIBIR_ARCHIVO ----------------------- //
+void atender_escritura_archivo(){
+
+    bloquear_FS();
+
+    t_ce_string_2enteros* estructura_escribir_archivo= recibir_ce_string_2enteros(cpu_dispatch_connection);
+
+    contexto_ejecucion* ce_a_updatear = estructura_escribir_archivo->ce;
+
+    char* nombre_archivo = estructura_escribir_archivo->string;
+    
+    int puntero_archivo = estructura_escribir_archivo->entero1;
+
+    int bytes_a_leer = estructura_escribir_archivo->entero2;
+        
+    pthread_mutex_lock(&m_listaEjecutando);
+        t_pcb * pcb_escritura = (t_pcb *) list_remove(listaEjecutando, 0);
+        actualizar_pcb(pcb_escritura, ce_a_updatear);
+    pthread_mutex_unlock(&m_listaEjecutando);
+
+    sacar_rafaga_ejecutada(pcb_escritura); // hacer cada vez que sale de running
+    
+    sem_post(&fin_ejecucion);
+    
+    cambiar_estado_a(pcb_escritura, BLOCKED, estadoActual(pcb_escritura));
+
+    log_info(kernel_logger, "PID: [%d] - Bloqueado por: [%s]",pcb_escritura->id, nombre_archivo);
+    
+    agregar_a_lista_con_sems(pcb_escritura, listaBloqueados, m_listaBloqueados);
+
+    thread_args_write* argumentos = malloc(sizeof(thread_args_write));
+    argumentos->pcb = pcb_escritura;
+    argumentos->nombre = nombre_archivo;
+    argumentos->puntero = puntero_archivo;
+    argumentos->bytes = bytes_a_leer;
+
+    pthread_create(&hiloWrite, NULL, (void*) rutina_write, (void*) (thread_args_write*) argumentos);
+    pthread_detach(hiloWrite);
+
+    liberar_ce_string_2enteros(estructura_escribir_archivo);
+
+    desbloquear_FS();
+
+}
+
+void rutina_write(thread_args_write* args)
+{
+    t_pcb* pcb = args->pcb;
+    char* nombre = args->nombre;
+    int puntero = args->puntero;
+    int bytes = args->bytes;
+    
+    enviar_string_3enteros(file_system_connection, nombre, pcb->id, puntero,bytes, F_WRITE);
+    
+    int cod_op = recibir_operacion(file_system_connection);
+
+    pthread_mutex_lock(&m_listaBloqueados);
+        list_remove_element(listaBloqueados, pcb);
+    pthread_mutex_unlock(&m_listaBloqueados);
+
+    cambiar_estado_a(pcb, READY, estadoActual(pcb));
+    
+    iniciar_nueva_espera_ready(pcb); // hacer cada vez que se mete en la lista de ready
+    
+    agregar_a_lista_con_sems(pcb, listaReady, m_listaReady);
+    
+    sem_post(&proceso_en_ready);
+
 }
 
 void bloquear_FS(){
@@ -1456,13 +1667,11 @@ void atender_modificar_tamanio_archivo(){
     argumentos->nombre = nombre_archivo;
     argumentos->tamanio = tamanio_archivo;
 
-    //pthread_mutex_lock(&m_IO);
     pthread_create(&hiloTruncate, NULL, (void*) rutina_truncate, (void*) (thread_args*) argumentos);
     pthread_detach(hiloTruncate);
 
     liberar_ce_string_entero(estructura_mod_tam_archivo);
     
-    // enviar parametros
     
 }
 
@@ -1472,7 +1681,7 @@ void rutina_truncate(thread_args_truncate* args)
     char* nombre = args->nombre;
     int tamanio = args->tamanio;
     
-    enviar_string_2enteros(file_system_connection, nombre, pcb->id, tamanio, TRUNCATE);
+    enviar_string_entero(file_system_connection, nombre, tamanio, F_TRUNCATE);
     
     int cod_op = recibir_operacion(file_system_connection);
 
@@ -1487,8 +1696,6 @@ void rutina_truncate(thread_args_truncate* args)
     agregar_a_lista_con_sems(pcb, listaReady, m_listaReady);
     
     sem_post(&proceso_en_ready);
-
-    //pthread_mutex_unlock(&m_IO);
 }
 
 // ----------------------- Funciones finales ----------------------- //

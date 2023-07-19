@@ -44,7 +44,7 @@ typedef struct
 	t_entradaTAAP* puntero; // apunta a la entrada tabla por procesos
 	uint32_t tamanioArchivo;
 	t_list *lista_block_archivo;
-	pthread_mutex_t mutex_lista_block_archivo;
+	pthread_mutex_t m_lista_block_archivo;
 }t_entradaTGAA;
 
 Kernel_config kernel_config;
@@ -226,18 +226,40 @@ t_list* nombre_en_lista_coincide(t_list*, char* );
 void crear_entrada_TAAP(char*,t_entradaTAAP*);
 void crear_entrada_TGAA(char*,t_entradaTAAP*);
 bool encontrar_nombre(char*);
+t_entradaTGAA* obtenerEntrada(char* );
 
 //Declaraciones CERRAR_ARCHIVO
 void atender_cierre_archivo();
+t_entradaTGAA* conseguirEntradaTablaGlobal(char*);
+void reencolar_bloq_por_archivo(char* ,t_entradaTGAA*);
+bool otrosUsanArchivo(char*);
+t_pcb* hallarPrimerPcb(char*);
 
 //Declaraciones ACTUALIZAR_PUNTERO
 void atender_actualizar_puntero();
 
 //Declaraciones LEER_ARCHIVO
 void atender_lectura_archivo();
+typedef struct{
+    t_pcb* pcb;
+    char* nombre;
+    int puntero;
+    int bytes;
+    int offset;
+}thread_args_read;
+
+void rutina_read(thread_args_read*);
 
 //Declaraciones ESCRIBIR_ARCHIVO
 void atender_escritura_archivo();
+typedef struct{
+    t_pcb* pcb;
+    char* nombre;
+    int puntero;
+    int bytes;
+}thread_args_write;
+
+void rutina_write(thread_args_write*);
 
 //Declaraciones F_*
 void bloquear_FS();
