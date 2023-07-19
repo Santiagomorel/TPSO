@@ -1,5 +1,5 @@
-#ifndef FILESYSTEM_H
-#define FILESYSTEM_H
+#ifndef FILESYSTEM_H_
+#define FILESYSTEM_H_
 
 #include <stdio.h>
 #include <commons/log.h>
@@ -14,8 +14,6 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <commons/bitarray.h>
-#include "comunicacion.h"
-#include "core.h"
 
 typedef struct
 {
@@ -25,29 +23,29 @@ typedef struct
   uint32_t f_ip;   // Puntero indirecto al bloque que contiene los punteros a los siguientes bloques del archivo
 } t_fcb;
 
-extern t_log *logger_filesystem;
+t_log *logger_filesystem;
 
 
-extern t_config *CONFIG_FILESYSTEM;
-extern char *IP_MEMORIA;
-extern char *PUERTO_MEMORIA;
-extern char *PUERTO_ESCUCHA_FILESYSTEM;
-extern char *PATH_SUPERBLOQUE;
-extern char *PATH_BITMAP;
-extern char *PATH_BLOQUES;
-extern char *PATH_FCB;
-extern int RETARDO_ACCESO_BLOQUE;
+t_config *CONFIG_FILESYSTEM;
+char *IP_MEMORIA;
+char *PUERTO_MEMORIA;
+char *PUERTO_ESCUCHA_FILESYSTEM;
+char *PATH_SUPERBLOQUE;
+char *PATH_BITMAP;
+char *PATH_BLOQUES;
+char *PATH_FCB;
+int RETARDO_ACCESO_BLOQUE;
 
-extern t_config *CONFIG_SUPERBLOQUE;
-extern int BLOCK_SIZE;
-extern int BLOCK_COUNT;
+t_config *CONFIG_SUPERBLOQUE;
+int BLOCK_SIZE;
+int BLOCK_COUNT;
 
-extern t_bitarray *bitmap;
-extern char* blocks_buffer;
+t_bitarray *bitmap;
+char* blocks_buffer;
 
-extern int socket_memoria;
-extern int socket_servidor_filesystem;
-extern int socket_fs;
+int socket_memoria;
+int socket_servidor_filesystem;
+int socket_fs;
 
 void levantar_loggers_filesystem();
 void levantar_config_filesystem();
@@ -68,5 +66,14 @@ void remover_puntero_de_bloque_indirecto(t_fcb *fcb, int bloques_utiles);
 void establecer_conexion(char *, char*, t_config*, t_log*);
 
 
+/******************COMUNICACION******************/
+void procesar_conexion();
+
+/******************CORE******************/
+uint32_t abrir_archivo(char* f_name);
+uint32_t crear_archivo(char* f_name);
+void truncar_archivo(char* f_name, uint32_t new_size);
+void eferrait(char* f_name, uint32_t offset, uint32_t size, char* data);
+void* eferrid(char* f_name, uint32_t offset, uint32_t cantidad);
 #endif
 
