@@ -42,10 +42,10 @@ int main(int argc, char ** argv) {
 	establecer_conexion(cpu_config.ip_memoria, cpu_config.puerto_memoria, cpu_config_file, cpu_logger);
     
 /*---------------------- CONEXION CON KERNEL ---------------------*/
-    pthread_t threadDispatch;
+    pthread_t threadKernel;
 
-    pthread_create(&threadDispatch, NULL, (void *) process_dispatch, NULL);
-    pthread_join(threadDispatch, NULL);
+    pthread_create(&threadKernel, NULL, (void *) process_dispatch, NULL);
+    pthread_join(threadKernel, NULL);
  
     
 
@@ -668,7 +668,7 @@ void enviar_ce_con_string_2_enteros(int client_socket, contexto_ejecucion* ce, c
     eliminar_paquete(paquete);
     
 }
-void enviar_ce_con_string_3_enteros(int client_socket, contexto_ejecucion* ce, char* parameter, char* x, char* y, int z int codOP){
+void enviar_ce_con_string_3_enteros(int client_socket, contexto_ejecucion* ce, char* parameter, char* x, char* y, int z, int codOP){
     t_paquete* paquete = crear_paquete_op_code(codOP);
 
     agregar_ce_a_paquete(paquete, ce, cpu_logger);
