@@ -42,10 +42,10 @@ int main(int argc, char ** argv) {
 	establecer_conexion(cpu_config.ip_memoria, cpu_config.puerto_memoria, cpu_config_file, cpu_logger);
     
 /*---------------------- CONEXION CON KERNEL ---------------------*/
-    pthread_t threadDispatch;
+    pthread_t threadKernel;
 
-    pthread_create(&threadDispatch, NULL, (void *) process_dispatch, NULL);
-    pthread_join(threadDispatch, NULL);
+    pthread_create(&threadKernel, NULL, (void *) process_dispatch, NULL);
+    pthread_join(threadKernel, NULL);
  
     
 

@@ -19,12 +19,17 @@ int main(int argc, char **argv)
 		levantar_config_filesystem();
 		levantar_superbloque();
 
-		establecer_conexion(IP_MEMORIA, PUERTO_MEMORIA, CONFIG_FILESYSTEM, logger_filesystem);
+    log_error(logger_filesystem, "Estoy antes de establecer conexion");
+
+		establecer_conexion(logger_filesystem);
+
+    log_error(logger_filesystem, "Estoy despues de establecer conexion");
 		//*********************
 		// PREPARACIÓN DE BLOQUES - TODO: Hacer logs
 		bitmap = levantar_bitmap();
+    log_error(logger_filesystem, "Estoy despues de levantar bitmap");
 		blocks_buffer = levantar_bloques();
-
+    log_error(logger_filesystem, "Estoy despues de levantar bloques");
 		// Prueba de archivo de bloques
 		// truncar_archivo("elpicante", 0);
 
@@ -57,7 +62,7 @@ int main(int argc, char **argv)
     pthread_create(&threadDispatch, NULL, (void *) procesar_conexion, NULL);
     pthread_join(threadDispatch, NULL);
  
-
+  log_error(logger_filesystem, "Estoy despues de levantar como servidor");
 
 		bitarray_destroy(bitmap);
 		free(blocks_buffer);
@@ -87,16 +92,20 @@ void levantar_config_filesystem()
   PATH_FCB = config_get_string_value(CONFIG_FILESYSTEM, "PATH_FCB");
   RETARDO_ACCESO_BLOQUE = config_get_int_value(CONFIG_FILESYSTEM, "RETARDO_ACCESO_BLOQUE");
 
-  
+  log_error(logger_filesystem, "termine de crear config");
 }
 
 void levantar_superbloque()
 {
 
   CONFIG_SUPERBLOQUE = config_create(PATH_SUPERBLOQUE);
-  BLOCK_SIZE = config_get_int_value(CONFIG_FILESYSTEM, "BLOCK_SIZE");
-  BLOCK_COUNT = config_get_int_value(CONFIG_FILESYSTEM, "BLOCK_COUNT");
+  log_error(logger_filesystem, "Cree config superbloque con path: %s", PATH_SUPERBLOQUE);
+  BLOCK_SIZE = config_get_int_value(CONFIG_SUPERBLOQUE, "BLOCK_SIZE");
+  BLOCK_COUNT = config_get_int_value(CONFIG_SUPERBLOQUE, "BLOCK_COUNT");
   config_destroy(CONFIG_SUPERBLOQUE);
+  log_error(logger_filesystem, "Termine de crear superbloque");
+  log_error(logger_filesystem, "Borro config");
+  
 }
 
 t_bitarray *levantar_bitmap()
@@ -290,23 +299,25 @@ void remover_puntero_de_bloque_indirecto(t_fcb *fcb, int bloques_utiles)
   modificar_bloque(fcb->f_ip, bloque_a_rellenar);
 }
 
-void establecer_conexion(char * ip_memoria, char* puerto_memoria, t_config* config, t_log* logger){
+void establecer_conexion(t_log* logger){
 
-	
 	log_trace(logger, "Inicio como cliente");
 
-	log_trace(logger,"Lei la IP %s , el Puerto Memoria %s ", ip_memoria, puerto_memoria);
+	log_error(logger_filesystem,"Lei la IP %s , el Puerto Memoria %s ", IP_MEMORIA, PUERTO_MEMORIA);
 
 	/*----------------------------------------------------------------------------------------------------------------*/
-
-	// Enviamos al servidor el valor de ip como mensaje si es que levanta el cliente
-	if((socket_memoria = crear_conexion(ip_memoria, puerto_memoria)) == -1){
+  log_error(logger_filesystem, "Estoy adentro de establecer conexion");
+  
+	
+	if((socket_memoria = crear_conexion(IP_MEMORIA, PUERTO_MEMORIA)) == -1){
+    log_error(logger_filesystem, "Entre al if de establecer conexion");
 		log_trace(logger, "Error al conectar con Memoria. El servidor no esta activo");
         free(socket_memoria);
 		exit(-1);
 	}else{
+    log_error(logger_filesystem, "Entre al else de establecer conexion");
 		//handshake_cliente(conexion_cpu);
-		enviar_mensaje(ip_memoria, socket_memoria);
+		enviar_mensaje(IP_MEMORIA, socket_memoria);
 	}
 
     recibir_operacion(socket_memoria);
@@ -319,7 +330,11 @@ void establecer_conexion(char * ip_memoria, char* puerto_memoria, t_config* conf
 
 void procesar_conexion()
 {
-    socket_servidor_filesystem = iniciar_servidor(logger_filesystem, PUERTO_ESCUCHA_FILESYSTEM);
+    log_error(logger_filesystem, "Estoy antes de iniciar servidor");
+
+    socket_servidor_filesystem = iniciar_servidor(PUERTO_ESCUCHA_FILESYSTEM, logger_filesystem);
+
+    log_error(logger_filesystem, "inicio servidor");
     socket_fs = esperar_cliente(socket_servidor_filesystem, logger_filesystem);
     enviar_mensaje("Kernel conectado",socket_fs);
     

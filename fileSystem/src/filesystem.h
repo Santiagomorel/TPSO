@@ -1,14 +1,9 @@
 #ifndef FILESYSTEM_H_
 #define FILESYSTEM_H_
 
-#include <stdio.h>
-#include <commons/log.h>
-#include <commons/config.h>
-#include <stdbool.h>
+
 #include <utils/utils.h>
-#include <stdlib.h>
 #include <unistd.h>
-#include <stdint.h>
 #include <ctype.h>
 #include <string.h>
 #include <fcntl.h>
@@ -35,6 +30,7 @@ char *PATH_BITMAP;
 char *PATH_BLOQUES;
 char *PATH_FCB;
 int RETARDO_ACCESO_BLOQUE;
+
 
 t_config *CONFIG_SUPERBLOQUE;
 int BLOCK_SIZE;
@@ -63,7 +59,7 @@ void asignar_bloque_directo(t_fcb *fcb);
 void asignar_bloque_indirecto(t_fcb *fcb);
 void asignar_bloque_al_bloque_indirecto(t_fcb *fcb, int bloques_ya_asignados);
 void remover_puntero_de_bloque_indirecto(t_fcb *fcb, int bloques_utiles);
-void establecer_conexion(char *, char*, t_config*, t_log*);
+void establecer_conexion(t_log*);
 
 
 /******************COMUNICACION******************/
