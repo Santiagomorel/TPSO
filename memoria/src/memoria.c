@@ -121,7 +121,8 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
                 t_list* segmentosDisponibles = buscarSegmentosDisponibles();
 
                 if(list_is_empty(segmentosDisponibles)){
-                   enviar_CodOp(SOCKET_CLIENTE_KERNEL, NECESITO_COMPACTAR);
+                    log_trace(log_memoria, "envio solicitud de compactacion");//borrar
+                    enviar_CodOp(SOCKET_CLIENTE_KERNEL, NECESITO_COMPACTAR);
                 }
                 else{
                 //busco un espacio segun el algoritmo de ordenamiento
@@ -458,6 +459,7 @@ int puedoGuardar(int quieroGuardar)
     log_info(log_memoria, "Hay %d espacio libre, quiero guardar %d", tamanioLibre, quieroGuardar);
     if (quieroGuardar <= tamanioLibre)
     {
+        log_trace(log_memoria, "puedo guardar");//borrar
         return 1;
     }
     else
@@ -531,13 +533,14 @@ t_segmento* buscarSegmentoSegunTamanio(int size){
 
     t_list* segmentosCandidatos;
     segmentosCandidatos = puedenGuardar( todosLosSegLibres , size); //ME DEVUELVE LOS SEGMENTOS QUE EL TIENEN ESPACIO NECESARIO PARA GUARDAR
-    //log_info(logger,"Hay %d segmentos candidatos", list_size(segmentosCandidatos));
+    log_warning(log_memoria,"Hay %d segmentos candidatos", list_size(segmentosCandidatos));//borrar
     if(list_is_empty(segmentosCandidatos)){
         log_error(log_memoria,"No se ha compactado correctamente");
         
     }else if(list_size(segmentosCandidatos)== 1){
         segmento = list_get(segmentosCandidatos, 0);
     }else{
+        log_trace(log_memoria, "se elige criterio");//borrar
         segmento = elegirSegCriterio(segmentosCandidatos, size); //SI EN LA LISTA HAY MAS DE UN SEGMENTO VA A ELEGIR EN QUE SEGMENTO LO VA A GUARDAR SEGUN EL CRITERIO
         
 
