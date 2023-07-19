@@ -42,10 +42,10 @@ int main(int argc, char ** argv) {
 	establecer_conexion(cpu_config.ip_memoria, cpu_config.puerto_memoria, cpu_config_file, cpu_logger);
     
 /*---------------------- CONEXION CON KERNEL ---------------------*/
-    pthread_t threadDispatch;
+    pthread_t threadKernel;
 
-    pthread_create(&threadDispatch, NULL, (void *) process_dispatch, NULL);
-    pthread_join(threadDispatch, NULL);
+    pthread_create(&threadKernel, NULL, (void *) process_dispatch, NULL);
+    pthread_join(threadKernel, NULL);
  
     
 
@@ -64,7 +64,6 @@ void load_config(void){
 	cpu_config.tam_max_segmento						= config_get_string_value(cpu_config_file, "TAM_MAX_SEGMENTO");
 
 	log_trace(cpu_logger, "Config cargada en 'cpu_cofig_file'");
-
 
 }
 
@@ -297,6 +296,9 @@ char** decode(char* linea){ // separarSegunEspacios
 /*-------------------- EXECUTE ---------------------- */
 int sale_proceso = 0;
 t_segmento* segmento;
+int offset = 0;
+int direccion_logica;
+int direccion_fisica;
 
 void execute_instruction(char** instruction, contexto_ejecucion* ce){
 
@@ -384,7 +386,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
 
             enviar_ce_con_string(socket_kernel, ce, instruction[1], ABRIR_ARCHIVO);
 
-            desalojo_por_archivo = 1;
+            //desalojo_por_archivo = 1;
         
             break;
 
@@ -395,7 +397,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             
             enviar_ce_con_string(socket_kernel, ce, instruction[1], CERRAR_ARCHIVO);
 
-            desalojo_por_archivo = 1;
+            //desalojo_por_archivo = 1;
 
             break;
 
@@ -405,7 +407,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
 
             enviar_ce_con_string_entero(socket_kernel, ce, instruction[1], instruction[2], ACTUALIZAR_PUNTERO);
 
-            desalojo_por_archivo = 1;
+            //desalojo_por_archivo = 1;
 
             break;
 
@@ -416,9 +418,9 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             direccion_logica = atoi(instruction[2]);
             direccion_fisica = traducir_direccion_logica(direccion_logica, ce, instruction[3]);
             
-            enviar_ce_con_string_2_enteros(socket_kernel, ce, instruction[1], direccion_fisica, instruction[3], LEER_ARCHIVO);
+            enviar_ce_con_string_3_enteros(socket_kernel, ce, instruction[1], direccion_fisica, instruction[3], offset, LEER_ARCHIVO);
 
-            desalojo_por_archivo = 1;
+            //desalojo_por_archivo = 1;
 
             break;
         case I_F_WRITE:
@@ -430,7 +432,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
 
             enviar_ce_con_string_2_enteros(socket_kernel, ce, instruction[1], direccion_fisica, instruction[3], ESCRIBIR_ARCHIVO); 
 
-            desalojo_por_archivo = 1;
+            //desalojo_por_archivo = 1;
             
             break;
         case I_F_TRUNCATE:
@@ -439,7 +441,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
 
             enviar_ce_con_string_entero(socket_kernel, ce, instruction[1], instruction[2], MODIFICAR_TAMAÑO_ARCHIVO);
 
-            desalojo_por_archivo = 1;
+            //desalojo_por_archivo = 1;
 
             break;
 
@@ -449,7 +451,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
 
             enviar_ce_con_dos_enteros(socket_kernel, ce, instruction[1], instruction[2], CREAR_SEGMENTO);
 
-            desalojo_por_archivo = 1;
+            //desalojo_por_archivo = 1;
 
             break;
 
@@ -459,7 +461,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
 
             enviar_ce_con_entero(socket_kernel, ce, instruction[1], BORRAR_SEGMENTO);
 
-            desalojo_por_archivo = 1;
+            //desalojo_por_archivo = 1;
 
             break;
 
@@ -666,6 +668,18 @@ void enviar_ce_con_string_2_enteros(int client_socket, contexto_ejecucion* ce, c
     eliminar_paquete(paquete);
     
 }
+void enviar_ce_con_string_3_enteros(int client_socket, contexto_ejecucion* ce, char* parameter, char* x, char* y, int z, int codOP){
+    t_paquete* paquete = crear_paquete_op_code(codOP);
+
+    agregar_ce_a_paquete(paquete, ce, cpu_logger);
+    agregar_string_a_paquete(paquete, parameter); 
+    agregar_entero_a_paquete(paquete, atoi(x));
+    agregar_entero_a_paquete(paquete, atoi(y));
+    agregar_entero_a_paquete(paquete, z);
+    enviar_paquete(paquete, client_socket);
+    eliminar_paquete(paquete);
+    
+}
 
 void enviar_paquete_con_string_2_enteros(int client_socket, char* parameter, int x, char* y, int codOP){
     t_paquete* paquete = crear_paquete_op_code(codOP);
@@ -726,6 +740,7 @@ int traducir_direccion_logica(int logical_address, contexto_ejecucion* ce, int v
     int num_segmento = (int) floor(logical_address / atoi(cpu_config.tam_max_segmento));
     int desplazamiento_segmento = logical_address % atoi(cpu_config.tam_max_segmento);
 
+    offset = desplazamiento_segmento;
 
     t_list* segment_table_ce = ce->tabla_segmentos;
     
