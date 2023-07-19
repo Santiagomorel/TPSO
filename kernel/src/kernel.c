@@ -422,6 +422,16 @@ void agregar_lista_ready_con_log(t_list* listaready,t_pcb* pcb_a_encolar,char* a
     }
 }
 
+t_pcb* actualizar_pcb_lget_devuelve_pcb(contexto_ejecucion* contexto_actualiza, t_list* lista_del_pcb, pthread_mutex_t sem)
+{
+    pthread_mutex_lock(&sem);
+        t_pcb * pcb_a_actualizar = (t_pcb *) list_get(lista_del_pcb, 0);
+        actualizar_pcb(pcb_a_finalizar, contexto_actualiza);
+    pthread_mutex_unlock(&sem);
+
+    return pcb_a_actualizar
+} // probar que funcione
+
 // ----------------------- Funciones planificador to - ready ----------------------- //
 
 void planificar_sig_to_ready()
@@ -474,7 +484,7 @@ t_list* pedir_tabla_segmentos()
 void planificar_sig_to_running()
 {
     while(1){
-        sem_wait(&fin_ejecucion);
+        sem_wait(&fin_ejecucion); // hacer un post cada vez que un proceso deje de ejecutar
         sem_wait(&proceso_en_ready);
         log_trace(kernel_logger, "Entra en la planificacion de READY RUNNING");
         if(strcmp(kernel_config.algoritmo_planificacion, "FIFO") == 0) { // FIFO
@@ -940,12 +950,13 @@ void atender_wait_recurso()
         log_info(kernel_logger, "PID: [%d] - Wait: [%s] - Instancias: [%d]", id_proceso_en_lista(listaEjecutando), recurso_wait, obtener_instancias_recurso(id_recurso));
         
         if (tiene_instancia_wait(id_recurso)) {
-            pthread_mutex_lock(&m_listaEjecutando);
-                t_pcb * pcb_ejecuta_instruccion = (t_pcb *) list_get(listaEjecutando, 0); 
-                actualizar_pcb(pcb_ejecuta_instruccion, contexto_ejecuta_wait);
-            pthread_mutex_unlock(&m_listaEjecutando);
+            t_pcb* pcb_ejecuta_wait = actualizar_pcb_lget_devuelve_pcb(contexto_ejecuta_wait, listaEjecutando, m_listaEjecutando);
 
-            enviar_ce(cpu_dispatch_connection, contexto_ejecuta_wait, EJECUTAR_CE, kernel_logger);
+            contexto_ejecucion* nuevo_contexto_ejecuta_wait = obtener_ce(pcb_ejecuta_wait);
+
+            enviar_ce(cpu_dispatch_connection, nuevo_contexto_ejecuta_wait, EJECUTAR_CE, kernel_logger);
+
+            liberar_ce(nuevo_contexto_ejecuta_wait);
 
             sem_wait(sem_recurso[id_recurso]);
         } else {
@@ -993,12 +1004,13 @@ void atender_signal_recurso()
     if (recurso_no_existe(recurso_signal)) {
         finalizar_proceso(contexto_ejecuta_signal, INVALID_RESOURCE);
     } else {
-        pthread_mutex_lock(&m_listaEjecutando);
-            t_pcb * pcb_ejecuta_instruccion = (t_pcb *) list_get(listaEjecutando, 0); 
-            actualizar_pcb(pcb_ejecuta_instruccion, contexto_ejecuta_signal);
-        pthread_mutex_unlock(&m_listaEjecutando);
+        t_pcb * pcb_ejecuta_signal = actualizar_pcb_lget_devuelve_pcb(contexto_ejecuta_signal, listaEjecutando, m_listaEjecutando);
 
-        enviar_ce(cpu_dispatch_connection, contexto_ejecuta_signal, EJECUTAR_CE, kernel_logger);
+        contexto_ejecucion* nuevo_contexto_ejecuta_signal = obtener_ce(pcb_ejecuta_signal);
+        
+        enviar_ce(cpu_dispatch_connection, nuevo_contexto_ejecuta_signal, EJECUTAR_CE, kernel_logger);
+
+        liberar_ce(nuevo_contexto_ejecuta_signal);
 
         int id_recurso = obtener_id_recurso(recurso_signal);
 
@@ -1132,13 +1144,15 @@ void atender_crear_segmento()
             
             t_segmento *nuevoElemento = crear_segmento(id_segmento, base_segmento, tamanio_segmento);
             
-            pthread_mutex_lock(&m_listaEjecutando);
-                t_pcb * pcb_crea_segmento = (t_pcb *) list_get(listaEjecutando, 0);
-                actualizar_pcb(pcb_crea_segmento, contexto_crea_segmento);
-                list_add(pcb_crea_segmento->tabla_segmentos, nuevoElemento);
-            pthread_mutex_unlock(&m_listaEjecutando);
+            t_pcb* pcb_crea_segmento = actualizar_pcb_lget_devuelve_pcb(contexto_crea_segmento, listaBloqueados, m_listaEjecutando);
             
-            enviar_CodOp(cpu_dispatch_connection, OK);
+            list_add(pcb_crea_segmento->tabla_segmentos, nuevoElemento);
+            
+            contexto_ejecucion* nuevo_contexto_crea_segmento = obtener_ce(pcb_crea_segmento);
+
+            enviar_ce(cpu_dispatch_connection, nuevo_contexto_crea_segmento, EJECUTAR_CE, kernel_logger);
+
+            liberar_ce(nuevo_contexto_crea_segmento);
 
             compactacion = 0;
             break;
@@ -1247,10 +1261,20 @@ void atender_borrar_segmento() //TODO
 
     recibir_operacion(memory_connection);
     
-    // aca recibo la tabla de segmentos actualizada del proceso que mando a borrar el segmento
-
-    // enviar ce actualizado
+    t_list* nueva_tabla_segmentos = recibir_tabla_segmentos(memory_connection);
     
+    t_pcb* pcb_borrar_segmento = actualizar_pcb_lget_devuelve_pcb(contexto_borrar_segmento, listaEjecutando, m_listaEjecutando);
+
+    eliminar_tabla_segmentos(pcb_borrar_segmento->tabla_segmentos);
+
+    list_add_all(pcb_borrar_segmento->tabla_segmentos, nueva_tabla_segmentos);
+
+    contexto_ejecucion* nuevo_contexto_borrar_segmento = obtener_ce(pcb_borrar_segmento);
+    
+    enviar_ce(cpu_dispatch_connection, nuevo_contexto_borrar_segmento, EJECUTAR_CE, kernel_logger);
+    
+    liberar_ce(nuevo_contexto_borrar_segmento);
+
     liberar_ce_entero(estructura_borrar_segmento); // VER SI FUNCIONA
 }
 

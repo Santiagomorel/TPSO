@@ -127,6 +127,7 @@ char* obtenerEstado(estados);
 int estadoActual(t_pcb*);
 void agregar_a_lista_con_sems(t_pcb*, t_list*, pthread_mutex_t);
 void agregar_lista_ready_con_log(t_list*, t_pcb*, char*);
+t_pcb* actualizar_pcb_lget_devuelve_pcb(contexto_ejecucion*, t_list*, pthread_mutex_t);
 
 
 // Declaraciones de planificador to - ready
