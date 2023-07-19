@@ -19,22 +19,23 @@ int main(int argc, char **argv)
 		levantar_config_filesystem();
 		levantar_superbloque();
 
-    log_error(logger_filesystem, "Estoy antes de establecer conexion");
+    log_trace(logger_filesystem, "Estoy antes de establecer conexion");
 
 		establecer_conexion(logger_filesystem);
 
-    log_error(logger_filesystem, "Estoy despues de establecer conexion");
+    log_trace(logger_filesystem, "Estoy despues de establecer conexion");
 		//*********************
 		// PREPARACIÓN DE BLOQUES - TODO: Hacer logs
 		bitmap = levantar_bitmap();
-    log_error(logger_filesystem, "Estoy despues de levantar bitmap");
+    log_trace(logger_filesystem, "Estoy despues de levantar bitmap");
 		blocks_buffer = levantar_bloques();
-    log_error(logger_filesystem, "Estoy despues de levantar bloques");
+    log_trace(logger_filesystem, "Estoy despues de levantar bloques");
 		// Prueba de archivo de bloques
 		// truncar_archivo("elpicante", 0);
 
 		// for (int i = 0; i < BLOCK_COUNT; i++)
 		// {
+  
 		// 	printf("Pos. %d: %d\n", i + 1, bitarray_test_bit(bitmap, i));
 		// }
 
@@ -51,7 +52,7 @@ int main(int argc, char **argv)
     socket_servidor_filesystem = iniciar_servidor(logger_filesystem, PUERTO_ESCUCHA_FILESYSTEM);
 		if (socket_servidor_filesystem == -1)
 		{
-			log_error(logger_filesystem, "No se pudo iniciar el servidor en Filesystem...");
+			log_trace(logger_filesystem, "No se pudo iniciar el servidor en Filesystem...");
 			return EXIT_FAILURE;
 		}
 		log_info(logger_filesystem, "Filesystem escuchando conexiones...");
@@ -62,7 +63,7 @@ int main(int argc, char **argv)
     pthread_create(&threadDispatch, NULL, (void *) procesar_conexion, NULL);
     pthread_join(threadDispatch, NULL);
  
-  log_error(logger_filesystem, "Estoy despues de levantar como servidor");
+  log_trace(logger_filesystem, "Estoy despues de levantar como servidor");
 
 		bitarray_destroy(bitmap);
 		free(blocks_buffer);
@@ -79,9 +80,9 @@ void levantar_loggers_filesystem()
 void levantar_config_filesystem()
 {
  
-  log_error(logger_filesystem, "intentamo levantar config");
+  log_trace(logger_filesystem, "intentamo levantar config");
   CONFIG_FILESYSTEM = config_create("./config/filesystem.config");
-  log_error(logger_filesystem, "se hace el create");
+  log_trace(logger_filesystem, "se hace el create");
 
   IP_MEMORIA = config_get_string_value(CONFIG_FILESYSTEM, "IP_MEMORIA");
   PUERTO_MEMORIA = config_get_string_value(CONFIG_FILESYSTEM, "PUERTO_MEMORIA");
@@ -92,19 +93,19 @@ void levantar_config_filesystem()
   PATH_FCB = config_get_string_value(CONFIG_FILESYSTEM, "PATH_FCB");
   RETARDO_ACCESO_BLOQUE = config_get_int_value(CONFIG_FILESYSTEM, "RETARDO_ACCESO_BLOQUE");
 
-  log_error(logger_filesystem, "termine de crear config");
+  log_trace(logger_filesystem, "termine de crear config");
 }
 
 void levantar_superbloque()
 {
 
   CONFIG_SUPERBLOQUE = config_create(PATH_SUPERBLOQUE);
-  log_error(logger_filesystem, "Cree config superbloque con path: %s", PATH_SUPERBLOQUE);
+  log_trace(logger_filesystem, "Cree config superbloque con path: %s", PATH_SUPERBLOQUE);
   BLOCK_SIZE = config_get_int_value(CONFIG_SUPERBLOQUE, "BLOCK_SIZE");
   BLOCK_COUNT = config_get_int_value(CONFIG_SUPERBLOQUE, "BLOCK_COUNT");
   config_destroy(CONFIG_SUPERBLOQUE);
-  log_error(logger_filesystem, "Termine de crear superbloque");
-  log_error(logger_filesystem, "Borro config");
+  log_trace(logger_filesystem, "Termine de crear superbloque");
+  log_trace(logger_filesystem, "Borro config");
   
 }
 
@@ -136,6 +137,7 @@ t_bitarray *levantar_bitmap()
   fclose(bitmap_file);
   // free(puntero_a_bits); TODO: Liberar esto al final del programa
   return bitarray;
+  
 }
 
 void ocupar_bloque(int numero_bloque)
@@ -303,19 +305,19 @@ void establecer_conexion(t_log* logger){
 
 	log_trace(logger, "Inicio como cliente");
 
-	log_error(logger_filesystem,"Lei la IP %s , el Puerto Memoria %s ", IP_MEMORIA, PUERTO_MEMORIA);
+	log_trace(logger_filesystem,"Lei la IP %s , el Puerto Memoria %s ", IP_MEMORIA, PUERTO_MEMORIA);
 
 	/*----------------------------------------------------------------------------------------------------------------*/
-  log_error(logger_filesystem, "Estoy adentro de establecer conexion");
+  log_trace(logger_filesystem, "Estoy adentro de establecer conexion");
   
 	
 	if((socket_memoria = crear_conexion(IP_MEMORIA, PUERTO_MEMORIA)) == -1){
-    log_error(logger_filesystem, "Entre al if de establecer conexion");
+    log_trace(logger_filesystem, "Entre al if de establecer conexion");
 		log_trace(logger, "Error al conectar con Memoria. El servidor no esta activo");
         free(socket_memoria);
 		exit(-1);
 	}else{
-    log_error(logger_filesystem, "Entre al else de establecer conexion");
+    log_trace(logger_filesystem, "Entre al else de establecer conexion");
 		//handshake_cliente(conexion_cpu);
 		enviar_mensaje(IP_MEMORIA, socket_memoria);
 	}
@@ -330,11 +332,11 @@ void establecer_conexion(t_log* logger){
 
 void procesar_conexion()
 {
-    log_error(logger_filesystem, "Estoy antes de iniciar servidor");
+    log_trace(logger_filesystem, "Estoy antes de iniciar servidor");
 
     socket_servidor_filesystem = iniciar_servidor(PUERTO_ESCUCHA_FILESYSTEM, logger_filesystem);
 
-    log_error(logger_filesystem, "inicio servidor");
+    log_trace(logger_filesystem, "inicio servidor");
     socket_fs = esperar_cliente(socket_servidor_filesystem, logger_filesystem);
     enviar_mensaje("Kernel conectado",socket_fs);
     
@@ -367,33 +369,38 @@ void procesar_conexion()
         {
         case F_OPEN:
             char* nombre_archivo = recibir_string(cliente_socket, logger);
+            log_trace(logger_filesystem, "recibi el nombre de archivo");
 
             archivo_ok = abrir_archivo(nombre_archivo);
-
+            log_trace(logger_filesystem, "abrimos el archivo");
 
             if(archivo_ok){
                 enviar_CodOp(cliente_socket, NO_EXISTE_ARCHIVO);
+                log_trace(logger_filesystem, "archivo no encontrado");
             }else{
                 enviar_CodOp(cliente_socket, EXISTE_ARCHIVO);
+                log_trace(logger_filesystem, "archivo encontrado");
             }
 
 
-            log_info(logger, "Abrir archivo: %s", nombre_archivo);
+            log_trace(logger, "Abrir archivo: %s", nombre_archivo);
             break;
         case F_CREATE:
             char* nombre_archivo2 = recibir_string(cliente_socket, logger);
 
             crear_archivo(nombre_archivo);
 
-            log_info(logger, "Crear archivo: %s", nombre_archivo);
+            log_trace(logger, "Crear archivo: %s", nombre_archivo);
             break;
         case F_TRUNCATE:
             t_string_entero* estructura = recibir_string_entero(cliente_socket);
+            log_trace(logger_filesystem, "archivo recibido");
             truncar_archivo(estructura->string, (uint32_t)estructura->entero1);
+            log_trace(logger_filesystem, "archivo truncado");
             break;
         case F_READ:
             t_string_4enteros* estructura_string_4enteros_l = recibir_string_4enteros(cliente_socket);
-            
+            log_trace(logger_filesystem, "archivo recibido con sus parametros");
             char* f_name = estructura_string_4enteros_l->string;
             uint32_t pid = estructura_string_4enteros_l->entero4;
             uint32_t offset = estructura_string_4enteros_l->entero1;
@@ -401,7 +408,7 @@ void procesar_conexion()
             uint32_t cant = estructura_string_4enteros_l->entero2;
 
 
-            log_info(logger, "Leer archivo: %s - Puntero: %d - Memoria: %d - Tamaño: %d" ,f_name, offset, dir_fisica, cant);
+            log_trace(logger, "Leer archivo: %s - Puntero: %d - Memoria: %d - Tamaño: %d" ,f_name, offset, dir_fisica, cant);
             char *stream_leido = eferrid(f_name, offset, cant);
             //char* cadena_parseada = imprimir_cadena(stream_leido, cant);
             //printf("Cadena parseada: %s\n", cadena_parseada);
@@ -423,7 +430,7 @@ void procesar_conexion()
 */
 
             enviar_string_3enteros(socket_memoria, stream_leido, pid, dir_fisica, cant, F_READ);
-
+            log_trace(logger_filesystem, "enviamos el empaquetado de datos");
             /*
             if(send(socket_memoria, buffer_leido, sizeof(uint32_t)*3 + cant + sizeof(int), NULL) == -1 ) {
             printf("Hubo un problema\n");
@@ -432,14 +439,15 @@ void procesar_conexion()
             //recv(socket_memoria, &archivo_ok, sizeof(uint32_t), NULL);
 
             int cod_op = recibir_operacion(socket_memoria);
-            enviar_CodOp(cliente_socket, cod_op);
-
+            log_trace(logger_filesystem, "recibimos operacion de memoria");
+            enviar_CodOp(cliente_socket, cod_op); 
+            log_trace(logger_filesystem, "enviamos codigo ");
             //free(buffer_leido);
             free(stream_leido);
             break;
         case F_WRITE:
             t_string_4enteros* estructura_string_4enteros_e = recibir_string_4enteros(cliente_socket);
-
+            log_trace(logger_filesystem, "archivo recibido con sus parametros");
             char* f_name2= estructura_string_4enteros_e->string;
             uint32_t pid2 = estructura_string_4enteros_e->entero4;
             uint32_t offset2 = estructura_string_4enteros_e->entero1;
@@ -463,20 +471,22 @@ void procesar_conexion()
 */
 
             enviar_3enteros(socket_memoria, pid2, dir_fisica2, cant2, F_WRITE);
-
+            log_trace(logger_filesystem, "enviamos el empaquetado de datos");
             //send(socket_memoria, buffer_memoria, sizeof(int) + sizeof(uint32_t)*3, NULL);
             //free(buffer_memoria);
 
             void* buffer_escritura = malloc(cant2);
             recv(socket_memoria, buffer_escritura, cant2, NULL);
+            log_trace(logger_filesystem, "recibimos operacion de memoria");
             eferrait(f_name2, offset2, cant2, buffer_escritura);
+            log_trace(logger_filesystem, "aplicamos el F_WRITE");
             free(buffer_escritura);
             
             enviar_CodOp(cliente_socket, OK);
-
+            log_trace(logger_filesystem, "enviamos codigo de operacion a kernel");
             break;
         default:
-            log_error(logger, "Algo anduvo mal en el server de Filesystem");
+            log_trace(logger, "Algo anduvo mal en el server de Filesystem");
             log_info(logger, "Cop: %d", cop);
             return;
         }
