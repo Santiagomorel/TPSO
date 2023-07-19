@@ -12,7 +12,7 @@
 
 typedef struct
 {
-  char* f_name; // Nombre del archivo
+  char f_name[100]; // Nombre del archivo
   uint32_t f_size; // Tamaño del archivo en bytes del archivo
   uint32_t f_dp;   // Puntero directo al primer bloque de datos del archivo
   uint32_t f_ip;   // Puntero indirecto al bloque que contiene los punteros a los siguientes bloques del archivo
@@ -66,8 +66,8 @@ void establecer_conexion(t_log*);
 void procesar_conexion();
 
 /******************CORE******************/
-uint32_t abrir_archivo(char* f_name);
-uint32_t crear_archivo(char* f_name);
+int abrir_archivo(char* f_name);
+void crear_archivo(char* f_name);
 void truncar_archivo(char* f_name, uint32_t new_size);
 void eferrait(char* f_name, uint32_t offset, uint32_t size, char* data);
 void* eferrid(char* f_name, uint32_t offset, uint32_t cantidad);
