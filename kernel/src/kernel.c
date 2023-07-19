@@ -1299,13 +1299,17 @@ void atender_apertura_archivo(){
             case NO_EXISTE_ARCHIVO:
 
             t_entradaTAAP* entradaTAAP = malloc(sizeof(t_entradaTAAP));
+            log_trace(kernel_logger,"recibimos no existe");
             enviar_paquete_string(file_system_connection,nombreArchivo,F_CREATE,(strlen(nombreArchivo)+1));
+            log_trace(kernel_logger,"enviamos el f_CREATE");
             crear_entrada_TGAA(nombreArchivo,entradaTAAP);
             crear_entrada_TAAP(nombreArchivo,entradaTAAP);
-            
+            log_trace(kernel_logger,"creamos entradas ");
             list_add(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso,entradaTAAP);
+            log_trace(kernel_logger,"agregamos a la lista");
             contexto_ejecucion* contextoAEnviar = obtener_ce(pcb_en_ejecucion);
             enviar_ce(cpu_dispatch_connection,contextoAEnviar,EJECUTAR_CE,kernel_logger);
+            log_trace(kernel_logger,"llegamos al final ");
             
             break;
 

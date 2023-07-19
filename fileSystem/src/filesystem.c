@@ -74,7 +74,7 @@ int main(int argc, char **argv)
 
 void levantar_loggers_filesystem()
 {
-  logger_filesystem = log_create("./runlogs/filesystem.log", "FILESYSTEM", true, LOG_LEVEL_INFO);
+  logger_filesystem = log_create("./runlogs/filesystem.log", "FILESYSTEM", true, LOG_LEVEL_TRACE);
 }
 
 void levantar_config_filesystem()
@@ -212,7 +212,7 @@ void modificar_bloque(uint32_t puntero_a_bloque, char *bloque_nuevo)
 
 t_fcb *levantar_fcb(char *f_name)
 {
-  char* path; // 46 viene de los caracteres de: ./fs/fcb/f_name.config
+  char path[100]; // 46 viene de los caracteres de: ./fs/fcb/f_name.config
   strcpy(path, PATH_FCB);
   strcat(path, "/");
   strcat(path, f_name);
@@ -220,8 +220,8 @@ t_fcb *levantar_fcb(char *f_name)
 
   t_config *FCB = config_create(path);
   t_fcb *fcb = malloc(sizeof(t_fcb));
-  strncpy(fcb->f_name, f_name, 29); // Si la cadena de origen tiene menos de 29 caracteres, los faltantes se llenan con caracteres nulos
-  fcb->f_name = '\0';           // Agrega el carácter nulo al final
+  strcpy(fcb->f_name, f_name); // Si la cadena de origen tiene menos de 29 caracteres, los faltantes se llenan con caracteres nulos
+  // fcb->f_name = '\0';           // Agrega el carácter nulo al final
   fcb->f_size = config_get_int_value(FCB, "TAMANIO_ARCHIVO");
   fcb->f_dp = config_get_int_value(FCB, "PUNTERO_DIRECTO");
   fcb->f_ip = config_get_int_value(FCB, "PUNTERO_INDIRECTO");
@@ -313,7 +313,7 @@ void establecer_conexion(t_log* logger){
 	
 	if((socket_memoria = crear_conexion(IP_MEMORIA, PUERTO_MEMORIA)) == -1){
     log_trace(logger_filesystem, "Entre al if de establecer conexion");
-		log_trace(logger, "Error al conectar con Memoria. El servidor no esta activo");
+		log_error(logger, "Error al conectar con Memoria. El servidor no esta activo");
         free(socket_memoria);
 		exit(-1);
 	}else{
@@ -356,7 +356,7 @@ void procesar_conexion()
         }
 
         char* f_name;
-        uint32_t archivo_ok;
+        int archivo_ok;
         uint32_t pid;
         uint32_t f_size;
         uint32_t dir_fisica;
@@ -387,7 +387,7 @@ void procesar_conexion()
             break;
         case F_CREATE:
             char* nombre_archivo2 = recibir_string(cliente_socket, logger);
-
+            log_trace(logger_filesystem,"recibi nombre_archivo f_create");
             crear_archivo(nombre_archivo);
 
             log_trace(logger, "Crear archivo: %s", nombre_archivo);
@@ -498,40 +498,50 @@ void procesar_conexion()
 
 /******************CORE******************/
 
-uint32_t abrir_archivo(char* f_name)
+int abrir_archivo(char* f_name)
 {
-  char* path; // 46 viene de los caracteres de: ./fs/fcb/f_name.config
+  char path[100]; // 46 viene de los caracteres de: ./fs/fcb/f_name.config
   strcpy(path, PATH_FCB);
   strcat(path, "/");
   strcat(path, f_name);
   strcat(path, ".config");
-
+  log_trace(logger_filesystem, "aca estoy despues del path");
   FILE *archivo_fcb = fopen(path, "r");
+  log_trace(logger_filesystem, "aca estoy despues del f_open");
+
   if (archivo_fcb == NULL)
   {
-    //printf("El archivo no existe\n");
+   
+    log_trace(logger_filesystem, "aca estoy despues del if");
     return 1;
-  }
-  //printf("Archivo abierto\n");
+    
+  }else{
+  
+  
   fclose(archivo_fcb);
+  log_trace(logger_filesystem, "aca estoy despues del f_close");
   return 0;
+  }
 }
 
-uint32_t crear_archivo(char* f_name)
+void crear_archivo(char* f_name)
 {
+  
   t_fcb *new_fcb = malloc(sizeof(t_fcb));
-  strncpy(new_fcb->f_name, f_name, 29); // Si la cadena de origen tiene menos de 29 caracteres, los faltantes se llenan con caracteres nulos
-  new_fcb->f_name = '\0';           // Agrega el carácter nulo al final
+  log_trace(logger_filesystem,"entro al void");
+  strcpy(new_fcb->f_name, f_name ); // Si la cadena de origen tiene menos de 29 caracteres, los faltantes se llenan con caracteres nulos
+  log_trace(logger_filesystem,"strncpy");
+  // new_fcb->f_name = '\0';           // Agrega el carácter nulo al final
   new_fcb->f_size = 0;
   new_fcb->f_dp = 0;
   new_fcb->f_ip = 0;
-
-  char* path; // 46 viene de los caracteres de: ./fs/fcb/f_name.config
+  log_trace(logger_filesystem,"seteamos todo = 0");
+  char path[100]; // 46 viene de los caracteres de: ./fs/fcb/f_name.config
   strcpy(path, PATH_FCB);
   strcat(path, "/");
   strcat(path, f_name);
   strcat(path, ".config");
-
+  log_trace(logger_filesystem,"seteamos path en F_CREATE");
   FILE *archivo_fcb = fopen(path, "w");
   fprintf(archivo_fcb, "NOMBRE_ARCHIVO=%s\n", new_fcb->f_name);
   fprintf(archivo_fcb, "TAMANIO_ARCHIVO=%u\n", new_fcb->f_size);
@@ -540,8 +550,9 @@ uint32_t crear_archivo(char* f_name)
 
   // printf("Archivo creado\n");
   fclose(archivo_fcb);
+  log_trace(logger_filesystem,"F_CLOSE F_CREATE");
   free(new_fcb);
-  return 0;
+ 
 }
 
 void truncar_archivo(char *f_name, uint32_t new_size)
