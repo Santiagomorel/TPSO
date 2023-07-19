@@ -538,6 +538,7 @@ t_segmento* buscarSegmentoSegunTamanio(int size){
         log_error(log_memoria,"No se ha compactado correctamente");
         
     }else if(list_size(segmentosCandidatos)== 1){
+        log_warning(log_memoria, "entro aca");
         segmento = list_get(segmentosCandidatos, 0);
     }else{
         log_trace(log_memoria, "se elige criterio");//borrar
@@ -556,7 +557,7 @@ t_segmento* buscarSegmentoSegunTamanio(int size){
 	//list_destroy(segmentosCandidatos);
 	eliminarLista(todosLosSegLibres);
 	list_destroy(segmentosCandidatos);
-    
+    log_warning(log_memoria, "tamanio del segmento = %d", segmento->tamanio_segmento);
     return segmento;
 }
 
@@ -569,11 +570,13 @@ t_list* buscarSegmentosDisponibles(){
     //YA SABEMOS QUE HAY LUGAR, SINO NO HUBIESE     
     
     while(base < (memoria_config.tam_memoria)){
+        log_trace(log_memoria, "encontro un espacio");
         t_segmento* unSegmento = buscarUnLugarLibre(&base);
         list_add(segmentos,unSegmento);
     }
 
-    return segmentos;    
+    return segmentos;
+    free(segmentos);
 }
 
 t_segmento* buscarUnLugarLibre(int* base){
