@@ -223,6 +223,7 @@ void atender_apertura_archivo();
 char* obtener_nombre_archivo(t_entradaTGAA*);
 bool existeArchivo(char*);
 t_list* nombre_en_lista_coincide(t_list*, char* );
+t_list* nombre_en_lista_nombres_coincide(t_list* , char* );
 void crear_entrada_TAAP(char*,t_entradaTAAP*);
 void crear_entrada_TGAA(char*,t_entradaTAAP*);
 bool encontrar_nombre(char*);

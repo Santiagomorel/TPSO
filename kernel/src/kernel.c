@@ -344,15 +344,25 @@ int obtenerPid(t_pcb* pcb)
 {
     return pcb->id;
 }
+
 char* obtener_nombre_archivo(t_entradaTGAA* entrada){
     return entrada->nombreArchivo;
 }
 
+
 bool existeArchivo(char* nombreArchivo){
-    t_list* nombreArchivosAbiertos= list_map(tablaGlobalArchivosAbiertos,(void*) obtener_nombre_archivo);
-    t_list* archivoEnLista = nombre_en_lista_coincide(nombreArchivosAbiertos,(char*) nombreArchivo);
-    
-     return list_is_empty(archivoEnLista) == 0;
+
+    //t_list* nombreArchivosAbiertos = list_map(tablaGlobalArchivosAbiertos,(void*) obtener_nombre_archivo);
+    //log_trace(kernel_logger, "La lista de nombres es de tamanio: %d", list_size(nombreArchivosAbiertos));
+    t_list* archivoEnLista = nombre_en_lista_coincide(tablaGlobalArchivosAbiertos, nombreArchivo);
+    log_trace(kernel_logger, "La lista de nombres es de tamanio: %d", list_size(archivoEnLista));
+    if(list_size(archivoEnLista)){
+        t_entradaTGAA* entradaGlobal = list_get(archivoEnLista,0);
+        return entradaGlobal->nombreArchivo == nombreArchivo;
+    }else{
+        return 0;
+    }
+     
  
 }
 
@@ -729,6 +739,7 @@ void manejar_dispatch()
 
             case ABRIR_ARCHIVO:
                 atender_apertura_archivo();
+                log_trace(kernel_logger, "Ya atendi apertura");
                 break;
             
             case CERRAR_ARCHIVO:
@@ -1303,13 +1314,12 @@ void atender_apertura_archivo(){
             enviar_paquete_string(file_system_connection,nombreArchivo,F_CREATE,(strlen(nombreArchivo)+1));
             log_trace(kernel_logger,"enviamos el f_CREATE");
             crear_entrada_TGAA(nombreArchivo,entradaTAAP);
+            log_trace(kernel_logger,"Creamos Entrada TGAA");
             crear_entrada_TAAP(nombreArchivo,entradaTAAP);
-            log_trace(kernel_logger,"creamos entradas ");
             list_add(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso,entradaTAAP);
-            log_trace(kernel_logger,"agregamos a la lista");
             contexto_ejecucion* contextoAEnviar = obtener_ce(pcb_en_ejecucion);
             enviar_ce(cpu_dispatch_connection,contextoAEnviar,EJECUTAR_CE,kernel_logger);
-            log_trace(kernel_logger,"llegamos al final ");
+            log_trace(kernel_logger,"llegamos al final del NO_EXISTE_ARCHIVO");
             
             break;
 
@@ -1331,8 +1341,9 @@ void atender_apertura_archivo(){
 
         
     }
+log_trace(kernel_logger, "PID: <%d> - Abrir Archivo: <%s>",pcb_en_ejecucion->id, nombreArchivo);
 liberar_ce_string_entero(estructuraApertura);
-log_trace(kernel_logger, "PID: <%d> - Abrir Archivo: <%s>",pcb_en_ejecucion->id,nombreArchivo);
+
 
 }
 void crear_entrada_TGAA(char* nombre,t_entradaTAAP* entrada){
@@ -1348,7 +1359,9 @@ void crear_entrada_TAAP(char* nombre,t_entradaTAAP* nuevaEntrada){
 
     nuevaEntrada->nombreArchivo = nombre;
     nuevaEntrada->puntero = 0;
-    t_list* listaFiltrada = nombre_en_lista_coincide(tablaGlobalArchivosAbiertos,(char*)nombre);
+    log_trace(kernel_logger, "Tamaño tabla global:%d ", list_size(tablaGlobalArchivosAbiertos));
+    t_list* listaFiltrada = nombre_en_lista_coincide(tablaGlobalArchivosAbiertos, nombre);
+    log_trace(kernel_logger, "Logre filtrar la lista por nombre con tamaño:%d ", list_size(listaFiltrada));
     t_entradaTGAA* entradaGlobal = list_get(listaFiltrada,0);
     nuevaEntrada->tamanioArchivo = entradaGlobal ->tamanioArchivo;
 
@@ -1356,11 +1369,21 @@ void crear_entrada_TAAP(char* nombre,t_entradaTAAP* nuevaEntrada){
 
 t_list* nombre_en_lista_coincide(t_list* tabla, char* nombre)
 {
-    bool encontrar_nombre(char* nombreLista){
-        return nombre == nombreLista;
-    }
+    bool encontrar_nombre(t_entradaTGAA* entrada){
+        log_trace(kernel_logger, "Busco");
+        return (entrada->nombreArchivo == nombre);
+        }
 
-    return list_filter(tabla, (void*) encontrar_nombre);
+    return list_filter(tabla, (void*)encontrar_nombre);
+}
+t_list* nombre_en_lista_nombres_coincide(t_list* tabla, char* nombre)
+{
+    bool encontrar_nombre(char* entrada){
+        log_trace(kernel_logger, "Busco nombre");
+        return (entrada == nombre);
+        }
+
+    return list_filter(tabla, (void*)encontrar_nombre);
 }
 // ----------------------- Funciones CERRAR_ARCHIVO ----------------------- //
 void atender_cierre_archivo(){
