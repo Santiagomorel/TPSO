@@ -344,15 +344,32 @@ int obtenerPid(t_pcb* pcb)
 {
     return pcb->id;
 }
+
 char* obtener_nombre_archivo(t_entradaTGAA* entrada){
     return entrada->nombreArchivo;
 }
 
+
 bool existeArchivo(char* nombreArchivo){
-    t_list* nombreArchivosAbiertos= list_map(tablaGlobalArchivosAbiertos,(void*) obtener_nombre_archivo);
-    t_list* archivoEnLista = nombre_en_lista_coincide(nombreArchivosAbiertos,(char*) nombreArchivo);
-    
-     return list_is_empty(archivoEnLista) == 0;
+  
+    //t_list* nombreArchivosAbiertos = list_map(tablaGlobalArchivosAbiertos,(void*) obtener_nombre_archivo);
+    // log_trace(kernel_logger, "La lista de nombres es de tamanio: %d", list_size(nombreArchivosAbiertos));
+    log_warning(kernel_logger, "La lista de nombres es de tamanio, con el list size: %d", list_size(tablaGlobalArchivosAbiertos));
+    if(list_size(tablaGlobalArchivosAbiertos)){
+    t_entradaTGAA* aux = list_get(tablaGlobalArchivosAbiertos,0);
+    log_error(kernel_logger, "Aux tiene: %s de nombre y %d de tamanio", aux->nombreArchivo,aux->tamanioArchivo);
+    }
+    t_list* archivoEnLista = nombre_en_lista_coincide(tablaGlobalArchivosAbiertos,nombreArchivo);
+    // ver si se puede utilizar (de la commons) list_any_satisfy para comprobar si existe un archivo.
+    log_error(kernel_logger, "La lista de nombres es de tamanio: %d", list_size(archivoEnLista));
+    if(list_size(archivoEnLista)){
+        t_entradaTGAA* entradaGlobal = list_get(archivoEnLista,0);
+        log_error(kernel_logger, "La lista de nombres es de tamanio: %d",entradaGlobal->nombreArchivo);
+        return strcmp(entradaGlobal->nombreArchivo, nombreArchivo) == 0;
+    }else{
+        return 0;
+    }
+     
  
 }
 
@@ -729,10 +746,12 @@ void manejar_dispatch()
 
             case ABRIR_ARCHIVO:
                 atender_apertura_archivo();
+                log_trace(kernel_logger, "Ya atendi apertura");
                 break;
             
             case CERRAR_ARCHIVO:
                 atender_cierre_archivo();
+                log_trace(kernel_logger, "Ya atendi cierre");
                 break;
 
             case ACTUALIZAR_PUNTERO:
@@ -1264,19 +1283,22 @@ void atender_borrar_segmento() //TODO
 }
 
 // ----------------------- Funciones ABRIR_ARCHIVO ----------------------- //
-void atender_apertura_archivo(){
+void atender_apertura_archivo()
+{
+    t_ce_string* estructuraApertura = recibir_ce_string(cpu_dispatch_connection);
 
-   t_ce_string* estructuraApertura=recibir_ce_string(cpu_dispatch_connection);
     contexto_ejecucion* contextoDeEjecucion = estructuraApertura->ce;
+
     char* nombreArchivo = estructuraApertura->string;
-    t_list* nombreArchivosAbiertos= list_map(tablaGlobalArchivosAbiertos,(void*) obtener_nombre_archivo);
+
+    t_list* nombreArchivosAbiertos = list_map(tablaGlobalArchivosAbiertos,(void*) obtener_nombre_archivo);
 
     pthread_mutex_lock(&m_listaEjecutando);
-        t_pcb * pcb_en_ejecucion = (t_pcb *) list_remove(listaEjecutando, 0);
+        t_pcb * pcb_en_ejecucion = (t_pcb *) list_get(listaEjecutando, 0);
         actualizar_pcb(pcb_en_ejecucion, contextoDeEjecucion);
     pthread_mutex_unlock(&m_listaEjecutando);
     
-    if(existeArchivo(nombreArchivo)){
+    if(existeArchivo(nombreArchivo)){ // si existe en la tabla global de kernel
         t_entradaTAAP* entradaTAAP3= malloc(sizeof(t_entradaTAAP));
         crear_entrada_TAAP(nombreArchivo,entradaTAAP3);
         list_add(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso,entradaTAAP3);
@@ -1289,7 +1311,6 @@ void atender_apertura_archivo(){
         agregar_a_lista_con_sems(pcb_en_ejecucion,entradaEncontrada->lista_block_archivo,entradaEncontrada->m_lista_block_archivo);
 
     }
-
     else{
         enviar_paquete_string(file_system_connection,nombreArchivo,F_OPEN,(strlen(nombreArchivo)+1));
         
@@ -1298,69 +1319,102 @@ void atender_apertura_archivo(){
         switch(existe){
             case NO_EXISTE_ARCHIVO:
 
-            t_entradaTAAP* entradaTAAP = malloc(sizeof(t_entradaTAAP));
-            log_trace(kernel_logger,"recibimos no existe");
-            enviar_paquete_string(file_system_connection,nombreArchivo,F_CREATE,(strlen(nombreArchivo)+1));
-            log_trace(kernel_logger,"enviamos el f_CREATE");
-            crear_entrada_TGAA(nombreArchivo,entradaTAAP);
-            crear_entrada_TAAP(nombreArchivo,entradaTAAP);
-            log_trace(kernel_logger,"creamos entradas ");
-            list_add(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso,entradaTAAP);
-            log_trace(kernel_logger,"agregamos a la lista");
-            contexto_ejecucion* contextoAEnviar = obtener_ce(pcb_en_ejecucion);
-            enviar_ce(cpu_dispatch_connection,contextoAEnviar,EJECUTAR_CE,kernel_logger);
-            log_trace(kernel_logger,"llegamos al final ");
+                t_entradaTAAP* entradaTAAP = malloc(sizeof(t_entradaTAAP));
+                log_trace(kernel_logger,"recibimos no existe");
+                enviar_paquete_string(file_system_connection,nombreArchivo,F_CREATE,(strlen(nombreArchivo)+1));
+                log_trace(kernel_logger,"enviamos el f_CREATE");
+                crear_entrada_TGAA(nombreArchivo,entradaTAAP);
+                log_trace(kernel_logger,"Creamos Entrada TGAA");
+                crear_entrada_TAAP(nombreArchivo,entradaTAAP);
+                list_add(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso,entradaTAAP);
+                contexto_ejecucion* contextoAEnviar = obtener_ce(pcb_en_ejecucion);
+                enviar_ce(cpu_dispatch_connection,contextoAEnviar,EJECUTAR_CE,kernel_logger);
+                log_trace(kernel_logger,"llegamos al final del NO_EXISTE_ARCHIVO");
             
-            break;
+                break;
 
-        case EXISTE_ARCHIVO:
-            t_entradaTAAP* entradaTAAP2 = malloc(sizeof(t_entradaTAAP));
-            crear_entrada_TGAA(nombreArchivo,entradaTAAP2);
-            crear_entrada_TAAP(nombreArchivo,entradaTAAP2);
-            
-            list_add(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso,entradaTAAP2);
-            contexto_ejecucion* contextoAEnviar2 = obtener_ce(pcb_en_ejecucion);
-            enviar_ce(cpu_dispatch_connection,contextoAEnviar2,EJECUTAR_CE,kernel_logger);
-            break;
-        default:
+            case EXISTE_ARCHIVO: // existe en el FS
+                log_error(kernel_logger, "El abrir archivo entro por aca");
+                t_entradaTAAP* entradaTAAP2 = malloc(sizeof(t_entradaTAAP));
 
-            log_error(kernel_logger,"CodOp invalido");
-            break;
-        }
+                crear_entrada_TGAA(nombreArchivo, entradaTAAP2);
 
+                crear_entrada_TAAP(nombreArchivo, entradaTAAP2);
 
-        
+                list_add(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso, entradaTAAP2);
+
+                contexto_ejecucion* contextoAEnviar2 = obtener_ce(pcb_en_ejecucion);
+
+                enviar_ce(cpu_dispatch_connection, contextoAEnviar2, EJECUTAR_CE, kernel_logger);
+                
+                break;
+
+            default:
+                log_error(kernel_logger,"CodOp invalido");
+                break;
+        }   
     }
-liberar_ce_string_entero(estructuraApertura);
-log_trace(kernel_logger, "PID: <%d> - Abrir Archivo: <%s>",pcb_en_ejecucion->id,nombreArchivo);
 
+    log_trace(kernel_logger, "PID: <%d> - Abrir Archivo: <%s>",pcb_en_ejecucion->id, nombreArchivo);
+    liberar_ce_string_entero(estructuraApertura);
 }
-void crear_entrada_TGAA(char* nombre,t_entradaTAAP* entrada){
+
+void crear_entrada_TGAA(char* nombre, t_entradaTAAP* entrada)
+{
     t_entradaTGAA* nuevaEntradaTGAA = malloc(sizeof(t_entradaTGAA));
-    nuevaEntradaTGAA->nombreArchivo = nombre;
+
+    strcpy(nuevaEntradaTGAA->nombreArchivo,nombre);
+
     nuevaEntradaTGAA->puntero = entrada;
+
+    nuevaEntradaTGAA->tamanioArchivo = 0;
     
     nuevaEntradaTGAA->lista_block_archivo = list_create();
+
     pthread_mutex_init(&(nuevaEntradaTGAA->m_lista_block_archivo),NULL);
-    list_add(tablaGlobalArchivosAbiertos,nuevaEntradaTGAA);
+
+    list_add(tablaGlobalArchivosAbiertos, nuevaEntradaTGAA);
 }
+
 void crear_entrada_TAAP(char* nombre,t_entradaTAAP* nuevaEntrada){
 
-    nuevaEntrada->nombreArchivo = nombre;
+    strcpy(nuevaEntrada->nombreArchivo,nombre);  
+
     nuevaEntrada->puntero = 0;
-    t_list* listaFiltrada = nombre_en_lista_coincide(tablaGlobalArchivosAbiertos,(char*)nombre);
+
+    log_trace(kernel_logger, "Tamaño tabla global:%d ", list_size(tablaGlobalArchivosAbiertos));
+
+    t_list* listaFiltrada = nombre_en_lista_coincide(tablaGlobalArchivosAbiertos, nombre);
+
+    log_trace(kernel_logger, "Logre filtrar la lista por nombre con tamaño:%d ", list_size(listaFiltrada));
+    
     t_entradaTGAA* entradaGlobal = list_get(listaFiltrada,0);
-    nuevaEntrada->tamanioArchivo = entradaGlobal ->tamanioArchivo;
+    
+    log_warning(kernel_logger,"el elemento guardado en TAAP tiene:%s,  tamanio %d",entradaGlobal->nombreArchivo,entradaGlobal->tamanioArchivo);
+    
+    nuevaEntrada->tamanioArchivo = entradaGlobal->tamanioArchivo;
 
 }
 
 t_list* nombre_en_lista_coincide(t_list* tabla, char* nombre)
 {
-    bool encontrar_nombre(char* nombreLista){
-        return nombre == nombreLista;
+    bool encontrar_nombre(t_entradaTGAA* entrada){
+    
+        log_trace(kernel_logger, "Busco en lista de entradas, %s", entrada->nombreArchivo);
+        return strcmp(entrada->nombreArchivo, nombre) == 0;
     }
 
-    return list_filter(tabla, (void*) encontrar_nombre);
+    return list_filter(tabla, (void*)encontrar_nombre);
+}
+
+t_list* nombre_en_lista_nombres_coincide(t_list* tabla, char* nombre)
+{
+    bool encontrar_nombre(char* entrada){
+        log_trace(kernel_logger, "Busco en lista de nombres");
+        return strcmp(entrada, nombre) == 0;
+        }
+
+    return list_filter(tabla, (void*)encontrar_nombre);
 }
 // ----------------------- Funciones CERRAR_ARCHIVO ----------------------- //
 void atender_cierre_archivo(){
@@ -1370,7 +1424,7 @@ void atender_cierre_archivo(){
     char* nombreArchivo = estructuraCierre->string;
 
     pthread_mutex_lock(&m_listaEjecutando);
-        t_pcb * pcb_en_ejecucion = (t_pcb *) list_remove(listaEjecutando, 0);
+        t_pcb * pcb_en_ejecucion = (t_pcb *) list_get(listaEjecutando, 0);
         actualizar_pcb(pcb_en_ejecucion, contextoDeEjecucion);
     pthread_mutex_unlock(&m_listaEjecutando);
 
@@ -1378,9 +1432,15 @@ void atender_cierre_archivo(){
     
     t_list* listaFiltrada = nombre_en_lista_coincide(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso,(char*) nombreArchivo);
     
+    log_error(kernel_logger,"la lista tiene :%d elementos", list_size(listaFiltrada));
+
     t_entradaTAAP* entradaProceso = list_get(listaFiltrada,0);
     
+    log_error(kernel_logger,"la TAAP tiene :%d elementos", list_size(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso));
+
     list_remove_element(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso,entradaProceso);
+
+    log_error(kernel_logger,"la TAAP tiene :%d elementos", list_size(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso));
     
     free(entradaProceso);
     
@@ -1395,6 +1455,8 @@ void atender_cierre_archivo(){
     t_list* listaFiltrada =  nombre_en_lista_coincide(tablaGlobalArchivosAbiertos,(char*) nombreArchivo);
     t_entradaTGAA* entradaGlobal = list_get(listaFiltrada,0);
     list_remove_element(tablaGlobalArchivosAbiertos,entradaGlobal);
+    log_warning(kernel_logger,"la TAAG tiene :%d",list_size(tablaGlobalArchivosAbiertos));
+    enviar_ce(cpu_dispatch_connection, contextoDeEjecucion, EJECUTAR_CE, kernel_logger);
     free(entradaGlobal);
     }
 
@@ -1455,22 +1517,33 @@ return list_is_empty(entradaGlobal->lista_block_archivo) == 0;
 
 // ----------------------- Funciones ACTUALIZAR_PUNTERO ----------------------- //
 void atender_actualizar_puntero(){
+    log_error(kernel_logger,"entro");
     t_ce_string_entero* estructura_actualizacion = recibir_ce_string_entero(cpu_dispatch_connection);
+    log_error(kernel_logger,"recibo joya");
+
+    log_error(kernel_logger,"nombre archivo recibido: %s",estructura_actualizacion->string);
+    log_error(kernel_logger,"el entero es:%d",estructura_actualizacion->entero);
 
     int posicion = estructura_actualizacion->entero;
     
-    char* nombreArchivo=estructura_actualizacion->string;
+    char nombreArchivo [100];
+    strcpy(nombreArchivo,estructura_actualizacion->string);
     
+    log_error(kernel_logger,"el nombre del archivo es %s",nombreArchivo);
+
     contexto_ejecucion* contextoDeEjecucion=estructura_actualizacion->ce;
 
     pthread_mutex_lock(&m_listaEjecutando);
-    t_pcb * pcb_en_ejecucion = (t_pcb *) list_remove(listaEjecutando, 0);
+    t_pcb * pcb_en_ejecucion = (t_pcb *) list_get(listaEjecutando, 0);
     actualizar_pcb(pcb_en_ejecucion, contextoDeEjecucion);
     pthread_mutex_unlock(&m_listaEjecutando);
 
+    log_error(kernel_logger,"estoy por filtrar lista");
     
-    t_list* listaFiltrada = nombre_en_lista_coincide(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso,(char*) nombreArchivo);
+    t_list* listaFiltrada = nombre_en_lista_coincide(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso,nombreArchivo);
     
+    log_error(kernel_logger,"el tamanio de la lista es %d",list_size(listaFiltrada));
+
     t_entradaTAAP* entradaProceso = list_get(listaFiltrada,0);
     
     entradaProceso->puntero = posicion;
@@ -1479,7 +1552,7 @@ void atender_actualizar_puntero(){
     //contexto_ejecucion* contextoAEnviar = obtener_ce(pcb_en_ejecucion);
     //enviar_ce(cpu_dispatch_connection,contextoAEnviar,EJECUTAR_CE,kernel_logger);
     //falta liberar algo?
-    log_trace(kernel_logger, "PID: <PID> - Actualizar puntero Archivo: <NOMBRE ARCHIVO> - Puntero <PUNTERO>");
+    log_trace(kernel_logger, "PID: <%s> - Actualizar puntero Archivo: <%s> - Puntero <%s>",pcb_en_ejecucion->id,entradaProceso->nombreArchivo,entradaProceso->puntero);
 
 liberar_ce_string_entero(estructura_actualizacion);
     
@@ -1505,7 +1578,7 @@ void atender_lectura_archivo(){
 
         
     pthread_mutex_lock(&m_listaEjecutando);
-        t_pcb * pcb_lectura = (t_pcb *) list_remove(listaEjecutando, 0);
+        t_pcb * pcb_lectura = (t_pcb *) list_get(listaEjecutando, 0);
         actualizar_pcb(pcb_lectura, ce_a_updatear);
     pthread_mutex_unlock(&m_listaEjecutando);
 
@@ -1576,7 +1649,7 @@ void atender_escritura_archivo(){
     int bytes_a_leer = estructura_escribir_archivo->entero2;
         
     pthread_mutex_lock(&m_listaEjecutando);
-        t_pcb * pcb_escritura = (t_pcb *) list_remove(listaEjecutando, 0);
+        t_pcb * pcb_escritura = (t_pcb *) list_get(listaEjecutando, 0);
         actualizar_pcb(pcb_escritura, ce_a_updatear);
     pthread_mutex_unlock(&m_listaEjecutando);
 
@@ -1652,7 +1725,7 @@ void atender_modificar_tamanio_archivo(){
     int tamanio_archivo = estructura_mod_tam_archivo->entero;
         
     pthread_mutex_lock(&m_listaEjecutando);
-        t_pcb * pcb_mod_tam_arch = (t_pcb *) list_remove(listaEjecutando, 0);
+        t_pcb * pcb_mod_tam_arch = (t_pcb *) list_get(listaEjecutando, 0);
         actualizar_pcb(pcb_mod_tam_arch, contexto_mod_tam_arch);
     pthread_mutex_unlock(&m_listaEjecutando);
 

@@ -349,11 +349,8 @@ void procesar_conexion()
 
     while (cliente_socket != -1)
     {
-        if (recv(cliente_socket, &cop, sizeof(int), 0) != sizeof(int))
-        {
-            log_warning(logger, "Cliente desconectado!");
-            break;
-        }
+        cop = recibir_operacion(cliente_socket);
+        
 
         char* f_name;
         int archivo_ok;
