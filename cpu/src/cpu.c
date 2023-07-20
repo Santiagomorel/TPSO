@@ -387,7 +387,8 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             enviar_ce_con_string(socket_kernel, ce, instruction[1], ABRIR_ARCHIVO);
 
             //desalojo_por_archivo = 1;
-        
+            sale_proceso = 1;
+
             break;
 
         case I_F_CLOSE:
@@ -398,6 +399,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             enviar_ce_con_string(socket_kernel, ce, instruction[1], CERRAR_ARCHIVO);
 
             //desalojo_por_archivo = 1;
+            sale_proceso = 1;
 
             break;
 
@@ -408,6 +410,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             enviar_ce_con_string_entero(socket_kernel, ce, instruction[1], instruction[2], ACTUALIZAR_PUNTERO);
 
             //desalojo_por_archivo = 1;
+            sale_proceso = 1;
 
             break;
 
@@ -422,6 +425,8 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
 
             //desalojo_por_archivo = 1;
 
+            sale_proceso = 1;
+
             break;
         case I_F_WRITE:
             log_trace(cpu_logger, "Por ejecutar instruccion F_WRITE");
@@ -433,7 +438,8 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             enviar_ce_con_string_2_enteros(socket_kernel, ce, instruction[1], direccion_fisica, instruction[3], ESCRIBIR_ARCHIVO); 
 
             //desalojo_por_archivo = 1;
-            
+            sale_proceso = 1;
+
             break;
         case I_F_TRUNCATE:
             log_trace(cpu_logger, "Por ejecutar instruccion F_TRUNCATE");
@@ -442,6 +448,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             enviar_ce_con_string_entero(socket_kernel, ce, instruction[1], instruction[2], MODIFICAR_TAMAÑO_ARCHIVO);
 
             //desalojo_por_archivo = 1;
+            sale_proceso = 1;
 
             break;
 
@@ -452,6 +459,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             enviar_ce_con_dos_enteros(socket_kernel, ce, instruction[1], instruction[2], CREAR_SEGMENTO);
 
             //desalojo_por_archivo = 1;
+            sale_proceso = 1;
 
             break;
 
@@ -462,7 +470,8 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             enviar_ce_con_entero(socket_kernel, ce, instruction[1], BORRAR_SEGMENTO);
 
             //desalojo_por_archivo = 1;
-
+            sale_proceso = 1;
+            
             break;
 
         case I_MOV_IN: //MOV_IN (Registro, Dirección Lógica)
