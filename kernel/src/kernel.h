@@ -33,14 +33,14 @@ typedef struct{
 
 typedef struct
 {
-	char* nombreArchivo;
+	char nombreArchivo[100];
 	uint32_t puntero; //apunta al archivo
 	uint32_t tamanioArchivo;
 }t_entradaTAAP;
 
 typedef struct
 {
-	char* nombreArchivo;
+	char nombreArchivo[100];
 	t_entradaTAAP* puntero; // apunta a la entrada tabla por procesos
 	uint32_t tamanioArchivo;
 	t_list *lista_block_archivo;

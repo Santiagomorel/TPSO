@@ -1,3 +1,4 @@
 F_OPEN Archivo
-F_OPEN Archivo
+F_SEEK Archivo 5
+F_CLOSE Archivo
 EXIT
