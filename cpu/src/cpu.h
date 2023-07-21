@@ -23,6 +23,7 @@ int socket_cpu;
 int socket_kernel;
 
 
+
 void load_config(void);
 void leer_consola(t_log*);
 void paquete(int);
@@ -111,7 +112,7 @@ void escribir_valor(int physical_address, char* register_value_mov_out, int pid,
 void enviar_paquete_con_string_entero(int client_socket, char* parameter, char* x, int codOP);
 void enviar_paquete_con_string_2_enteros(int client_socket, char* parameter, int x, char* y, int codOP);
 void enviar_paquete_con_dos_enteros(int client_socket, char* x, char* y, int codOP);
-void enviar_ce_con_string_3_enteros(int client_socket, contexto_ejecucion* ce, char* parameter, char* x, char* y, int z ,int codOP);
+void enviar_ce_con_string_3_enteros(int client_socket, contexto_ejecucion* ce, char* parameter, int x, char* y, int z ,int codOP);
 
 int read_int(char* buffer, int* desp);
 

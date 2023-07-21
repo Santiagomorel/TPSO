@@ -516,7 +516,7 @@ int abrir_archivo(char* f_name)
   
   
   fclose(archivo_fcb);
-  log_trace(logger_filesystem, "aca estoy despues del f_close");
+  log_trace(logger_filesystem, "aca estoy despues del fclose de fopen");
   return 0;
   }
 }
@@ -640,7 +640,7 @@ void truncar_archivo(char *f_name, uint32_t new_size)
     }
   }
 
-  char* path; // 46 viene de los caracteres de: ./fs/fcb/f_name.config
+  char path [100]; // 46 viene de los caracteres de: ./fs/fcb/f_name.config
   strcpy(path, PATH_FCB);
   strcat(path, "/");
   strcat(path, f_name);

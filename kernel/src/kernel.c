@@ -1518,11 +1518,9 @@ return list_is_empty(entradaGlobal->lista_block_archivo) == 0;
 // ----------------------- Funciones ACTUALIZAR_PUNTERO ----------------------- //
 void atender_actualizar_puntero(){
     log_error(kernel_logger,"entro");
-    t_ce_string_entero* estructura_actualizacion = recibir_ce_string_entero(cpu_dispatch_connection);
-    log_error(kernel_logger,"recibo joya");
-
-    log_error(kernel_logger,"nombre archivo recibido: %s",estructura_actualizacion->string);
-    log_error(kernel_logger,"el entero es:%d",estructura_actualizacion->entero);
+    t_ce_string_entero* estructura_actualizacion = malloc(sizeof(t_ce_string_entero));
+    
+    estructura_actualizacion = recibir_ce_string_entero(cpu_dispatch_connection);
 
     int posicion = estructura_actualizacion->entero;
     
@@ -1561,13 +1559,14 @@ liberar_ce_string_entero(estructura_actualizacion);
 void atender_lectura_archivo(){
 
     bloquear_FS();
-
+    log_error(kernel_logger,"por entrar a recibir ce string 3 enteros");
     t_ce_string_3enteros* estructura_leer_archivo= recibir_ce_string_3enteros(cpu_dispatch_connection);
-
+    log_error(kernel_logger,"el nombre es :%s",estructura_leer_archivo->string);
     contexto_ejecucion* ce_a_updatear = estructura_leer_archivo->ce;
 
-    char* nombre_archivo = estructura_leer_archivo->string;
-    
+    char nombre_archivo[100];
+    strcpy(nombre_archivo,estructura_leer_archivo->string);
+
     int offset = estructura_leer_archivo ->entero1;
 
     int bytes_a_leer = estructura_leer_archivo->entero2;
@@ -1594,7 +1593,7 @@ void atender_lectura_archivo(){
 
     thread_args_read* argumentos = malloc(sizeof(thread_args_read));
     argumentos->pcb = pcb_lectura;
-    argumentos->nombre = nombre_archivo;
+    strcpy(argumentos->nombre,nombre_archivo);
     argumentos->puntero = puntero_archivo;
     argumentos->bytes = bytes_a_leer;
     argumentos->offset = offset;
@@ -1610,13 +1609,14 @@ void atender_lectura_archivo(){
    void rutina_read(thread_args_read* args)
 {
     t_pcb* pcb = args->pcb;
-    char* nombre = args->nombre;
+    char nombre [100];
+    strcpy(nombre,args->nombre);
     int puntero = args->puntero;
     int bytes = args->bytes;
     int offset = args->offset;
     
     enviar_string_4enteros(file_system_connection, nombre, pcb->id, puntero,bytes, offset, F_READ);
-    
+    log_error(kernel_logger,"Envio fread a fs");
     int cod_op = recibir_operacion(file_system_connection);
 
     pthread_mutex_lock(&m_listaBloqueados);
@@ -1642,7 +1642,8 @@ void atender_escritura_archivo(){
 
     contexto_ejecucion* ce_a_updatear = estructura_escribir_archivo->ce;
 
-    char* nombre_archivo = estructura_escribir_archivo->string;
+    char nombre_archivo[100];
+    strcpy(nombre_archivo,estructura_escribir_archivo->string);
     
     int puntero_archivo = estructura_escribir_archivo->entero1;
 

@@ -843,10 +843,10 @@ t_ce_string_entero* recibir_ce_string_entero(int socket)
 
 	nuevo_ce_string_entero->ce = nuevoCe;
 
-	 
-
 	nuevo_ce_string_entero->entero = leer_entero(buffer, &desp);
 	nuevo_ce_string_entero->string = leer_string(buffer, &desp);
+	
+
 
 
 	free(buffer);

@@ -243,7 +243,7 @@ void atender_actualizar_puntero();
 void atender_lectura_archivo();
 typedef struct{
     t_pcb* pcb;
-    char* nombre;
+    char nombre [100];
     int puntero;
     int bytes;
     int offset;

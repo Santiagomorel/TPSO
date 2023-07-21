@@ -294,8 +294,8 @@ char** decode(char* linea){ // separarSegunEspacios
 }
 
 /*-------------------- EXECUTE ---------------------- */
-int sale_proceso = 0;
 t_segmento* segmento;
+int sale_proceso = 0;
 int offset = 0;
 int direccion_logica;
 int direccion_fisica;
@@ -408,7 +408,6 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s- %s", ce->id, instruction[0], instruction[1], instruction[2]);
 
             enviar_ce_con_string_entero(socket_kernel, ce, instruction[1], instruction[2], ACTUALIZAR_PUNTERO);
-
             //desalojo_por_archivo = 1;
             sale_proceso = 1;
 
@@ -417,9 +416,14 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
         case I_F_READ:
             log_trace(cpu_logger, "Por ejecutar instruccion F_READ");
             log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s - %s", ce->id, instruction[0], instruction[1], instruction[2], instruction[3]);
-            
+
+             
             direccion_logica = atoi(instruction[2]);
-            direccion_fisica = traducir_direccion_logica(direccion_logica, ce, instruction[3]);
+    
+            direccion_fisica = traducir_direccion_logica(direccion_logica, ce, atoi(instruction[3]));
+
+            log_trace(cpu_logger, "ya traduje a dir fisica y es :%d",direccion_fisica);
+            
             
             enviar_ce_con_string_3_enteros(socket_kernel, ce, instruction[1], direccion_fisica, instruction[3], offset, LEER_ARCHIVO);
 
@@ -623,7 +627,6 @@ void enviar_ce_con_string(int client_socket, contexto_ejecucion* ce, char* param
     
 }
 
-
 void enviar_ce_con_dos_enteros(int client_socket, contexto_ejecucion* ce, char* x, char* y, int codOP){
     t_paquete* paquete = crear_paquete_op_code(codOP);
 
@@ -648,7 +651,9 @@ void enviar_ce_con_string_entero(int client_socket, contexto_ejecucion* ce, char
     t_paquete* paquete = crear_paquete_op_code(codOP);
 
     agregar_ce_a_paquete(paquete, ce, cpu_logger);
+    log_error(cpu_logger,"el nombre del archivo es %s",parameter);
     agregar_string_a_paquete(paquete, parameter); 
+    log_error(cpu_logger,"el entero del archivo es %s", x);
     agregar_entero_a_paquete(paquete, atoi(x));
     enviar_paquete(paquete, client_socket);
     eliminar_paquete(paquete);
@@ -677,12 +682,12 @@ void enviar_ce_con_string_2_enteros(int client_socket, contexto_ejecucion* ce, c
     eliminar_paquete(paquete);
     
 }
-void enviar_ce_con_string_3_enteros(int client_socket, contexto_ejecucion* ce, char* parameter, char* x, char* y, int z, int codOP){
+void enviar_ce_con_string_3_enteros(int client_socket, contexto_ejecucion* ce, char* parameter, int x, char* y, int z, int codOP){
     t_paquete* paquete = crear_paquete_op_code(codOP);
 
     agregar_ce_a_paquete(paquete, ce, cpu_logger);
     agregar_string_a_paquete(paquete, parameter); 
-    agregar_entero_a_paquete(paquete, atoi(x));
+    agregar_entero_a_paquete(paquete, x);
     agregar_entero_a_paquete(paquete, atoi(y));
     agregar_entero_a_paquete(paquete, z);
     enviar_paquete(paquete, client_socket);
@@ -749,26 +754,39 @@ int traducir_direccion_logica(int logical_address, contexto_ejecucion* ce, int v
     int num_segmento = (int) floor(logical_address / atoi(cpu_config.tam_max_segmento));
     int desplazamiento_segmento = logical_address % atoi(cpu_config.tam_max_segmento);
 
+   
     offset = desplazamiento_segmento;
+    log_error(cpu_logger,"desplazamiento segmento:%d",desplazamiento_segmento);
+
 
     t_list* segment_table_ce = ce->tabla_segmentos;
+
+    log_trace(cpu_logger, "tamanio segment table es :%d",list_size(segment_table_ce));
     
     t_segmento* segment = list_get(segment_table_ce, num_segmento);
-    
-    segmento->id_segmento = num_segmento;
+
+    log_trace(cpu_logger, "el id del segmento es :%d",segment->id_segmento);
+    log_trace(cpu_logger, "la direccion base del segmento es :%d",segment->direccion_base);
+    log_trace(cpu_logger, "el tamanio es :%d",segment->tamanio_segmento);
+
+    /*segmento->id_segmento = num_segmento;
+    log_trace(cpu_logger, "el id del segmento es :%d",segmento->id_segmento);
     segmento->tamanio_segmento = segment ->tamanio_segmento;
-    segmento->direccion_base = segment->direccion_base + desplazamiento_segmento;
+    segmento->direccion_base = desplazamiento_segmento + segment->direccion_base ;*/
 
+    log_error(cpu_logger,"el calculo da: %d",desplazamiento_segmento+valor_a_sumar);
     if(desplazamiento_segmento + valor_a_sumar >= segment-> tamanio_segmento ){
-
+        log_trace(cpu_logger, "entre en el if de segfault");
         desplazamiento_segfault = desplazamiento_segmento;
+        log_trace(cpu_logger, "despues de desplazamiento segfault: %d",desplazamiento_segfault);
         id_segmento_con_segfault = segmento->id_segmento;
+        log_trace(cpu_logger, "despues de segmento.idSegmento: %d",segmento->id_segmento);
         tamanio_segfault = segmento->tamanio_segmento;   /* Esta linea y la anterior es porque hay que imprimir cual fue el 
                                                             segmento que falló */
 
         sigsegv = 1;
     }
-   
+    log_trace(cpu_logger, "entre en el return de segfault");
       return (segment->direccion_base + desplazamiento_segmento);
 }
 
