@@ -259,6 +259,12 @@ typedef struct{
 	int entero1;
 	int entero2;
 	int entero3;
+} t_string_3enteros;
+typedef struct{
+	char* string;
+	int entero1;
+	int entero2;
+	int entero3;
 	int entero4;
 } t_string_4enteros;
 
@@ -359,6 +365,7 @@ t_ce_string_3enteros * recibir_ce_string_3enteros(int socket);
 void enviar_3_enteros(int client_socket, int x, int y, int z, int codOP);
 t_ce_string_2enteros* recibir_ce_string_2enteros(int);
 t_3_enteros * recibir_3_enteros(int);
+t_string_3enteros* recibir_string_3enteros(int);
 t_string_4enteros* recibir_string_4enteros(int);
 recive_mov_out * recibir_mov_out(int);
 void liberar_ce_2enteros(t_ce_2enteros*);
