@@ -1542,14 +1542,19 @@ void atender_actualizar_puntero(){
     log_error(kernel_logger,"el tamanio de la lista es %d",list_size(listaFiltrada));
 
     t_entradaTAAP* entradaProceso = list_get(listaFiltrada,0);
-    
-    entradaProceso->puntero = posicion;
 
+    log_error(kernel_logger,"consegui posicion inicial %u",entradaProceso->puntero);
+    log_error(kernel_logger,"consegui entrada %s",entradaProceso->nombreArchivo);
+    log_error(kernel_logger,"consegui posicion 2da %d",posicion);
     
-    //contexto_ejecucion* contextoAEnviar = obtener_ce(pcb_en_ejecucion);
-    //enviar_ce(cpu_dispatch_connection,contextoAEnviar,EJECUTAR_CE,kernel_logger);
+    entradaProceso->puntero = (uint32_t) posicion;
+
+    log_error(kernel_logger,"consegui posicion %u",entradaProceso->puntero);
+    
+    contexto_ejecucion* contextoAEnviar = obtener_ce(pcb_en_ejecucion);
+    enviar_ce(cpu_dispatch_connection,contextoAEnviar,EJECUTAR_CE,kernel_logger);
     //falta liberar algo?
-    log_trace(kernel_logger, "PID: <%s> - Actualizar puntero Archivo: <%s> - Puntero <%s>",pcb_en_ejecucion->id,entradaProceso->nombreArchivo,entradaProceso->puntero);
+    log_trace(kernel_logger, "PID: <%d> - Actualizar puntero Archivo: <%s> - Puntero <%u>",pcb_en_ejecucion->id,entradaProceso->nombreArchivo,entradaProceso->puntero);
 
 liberar_ce_string_entero(estructura_actualizacion);
     
@@ -1613,7 +1618,7 @@ void atender_lectura_archivo(){
     int puntero = args->puntero;
     int bytes = args->bytes;
     int offset = args->offset;
-    
+
     enviar_string_4enteros(file_system_connection, nombre, pcb->id, puntero,bytes, offset, F_READ);
     log_error(kernel_logger,"Envio fread a fs");
     int cod_op = recibir_operacion(file_system_connection);
@@ -1637,16 +1642,17 @@ void atender_escritura_archivo(){
 
     bloquear_FS();
 
-    t_ce_string_2enteros* estructura_escribir_archivo= recibir_ce_string_2enteros(cpu_dispatch_connection);
+    t_ce_string_3enteros* estructura_escribir_archivo= recibir_ce_string_3enteros(cpu_dispatch_connection);
 
     contexto_ejecucion* ce_a_updatear = estructura_escribir_archivo->ce;
 
     char nombre_archivo[100];
     strcpy(nombre_archivo,estructura_escribir_archivo->string);
-    
-    int puntero_archivo = estructura_escribir_archivo->entero1;
 
+    int offset = estructura_escribir_archivo->entero1;
     int bytes_a_leer = estructura_escribir_archivo->entero2;
+    int puntero_archivo = estructura_escribir_archivo->entero3;
+
         
     pthread_mutex_lock(&m_listaEjecutando);
         t_pcb * pcb_escritura = (t_pcb *) list_get(listaEjecutando, 0);
@@ -1665,9 +1671,10 @@ void atender_escritura_archivo(){
 
     thread_args_write* argumentos = malloc(sizeof(thread_args_write));
     argumentos->pcb = pcb_escritura;
-    argumentos->nombre = nombre_archivo;
+    strcpy(argumentos->nombre,nombre_archivo);
     argumentos->puntero = puntero_archivo;
     argumentos->bytes = bytes_a_leer;
+    argumentos->offset = offset;
 
     pthread_create(&hiloWrite, NULL, (void*) rutina_write, (void*) (thread_args_write*) argumentos);
     pthread_detach(hiloWrite);
@@ -1681,13 +1688,17 @@ void atender_escritura_archivo(){
 void rutina_write(thread_args_write* args)
 {
     t_pcb* pcb = args->pcb;
-    char* nombre = args->nombre;
+    char nombre [100];
+    strcpy(nombre,args->nombre);
     int puntero = args->puntero;
     int bytes = args->bytes;
+    int offset = args->offset;
     
-    enviar_string_3enteros(file_system_connection, nombre, pcb->id, puntero,bytes, F_WRITE);
+    enviar_string_4enteros(file_system_connection, nombre, pcb->id, puntero,bytes,offset, F_WRITE);
     
     int cod_op = recibir_operacion(file_system_connection);
+
+    log_warning(kernel_logger,"recibi CODOP %d",cod_op);
 
     pthread_mutex_lock(&m_listaBloqueados);
         list_remove_element(listaBloqueados, pcb);

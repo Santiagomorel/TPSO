@@ -437,13 +437,15 @@ void procesar_conexion()
 
             int cod_op = recibir_operacion(socket_memoria);
             log_trace(logger_filesystem, "recibimos operacion de memoria");
-            enviar_CodOp(cliente_socket, cod_op); 
+            enviar_CodOp(cliente_socket, cod_op); //CORREGIR CODOP PARA QUE KERNEL SIGA EJECUTANDO
             log_trace(logger_filesystem, "enviamos codigo ");
             //free(buffer_leido);
             free(stream_leido);
             break;
+            
         case F_WRITE:
             t_string_4enteros* estructura_string_4enteros_e = recibir_string_4enteros(cliente_socket);
+          
             log_trace(logger_filesystem, "archivo recibido con sus parametros");
             char* f_name2= estructura_string_4enteros_e->string;
             uint32_t pid2 = estructura_string_4enteros_e->entero4;
@@ -479,7 +481,7 @@ void procesar_conexion()
             log_trace(logger_filesystem, "aplicamos el F_WRITE");
             free(buffer_escritura);
             
-            enviar_CodOp(cliente_socket, OK);
+            enviar_CodOp(cliente_socket, OK); //CORREGIR CODOP PARA QUE KERNEL SIGA EJECUTANDO
             log_trace(logger_filesystem, "enviamos codigo de operacion a kernel");
             break;
         default:

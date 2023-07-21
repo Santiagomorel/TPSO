@@ -438,9 +438,9 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s - %s", ce->id, instruction[0], instruction[1], instruction[2], instruction[3]);
             
             direccion_logica = atoi(instruction[2]);
-            direccion_fisica = traducir_direccion_logica(direccion_logica, ce, instruction[3]);
+            direccion_fisica = traducir_direccion_logica(direccion_logica, ce, atoi(instruction[3]));
 
-            enviar_ce_con_string_2_enteros(socket_kernel, ce, instruction[1], direccion_fisica, instruction[3], ESCRIBIR_ARCHIVO); 
+            enviar_ce_con_string_3_enteros(socket_kernel, ce, instruction[1], direccion_fisica, instruction[3],offset, ESCRIBIR_ARCHIVO); 
 
             //desalojo_por_archivo = 1;
             sale_proceso = 1;
@@ -655,7 +655,7 @@ void enviar_ce_con_string_entero(int client_socket, contexto_ejecucion* ce, char
     log_error(cpu_logger,"el entero del archivo es %s", x);
     agregar_entero_a_paquete(paquete, atoi(x));
     log_error(cpu_logger,"el nombre del archivo es %s",parameter);
-    agregar_string_a_paquete(paquete, parameter); 
+    agregar_a_paquete(paquete, parameter,sizeof(parameter)+1); 
     enviar_paquete(paquete, client_socket);
     eliminar_paquete(paquete);
     
@@ -672,13 +672,13 @@ void enviar_paquete_con_string_entero(int client_socket, char* parameter, char* 
 }
 
 
-void enviar_ce_con_string_2_enteros(int client_socket, contexto_ejecucion* ce, char* parameter, char* x, char* y, int codOP){
+void enviar_ce_con_string_2_enteros(int client_socket, contexto_ejecucion* ce, char* parameter, int x, char* y, int codOP){
     t_paquete* paquete = crear_paquete_op_code(codOP);
 
     agregar_ce_a_paquete(paquete, ce, cpu_logger);
-    agregar_string_a_paquete(paquete, parameter); 
-    agregar_entero_a_paquete(paquete, atoi(x));
+    agregar_entero_a_paquete(paquete, x);
     agregar_entero_a_paquete(paquete, atoi(y));
+    agregar_a_paquete(paquete, parameter,sizeof(parameter) +1 ); 
     enviar_paquete(paquete, client_socket);
     eliminar_paquete(paquete);
     
@@ -687,10 +687,10 @@ void enviar_ce_con_string_3_enteros(int client_socket, contexto_ejecucion* ce, c
     t_paquete* paquete = crear_paquete_op_code(codOP);
 
     agregar_ce_a_paquete(paquete, ce, cpu_logger);
-    agregar_string_a_paquete(paquete, parameter); 
     agregar_entero_a_paquete(paquete, x);
     agregar_entero_a_paquete(paquete, atoi(y));
     agregar_entero_a_paquete(paquete, z);
+    agregar_a_paquete(paquete, parameter,sizeof(parameter)+1); 
     enviar_paquete(paquete, client_socket);
     eliminar_paquete(paquete);
     

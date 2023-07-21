@@ -53,7 +53,7 @@ void enviar_ce_con_string(int client_socket, contexto_ejecucion* ce, char* param
 void enviar_ce_con_string_entero(int client_socket, contexto_ejecucion* ce, char* parameter, char* x, int codOP);
 void enviar_ce_con_dos_enteros(int client_socket, contexto_ejecucion* ce, char* x, char* y, int codOP);
 void enviar_ce_con_entero(int client_socket, contexto_ejecucion* ce, char* parameter, int codOP);
-void enviar_ce_con_string_2_enteros(int client_socket, contexto_ejecucion* ce, char* parameter, char* x, char* y, int codOP);
+void enviar_ce_con_string_2_enteros(int client_socket, contexto_ejecucion* ce, char* parameter, int x, char* y, int codOP);
 
 /*------------------- INSTRUCCIONES --------------------*/
 

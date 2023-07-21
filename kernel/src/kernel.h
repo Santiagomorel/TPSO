@@ -255,9 +255,10 @@ void rutina_read(thread_args_read*);
 void atender_escritura_archivo();
 typedef struct{
     t_pcb* pcb;
-    char* nombre;
+    char nombre [100]; 
     int puntero;
     int bytes;
+    int offset;
 }thread_args_write;
 
 void rutina_write(thread_args_write*);
