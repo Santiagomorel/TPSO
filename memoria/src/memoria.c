@@ -233,21 +233,19 @@ void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM)
 
             break;
 
-        case MOV_IN: //se va a llamar distinto seguro
+        case F_READ: //se va a llamar distinto seguro
 
-        t_3_enteros* movin = recibir_3_enteros(SOCKET_CLIENTE_FILESYSTEM);
-        log_info(log_memoria, "PID: %d - Accion: LEER - Direccion física: %d - Tamaño: %d - Origen: FS",movin->entero1, movin->entero2,movin->entero3);
-        mov_in(SOCKET_CLIENTE_FILESYSTEM, movin->entero2, movin->entero3);
-            //FALTAN COSAS
+        t_string_3enteros* f_read = recibir_string_3enteros(SOCKET_CLIENTE_FILESYSTEM);
+        log_info(log_memoria, "PID: %d - Accion: ESCRIBIR - Direccion física: %d - Tamaño: %d - Origen: FS",f_read->entero1, f_read->entero2, f_read->entero3);
+        ocuparBitMap(f_read->entero2, f_read->entero3);
+        ocuparMemoria(f_read->string, f_read->entero2, f_read->entero3);
             break;
         
-        case MOV_OUT: //se va a llamar distinto seguro
-        recive_mov_out* data_mov_out = recibir_mov_out(SOCKET_CLIENTE_FILESYSTEM);
-            //void * registro = (void*)recibir_string(SOCKET_CLIENTE_CPU, log_memoria);
-        void* registro = (void*) data_mov_out->registro;
-        log_trace(log_memoria,"PID: %d - Acción: ESCRIBIR - Dirección física: %d - Tamaño: %d - Origen: FS", data_mov_out->PID, data_mov_out->DF, data_mov_out->size); 
-            
-            //FALTAN COSAS
+        case F_WRITE:
+        t_3_enteros* f_write = recibir_3_enteros(SOCKET_CLIENTE_FILESYSTEM);
+
+        log_trace(log_memoria,"PID: %d - Acción: LEER - Dirección física: %d - Tamaño: %d - Origen: FS", f_write->entero1, f_write->entero2, f_write->entero3);
+        f_Write();//igual al movin hasta donde se
             break;
 
         case -1:
@@ -417,6 +415,11 @@ void mov_in(int socket_cliente,int direc_fisica, int size/*sizeof(t_registro)*/)
     //ocuparMemoria(registro, direc_logica, size);
     //ocuparBitMap(direc_logica, size);
 }
+
+//
+// FS
+//
+void f_Write(int socket_cliente)
 
 
 

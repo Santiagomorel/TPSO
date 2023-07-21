@@ -1,4 +1,2 @@
-F_OPEN Archivo
-F_SEEK Archivo 5
-F_CLOSE Archivo
+CREATE_SEGMENT 1 128
 EXIT
