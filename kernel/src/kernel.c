@@ -1523,12 +1523,11 @@ void atender_actualizar_puntero(){
     estructura_actualizacion = recibir_ce_string_entero(cpu_dispatch_connection);
 
     int posicion = estructura_actualizacion->entero;
-    
-    char nombreArchivo [100];
-    strcpy(nombreArchivo,estructura_actualizacion->string);
-    
+    char* nombreArchivo = estructura_actualizacion->string;
+         
     log_error(kernel_logger,"el nombre del archivo es %s",nombreArchivo);
-
+    log_error(kernel_logger,"el entero del paquete es %d",posicion);
+    imprimir_ce(estructura_actualizacion->ce, kernel_logger);
     contexto_ejecucion* contextoDeEjecucion=estructura_actualizacion->ce;
 
     pthread_mutex_lock(&m_listaEjecutando);

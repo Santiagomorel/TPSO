@@ -407,6 +407,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             log_trace(cpu_logger, "Por ejecutar instruccion F_SEEK");
             log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s- %s", ce->id, instruction[0], instruction[1], instruction[2]);
 
+ 
             enviar_ce_con_string_entero(socket_kernel, ce, instruction[1], instruction[2], ACTUALIZAR_PUNTERO);
             //desalojo_por_archivo = 1;
             sale_proceso = 1;
@@ -651,10 +652,10 @@ void enviar_ce_con_string_entero(int client_socket, contexto_ejecucion* ce, char
     t_paquete* paquete = crear_paquete_op_code(codOP);
 
     agregar_ce_a_paquete(paquete, ce, cpu_logger);
-    log_error(cpu_logger,"el nombre del archivo es %s",parameter);
-    agregar_string_a_paquete(paquete, parameter); 
     log_error(cpu_logger,"el entero del archivo es %s", x);
     agregar_entero_a_paquete(paquete, atoi(x));
+    log_error(cpu_logger,"el nombre del archivo es %s",parameter);
+    agregar_string_a_paquete(paquete, parameter); 
     enviar_paquete(paquete, client_socket);
     eliminar_paquete(paquete);
     
