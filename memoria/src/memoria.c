@@ -121,8 +121,7 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
                 t_list* segmentosDisponibles = buscarSegmentosDisponibles();
 
                 if(list_is_empty(segmentosDisponibles)){
-                    log_trace(log_memoria, "envio solicitud de compactacion");//borrar
-                    enviar_CodOp(SOCKET_CLIENTE_KERNEL, NECESITO_COMPACTAR);
+                   enviar_CodOp(SOCKET_CLIENTE_KERNEL, NECESITO_COMPACTAR);
                 }
                 else{
                 //busco un espacio segun el algoritmo de ordenamiento
@@ -132,7 +131,6 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
                 list_add(proceso_con_nuevo_segmento->tabla_segmentos, segmento_nuevo);
                 log_warning(log_memoria,"Creación de Segmento: PID: %d - Crear Segmento: %d - Base: %d - TAMAÑO: %d", id_proceso, id_segmento_nuevo, segmento_nuevo->direccion_base, segmento_nuevo->tamanio_segmento);
                 //list_add(proceso_con_nuevo_segmento->tabla_segmentos, segmento_nuevo);
-                ocuparBitMap(segmento_nuevo->direccion_base, segmento_nuevo->tamanio_segmento);
                 enviar_paquete_entero(SOCKET_CLIENTE_KERNEL, segmento_nuevo->direccion_base, OK);
                 }
             }
@@ -233,19 +231,21 @@ void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM)
 
             break;
 
-        case F_READ: //se va a llamar distinto seguro
+        case MOV_IN: //se va a llamar distinto seguro
 
-        t_string_3enteros* f_read = recibir_string_3enteros(SOCKET_CLIENTE_FILESYSTEM);
-        log_info(log_memoria, "PID: %d - Accion: ESCRIBIR - Direccion física: %d - Tamaño: %d - Origen: FS",f_read->entero1, f_read->entero2, f_read->entero3);
-        ocuparBitMap(f_read->entero2, f_read->entero3);
-        ocuparMemoria(f_read->string, f_read->entero2, f_read->entero3);
+        t_3_enteros* movin = recibir_3_enteros(SOCKET_CLIENTE_FILESYSTEM);
+        log_info(log_memoria, "PID: %d - Accion: LEER - Direccion física: %d - Tamaño: %d - Origen: FS",movin->entero1, movin->entero2,movin->entero3);
+        mov_in(SOCKET_CLIENTE_FILESYSTEM, movin->entero2, movin->entero3);
+            //FALTAN COSAS
             break;
         
-        case F_WRITE:
-        t_3_enteros* f_write = recibir_3_enteros(SOCKET_CLIENTE_FILESYSTEM);
-
-        log_trace(log_memoria,"PID: %d - Acción: LEER - Dirección física: %d - Tamaño: %d - Origen: FS", f_write->entero1, f_write->entero2, f_write->entero3);
-        f_Write();//igual al movin hasta donde se
+        case MOV_OUT: //se va a llamar distinto seguro
+        recive_mov_out* data_mov_out = recibir_mov_out(SOCKET_CLIENTE_FILESYSTEM);
+            //void * registro = (void*)recibir_string(SOCKET_CLIENTE_CPU, log_memoria);
+        void* registro = (void*) data_mov_out->registro;
+        log_trace(log_memoria,"PID: %d - Acción: ESCRIBIR - Dirección física: %d - Tamaño: %d - Origen: FS", data_mov_out->PID, data_mov_out->DF, data_mov_out->size); 
+            
+            //FALTAN COSAS
             break;
 
         case -1:
@@ -279,13 +279,10 @@ t_proceso* crear_proceso_en_memoria(int id_proceso){
 
 void generar_tabla_segmentos(t_proceso* proceso){
 	t_list* nuevaTabla = list_create();
-    agregar_segmento_0(nuevaTabla);
-    proceso->tabla_segmentos = nuevaTabla;
-}
+	t_segmento* nuevoElemento = crear_segmento(0,0,memoria_config.tam_segmento_0);
 
-void agregar_segmento_0(t_list* nueva_tabla_segmentos){
-    
-    list_add(nueva_tabla_segmentos, segmento_compartido);
+    list_add(nuevaTabla, nuevoElemento);
+    proceso->tabla_segmentos = nuevaTabla;
 }
 
 
@@ -416,11 +413,6 @@ void mov_in(int socket_cliente,int direc_fisica, int size/*sizeof(t_registro)*/)
     //ocuparBitMap(direc_logica, size);
 }
 
-//
-// FS
-//
-void f_Write(int socket_cliente)
-
 
 
 //
@@ -456,13 +448,7 @@ int iniciarSegmentacion(void)
 
     bitMapSegment = bitarray_create_with_mode(datos, tamanio, MSB_FIRST);
 
-    iniciar_segmento_0();
-
     return 1; // SI FALLA DEVUELVE 0
-}
-void iniciar_segmento_0(){
-    segmento_compartido = crear_segmento(0,0,memoria_config.tam_segmento_0);
-    ocuparBitMap(0, memoria_config.tam_segmento_0);
 }
 
 int puedoGuardar(int quieroGuardar)
@@ -472,7 +458,6 @@ int puedoGuardar(int quieroGuardar)
     log_info(log_memoria, "Hay %d espacio libre, quiero guardar %d", tamanioLibre, quieroGuardar);
     if (quieroGuardar <= tamanioLibre)
     {
-        log_trace(log_memoria, "puedo guardar");//borrar
         return 1;
     }
     else
@@ -545,17 +530,14 @@ t_segmento* buscarSegmentoSegunTamanio(int size){
     todosLosSegLibres =  buscarSegmentosDisponibles(); //PONE TODOS LOS SEGMENTOS VACIOS EN UNA LISTA 
 
     t_list* segmentosCandidatos;
-    segmentosCandidatos = puedenGuardar(todosLosSegLibres , size); //ME DEVUELVE LOS SEGMENTOS QUE EL TIENEN ESPACIO NECESARIO PARA GUARDAR
-    log_warning(log_memoria,"Hay %d segmentos candidatos", list_size(segmentosCandidatos));//borrar
+    segmentosCandidatos = puedenGuardar( todosLosSegLibres , size); //ME DEVUELVE LOS SEGMENTOS QUE EL TIENEN ESPACIO NECESARIO PARA GUARDAR
+    //log_info(logger,"Hay %d segmentos candidatos", list_size(segmentosCandidatos));
     if(list_is_empty(segmentosCandidatos)){
         log_error(log_memoria,"No se ha compactado correctamente");
         
     }else if(list_size(segmentosCandidatos)== 1){
-        log_warning(log_memoria, "entro aca");
         segmento = list_get(segmentosCandidatos, 0);
-        segmento->tamanio_segmento = size;
     }else{
-        log_trace(log_memoria, "se elige criterio");//borrar
         segmento = elegirSegCriterio(segmentosCandidatos, size); //SI EN LA LISTA HAY MAS DE UN SEGMENTO VA A ELEGIR EN QUE SEGMENTO LO VA A GUARDAR SEGUN EL CRITERIO
         
 
@@ -571,7 +553,7 @@ t_segmento* buscarSegmentoSegunTamanio(int size){
 	//list_destroy(segmentosCandidatos);
 	eliminarLista(todosLosSegLibres);
 	list_destroy(segmentosCandidatos);
-    log_warning(log_memoria, "tamanio del segmento = %d", segmento->tamanio_segmento);
+    
     return segmento;
 }
 
@@ -584,13 +566,11 @@ t_list* buscarSegmentosDisponibles(){
     //YA SABEMOS QUE HAY LUGAR, SINO NO HUBIESE     
     
     while(base < (memoria_config.tam_memoria)){
-        log_trace(log_memoria, "encontro un espacio");
         t_segmento* unSegmento = buscarUnLugarLibre(&base);
         list_add(segmentos,unSegmento);
     }
 
-    return segmentos;
-    free(segmentos);
+    return segmentos;    
 }
 
 t_segmento* buscarUnLugarLibre(int* base){
@@ -634,8 +614,8 @@ t_list* puedenGuardar(t_list* segmentos, int size){
     int puedoGuardarSeg(t_segmento* segmento){
         return(segmento->tamanio_segmento >= size);
     }
-    aux = list_filter(segmentos, (void*)puedoGuardarSeg);
-    log_error(log_memoria,"tamaño de la lista aux = %d", list_size(aux));
+    aux= list_filter(segmentos, (void*)puedoGuardarSeg);
+
     return aux;
 }
 

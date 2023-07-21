@@ -259,12 +259,6 @@ typedef struct{
 	int entero1;
 	int entero2;
 	int entero3;
-} t_string_3enteros;
-typedef struct{
-	char* string;
-	int entero1;
-	int entero2;
-	int entero3;
 	int entero4;
 } t_string_4enteros;
 
@@ -346,6 +340,7 @@ t_list* leer_tabla_segmentos(char*, int*);
 t_segmento* crear_segmento(int, int, int);
 
 void enviar_string_entero(int,char*,int,int codOP);
+void enviar_string_enterov2(int,char*,int,int codOP);
 void agregar_tabla_segmentos_a_paquete(t_paquete*, t_list*);
 
 t_ce_2enteros * recibir_ce_2enteros(int);
@@ -354,6 +349,7 @@ t_ce_string* recibir_ce_string(int);
 t_ce_string_entero* recibir_ce_string_entero(int);
 void enviar_2_enteros(int client_socket, int x, int y, int codOP);
 t_string_entero* recibir_string_entero(int);
+t_string_entero* recibir_string_enterov2(int);
 t_2_enteros * recibir_2_enteros(int);
 void enviar_3enteros(int client, int x, int y, int z, int codOP);
 void enviar_string_2enteros(int, char*, int, int, int);
@@ -363,7 +359,6 @@ t_ce_string_3enteros * recibir_ce_string_3enteros(int socket);
 void enviar_3_enteros(int client_socket, int x, int y, int z, int codOP);
 t_ce_string_2enteros* recibir_ce_string_2enteros(int);
 t_3_enteros * recibir_3_enteros(int);
-t_string_3enteros* recibir_string_3enteros(int);
 t_string_4enteros* recibir_string_4enteros(int);
 recive_mov_out * recibir_mov_out(int);
 void liberar_ce_2enteros(t_ce_2enteros*);

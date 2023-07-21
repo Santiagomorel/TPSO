@@ -661,9 +661,10 @@ void enviar_ce_con_string_entero(int client_socket, contexto_ejecucion* ce, char
     t_paquete* paquete = crear_paquete_op_code(codOP);
 
     agregar_ce_a_paquete(paquete, ce, cpu_logger);
-    log_error(cpu_logger,"el entero del archivo es %s", x);
+          log_error(cpu_logger,"el entero del archivo es %s", x);
+        log_error(cpu_logger,"el entero del archivo es %s", parameter);
     agregar_entero_a_paquete(paquete, atoi(x));
-    log_error(cpu_logger,"el nombre del archivo es %s",parameter);
+
     agregar_a_paquete(paquete, parameter,sizeof(parameter)+1); 
     enviar_paquete(paquete, client_socket);
     eliminar_paquete(paquete);
