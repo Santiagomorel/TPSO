@@ -270,7 +270,7 @@ void desbloquear_FS();
 //Declaraciones MODIFICAR_TAMANIO_ARCHIVO
 typedef struct{
     t_pcb* pcb;
-    char nombre [100];
+    char* nombre;
     int tamanio;
 }thread_args_truncate;
 

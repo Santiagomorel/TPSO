@@ -1,4 +1,5 @@
 F_OPEN Archivo
+F_WRITE Archivo 16 4
 F_READ Archivo 16 4
 F_CLOSE Archivo
 CREATE_SEGMENT 1 128

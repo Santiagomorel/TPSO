@@ -768,7 +768,6 @@ void manejar_dispatch()
 
             case MODIFICAR_TAMAÑO_ARCHIVO:
                 atender_modificar_tamanio_archivo();
-                log_trace(kernel_logger, "Ya atendi truncar");
                 break;
 
             case -1:
@@ -1622,7 +1621,6 @@ void atender_lectura_archivo(){
 
     enviar_string_4enteros(file_system_connection, nombre, pcb->id, puntero,bytes, offset, F_READ);
     log_error(kernel_logger,"Envio fread a fs");
-
     int cod_op = recibir_operacion(file_system_connection);
 
     pthread_mutex_lock(&m_listaBloqueados);
@@ -1695,8 +1693,6 @@ void rutina_write(thread_args_write* args)
     int puntero = args->puntero;
     int bytes = args->bytes;
     int offset = args->offset;
-
-      log_error(kernel_logger,"el nombre en rutina es :%s",nombre);
     
     enviar_string_4enteros(file_system_connection, nombre, pcb->id, puntero,bytes,offset, F_WRITE);
     
@@ -1735,12 +1731,9 @@ void atender_modificar_tamanio_archivo(){
 
     contexto_ejecucion* contexto_mod_tam_arch = estructura_mod_tam_archivo->ce;
 
-    char nombre_archivo[100];
-    strcpy(nombre_archivo,estructura_mod_tam_archivo->string);
-
-    log_error(kernel_logger,"el nombre es :%s",nombre_archivo);
+    char* nombre_archivo = estructura_mod_tam_archivo->string;
+    
     int tamanio_archivo = estructura_mod_tam_archivo->entero;
-    log_error(kernel_logger,"el tamanio es :%d",tamanio_archivo);
         
     pthread_mutex_lock(&m_listaEjecutando);
         t_pcb * pcb_mod_tam_arch = (t_pcb *) list_get(listaEjecutando, 0);
@@ -1759,11 +1752,8 @@ void atender_modificar_tamanio_archivo(){
 
     thread_args_truncate* argumentos = malloc(sizeof(thread_args_truncate));
     argumentos->pcb = pcb_mod_tam_arch;
-    strcpy(argumentos->nombre,nombre_archivo);
+    argumentos->nombre = nombre_archivo;
     argumentos->tamanio = tamanio_archivo;
-
-    log_error(kernel_logger,"el nombre en argumentos es :%s",argumentos->nombre);
-    log_error(kernel_logger,"el tamanio en argumentos es :%d",argumentos->tamanio);
 
     pthread_create(&hiloTruncate, NULL, (void*) rutina_truncate, (void*) (thread_args*) argumentos);
     pthread_detach(hiloTruncate);
@@ -1776,13 +1766,10 @@ void atender_modificar_tamanio_archivo(){
 void rutina_truncate(thread_args_truncate* args)
 {
     t_pcb* pcb = args->pcb;
-    char nombre[100];
-    strcpy(nombre,args->nombre);
+    char* nombre = args->nombre;
     int tamanio = args->tamanio;
-
-    log_error(kernel_logger,"el nombre en rutina es :%s",nombre);
     
-    enviar_string_enterov2(file_system_connection, nombre, tamanio, F_TRUNCATE);
+    enviar_string_entero(file_system_connection, nombre, tamanio, F_TRUNCATE);
     
     int cod_op = recibir_operacion(file_system_connection);
 
