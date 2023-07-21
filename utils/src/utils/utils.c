@@ -893,6 +893,7 @@ void enviar_string_3enteros(int client, char* string, int x, int y, int z, int c
     agregar_entero_a_paquete(paquete, x); 
     agregar_entero_a_paquete(paquete, y); 
 	agregar_entero_a_paquete(paquete, z); 
+ 
 	printf("se esta por enviar: %d , %d , %d ,%s.",x,y,z,string);
     enviar_paquete(paquete, client);
     eliminar_paquete(paquete);
@@ -953,7 +954,7 @@ t_string_4enteros* recibir_string_4enteros(int socket)
 	return nuevo_string_4enteros;
 }
 
-t_string_entero* recibir_string_entero(int)
+t_string_entero* recibir_string_entero(int socket)
 {
 	t_string_entero* nuevo_string_2enteros = malloc(sizeof(t_string_entero));
 	int size = 0;
@@ -965,6 +966,23 @@ t_string_entero* recibir_string_entero(int)
 	nuevo_string_2enteros->string = leer_string(buffer, &desp);
 
 	nuevo_string_2enteros->entero1 = leer_entero(buffer, &desp);
+
+	free(buffer);
+	return nuevo_string_2enteros;
+}
+
+t_string_entero* recibir_string_enterov2(int socket)
+{
+	t_string_entero* nuevo_string_2enteros = malloc(sizeof(t_string_entero));
+	int size = 0;
+	char *buffer;
+	int desp = 0;
+
+	buffer = recibir_buffer(&size, socket);
+	nuevo_string_2enteros->string = leer_string(buffer, &desp);
+	nuevo_string_2enteros->entero1 = leer_entero(buffer, &desp);
+
+
 
 	free(buffer);
 	return nuevo_string_2enteros;
@@ -1123,6 +1141,15 @@ t_proceso* recibir_t_proceso(char* buffer, int* desp)
 void enviar_string_entero(int client_socket, char* parameter, int x, int codOP){
     t_paquete* paquete = crear_paquete_op_code(codOP);
     agregar_string_a_paquete(paquete, parameter); 
+    agregar_entero_a_paquete(paquete,x);
+    enviar_paquete(paquete, client_socket);
+    eliminar_paquete(paquete);
+    
+}
+
+void enviar_string_enterov2(int client_socket, char* parameter, int x, int codOP){
+    t_paquete* paquete = crear_paquete_op_code(codOP); 
+		agregar_a_paquete(paquete, parameter,sizeof(parameter)+1); 
     agregar_entero_a_paquete(paquete,x);
     enviar_paquete(paquete, client_socket);
     eliminar_paquete(paquete);
