@@ -425,13 +425,17 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
 
             log_trace(cpu_logger, "ya traduje a dir fisica y es :%d",direccion_fisica);
             
-            
+            if(sigsegv){
+                //PID: <PID> - Error SEG_FAULT- Segmento: <NUMERO SEGMENTO> -Offset: <OFFSET> - Tamaño: <TAMAÑO>”
+                enviar_ce(socket_kernel, ce, SEG_FAULT, cpu_logger);
+                sigsegv = 0;
+            }else{
             enviar_ce_con_string_3_enteros(socket_kernel, ce, instruction[1], direccion_fisica, instruction[3], offset, LEER_ARCHIVO);
 
             //desalojo_por_archivo = 1;
 
             sale_proceso = 1;
-
+            }
             break;
         case I_F_WRITE:
             log_trace(cpu_logger, "Por ejecutar instruccion F_WRITE");
@@ -440,8 +444,13 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             direccion_logica = atoi(instruction[2]);
             direccion_fisica = traducir_direccion_logica(direccion_logica, ce, atoi(instruction[3]));
 
+            if(sigsegv){
+                //PID: <PID> - Error SEG_FAULT- Segmento: <NUMERO SEGMENTO> -Offset: <OFFSET> - Tamaño: <TAMAÑO>”
+                enviar_ce(socket_kernel, ce, SEG_FAULT, cpu_logger);
+                sigsegv = 0;
+            }else{
             enviar_ce_con_string_3_enteros(socket_kernel, ce, instruction[1], direccion_fisica, instruction[3],offset, ESCRIBIR_ARCHIVO); 
-
+            }
             //desalojo_por_archivo = 1;
             sale_proceso = 1;
 
@@ -499,6 +508,10 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
                 log_info(cpu_logger, "PID: %d - Acción: LEER - Segmento: %d - Dirección Fisica: %d",
                         ce->id, segmento->id_segmento, direccion_fisica);
                     log_info(cpu_logger,"YA GUARDE VALOR EN REGISTRO!!");
+            }else{
+                //“PID: <PID> - Error SEG_FAULT- Segmento: <NUMERO SEGMENTO> - Offset: <OFFSET> - Tamaño: <TAMAÑO>”
+                enviar_ce(socket_kernel, ce, SEG_FAULT, cpu_logger);
+                sigsegv = 0;
             }
 
             break;
@@ -522,20 +535,16 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
                 int code_op = recibir_operacion(conexion_cpu); // Si ta todo ok prosigo, si no ta todo ok que hago?
 
                 if(code_op == MOV_OUT_OK) {  
-                    log_info(cpu_logger,"Todo OK Prosiga");
-                    
-                    int size = 0;
-                    int desp = 0;
-
-                    void * buffer = recibir_buffer(&size, conexion_cpu);
-
-                    log_info(cpu_logger, "Leo buffer: %d", leer_entero(buffer, &desp));
                     log_info(cpu_logger, "PID: %d - Acción: ESCRIBIR - Segmento: %d -  Dirección Fisica: %d", ce->id, segmento->id_segmento, direccion_fisica);
                 }
                 else {
                     log_error(conexion_cpu, "CODIGO DE OPERACION INVALIDO");
                 }
 
+            }else{
+                //“PID: <PID> - Error SEG_FAULT- Segmento: <NUMERO SEGMENTO> - Offset: <OFFSET> - Tamaño: <TAMAÑO>”
+                enviar_ce(socket_kernel, ce, SEG_FAULT, cpu_logger);
+                sigsegv = 0;
             }
             break;
 
@@ -804,16 +813,12 @@ char* fetch_value_in_memory(int physical_adress, contexto_ejecucion* ce, int siz
     log_info(cpu_logger, "MOV IN enviado");    
 
     int code_op = recibir_operacion(conexion_cpu);
+    char* value_received = recibir_string(conexion_cpu, cpu_logger);
     log_info(cpu_logger, "CODIGO OPERACION RECIBIDO EN CPU: %d", code_op);
     
-
-    char* value_received;    
-    int sizeb = 0, desp = 0;
-
     if(code_op == MOV_IN_OK) {  
         log_info(cpu_logger,"ENTRE CARAJO");
-        void* buffer = recibir_buffer(&sizeb, conexion_cpu);
-        value_received = leer_string(buffer, &desp); //AVERIGUAR BIEN ESTO
+
         log_info(conexion_cpu, "EL VALOR DEL REGISTRO RECIBIDO ES: %d", value_received);
     } else {
         log_error(conexion_cpu, "CODIGO DE OPERACION INVALIDO");
