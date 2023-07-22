@@ -929,6 +929,25 @@ t_string_2enteros* recibir_string_2enteros(int)
 	free(buffer);
 	return nuevo_string_2enteros;
 }
+t_string_3enteros* recibir_string_3enteros(int socket){
+	t_string_3enteros* nuevo_string_3enteros = malloc(sizeof(t_string_3enteros));
+	int size = 0;
+	char *buffer;
+	int desp = 0;
+
+	buffer = recibir_buffer(&size, socket);
+
+	nuevo_string_3enteros->string = leer_string(buffer, &desp);
+
+	nuevo_string_3enteros->entero1 = leer_entero(buffer, &desp);
+
+	nuevo_string_3enteros->entero2 = leer_entero(buffer, &desp);
+
+	nuevo_string_3enteros->entero3 = leer_entero(buffer, &desp);
+
+	free(buffer);
+	return nuevo_string_3enteros;
+}
 
 t_string_4enteros* recibir_string_4enteros(int socket)
 {

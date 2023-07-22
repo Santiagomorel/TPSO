@@ -92,8 +92,8 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
 {
 
     enviar_mensaje("recibido kernel", SOCKET_CLIENTE_KERNEL);
-
-    while (1)
+    //int cliente_socket = SOCKET_CLIENTE_KERNEL;
+    while (SOCKET_CLIENTE_KERNEL != -1)
     {
         int codigoOperacion = recibir_operacion(SOCKET_CLIENTE_KERNEL);
         switch (codigoOperacion)
@@ -159,15 +159,13 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
              break;
 
         // se desconecta kernel
-        case -1:
-            log_warning(log_memoria, "se desconecto kernel");
-            sem_post(&finModulo);
-            break;
         default:
-            // log_trace(log_memoria, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
+            log_trace(log_memoria, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
             break;
         }
     }
+    log_warning(log_memoria, "se desconecto kernel");
+    sem_post(&finModulo);
 }
 //CPU
 void recibir_cpu(int SOCKET_CLIENTE_CPU)
@@ -175,10 +173,10 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU)
 
     enviar_mensaje("recibido cpu", SOCKET_CLIENTE_CPU);
     log_trace(log_memoria, "recibido cpu");
-    while (1)
+    while (SOCKET_CLIENTE_CPU != -1)
     {
         int codigoOperacion = recibir_operacion(SOCKET_CLIENTE_CPU);
-        sleep(memoria_config.retardo_memoria);
+        //sleep(memoria_config.retardo_memoria);
         switch (codigoOperacion)
         {
         case MENSAJE:
@@ -205,25 +203,23 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU)
 
             //falta chequear que el tipo que se pide para los size este bien
             enviar_CodOp(SOCKET_CLIENTE_CPU, MOV_OUT_OK);
-        
-        case -1:
-            log_warning(log_memoria, "se desconecto CPU");
-        break;
         default:
             // log_trace(log_memoria, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
             break;
         }
     }
+    log_warning(log_memoria, "se desconecto CPU");
 }
 //FILESYSTEM
 void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM)
 {
 
     enviar_mensaje("recibido fileSystem", SOCKET_CLIENTE_FILESYSTEM);
-    while (1)
+    while (SOCKET_CLIENTE_FILESYSTEM != -1)
     {
         int codigoOperacion = recibir_operacion(SOCKET_CLIENTE_FILESYSTEM);
-        sleep(memoria_config.retardo_memoria);
+        //sleep(memoria_config.retardo_memoria);
+        log_warning(log_memoria, "llegue a fs");
         switch (codigoOperacion)
         {
         case MENSAJE:
@@ -231,31 +227,27 @@ void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM)
 
             break;
 
-        case MOV_IN: //se va a llamar distinto seguro
-
-        t_3_enteros* movin = recibir_3_enteros(SOCKET_CLIENTE_FILESYSTEM);
-        log_info(log_memoria, "PID: %d - Accion: LEER - Direccion física: %d - Tamaño: %d - Origen: FS",movin->entero1, movin->entero2,movin->entero3);
-        mov_in(SOCKET_CLIENTE_FILESYSTEM, movin->entero2, movin->entero3);
-            //FALTAN COSAS
+        case F_READ:
+        log_warning(log_memoria, "entre al fread");
+        t_string_3enteros* fRead = recibir_string_3enteros(SOCKET_CLIENTE_FILESYSTEM);
+        log_info(log_memoria, "el stream recibido es %d", fRead->string);
+        log_info(log_memoria, "PID: %d - Accion: ESCRIBIR - Direccion física: %d - Tamaño: %d - Origen: FS",fRead->entero1, fRead->entero2,fRead->entero3);
+        
             break;
         
-        case MOV_OUT: //se va a llamar distinto seguro
-        recive_mov_out* data_mov_out = recibir_mov_out(SOCKET_CLIENTE_FILESYSTEM);
-            //void * registro = (void*)recibir_string(SOCKET_CLIENTE_CPU, log_memoria);
-        void* registro = (void*) data_mov_out->registro;
-        log_trace(log_memoria,"PID: %d - Acción: ESCRIBIR - Dirección física: %d - Tamaño: %d - Origen: FS", data_mov_out->PID, data_mov_out->DF, data_mov_out->size); 
-            
+        case F_WRITE:
+        log_warning(log_memoria, "Entre al fwrite");
+        t_3_enteros* fWrite = recibir_3_enteros(SOCKET_CLIENTE_FILESYSTEM);
+        log_trace(log_memoria,"PID: %d - Acción: LEER - Dirección física: %d - Tamaño: %d - Origen: FS", fWrite->entero1, fWrite->entero2, fWrite->entero3); 
+        enviar_CodOp(SOCKET_CLIENTE_FILESYSTEM, F_WRITE_OK);
             //FALTAN COSAS
-            break;
-
-        case -1:
-                log_warning(log_memoria, "se desconecto FILESYSTEM");
             break;
         default:
             log_trace(log_memoria, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
             break;
         }
     }
+    log_warning(log_memoria, "se desconecto FILESYSTEM");
 }
 
 /* LOGS NECESAIROS Y OBLIGATORIOS
