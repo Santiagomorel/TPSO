@@ -316,18 +316,18 @@ void establecer_conexion(t_log* logger){
   
 	
 	if((socket_memoria = crear_conexion(IP_MEMORIA, PUERTO_MEMORIA)) == -1){
-    log_trace(logger_filesystem, "Entre al if de establecer conexion");
+
 		log_error(logger, "Error al conectar con Memoria. El servidor no esta activo");
         free(socket_memoria);
 		exit(-1);
 	}else{
     log_trace(logger_filesystem, "Entre al else de establecer conexion");
 		//handshake_cliente(conexion_cpu);
-		enviar_mensaje(IP_MEMORIA, socket_memoria);
-	}
-
     recibir_operacion(socket_memoria);
     recibir_mensaje(socket_memoria, logger_filesystem);
+    
+	}
+
 
 
 }

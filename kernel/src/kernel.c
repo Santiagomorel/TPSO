@@ -759,11 +759,14 @@ void manejar_dispatch()
                 break;
 
             case LEER_ARCHIVO:
+                log_trace(kernel_logger, "Ya por fread");
                 atender_lectura_archivo();
+                log_trace(kernel_logger, "Ya atendi fread");
                 break;
             
             case ESCRIBIR_ARCHIVO:
                 atender_escritura_archivo();
+                log_trace(kernel_logger, "Ya atendi fwrite");
                 break;
 
             case MODIFICAR_TAMAÑO_ARCHIVO:
@@ -1702,7 +1705,7 @@ void rutina_write(thread_args_write* args)
     
     int cod_op = recibir_operacion(file_system_connection);
 
-    log_warning(kernel_logger,"recibi CODOP %d",cod_op);
+    log_warning(kernel_logger,"recibi CODOP de fwrite %d",cod_op);
 
     pthread_mutex_lock(&m_listaBloqueados);
         list_remove_element(listaBloqueados, pcb);
