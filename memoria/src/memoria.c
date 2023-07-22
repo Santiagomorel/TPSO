@@ -93,7 +93,8 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
 
     enviar_mensaje("recibido kernel", SOCKET_CLIENTE_KERNEL);
     //int cliente_socket = SOCKET_CLIENTE_KERNEL;
-    while (SOCKET_CLIENTE_KERNEL != -1)
+    int codigoOP = 0;
+    while (codigoOP != -1)
     {
         int codigoOperacion = recibir_operacion(SOCKET_CLIENTE_KERNEL);
         switch (codigoOperacion)
@@ -158,6 +159,9 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
              compactacion2();
              break;
 
+        case -1:
+            codigoOP = codigoOperacion;
+            break;
         // se desconecta kernel
         default:
             log_trace(log_memoria, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
@@ -173,7 +177,8 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU)
 
     enviar_mensaje("recibido cpu", SOCKET_CLIENTE_CPU);
     log_trace(log_memoria, "recibido cpu");
-    while (SOCKET_CLIENTE_CPU != -1)
+    int codigoOP = 0;
+    while (codigoOP != -1)
     {
         int codigoOperacion = recibir_operacion(SOCKET_CLIENTE_CPU);
         //sleep(memoria_config.retardo_memoria);
@@ -203,6 +208,11 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU)
 
             //falta chequear que el tipo que se pide para los size este bien
             enviar_CodOp(SOCKET_CLIENTE_CPU, MOV_OUT_OK);
+
+            break;
+        case -1:
+        codigoOP = codigoOperacion;
+        break;
         default:
             // log_trace(log_memoria, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
             break;
@@ -215,7 +225,8 @@ void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM)
 {
 
     enviar_mensaje("recibido fileSystem", SOCKET_CLIENTE_FILESYSTEM);
-    while (SOCKET_CLIENTE_FILESYSTEM != -1)
+    int codigoOP = 0;
+    while (codigoOP != -1)
     {
         int codigoOperacion = recibir_operacion(SOCKET_CLIENTE_FILESYSTEM);
         //sleep(memoria_config.retardo_memoria);
@@ -241,7 +252,12 @@ void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM)
         log_trace(log_memoria,"PID: %d - Acción: LEER - Dirección física: %d - Tamaño: %d - Origen: FS", fWrite->entero1, fWrite->entero2, fWrite->entero3); 
         enviar_CodOp(SOCKET_CLIENTE_FILESYSTEM, F_WRITE_OK);
             //FALTAN COSAS
-            break;
+        break;
+
+        case -1:
+        codigoOP = codigoOperacion;
+        break;
+
         default:
             log_trace(log_memoria, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
             break;
