@@ -375,6 +375,8 @@ void liberar_ce_entero(t_ce_entero*);
 void liberar_ce_string(t_ce_string*);
 void liberar_ce_string_entero(t_ce_string_entero*);
 void liberar_ce_string_2enteros(t_ce_string_2enteros*);
+void liberar_ce_string_3enteros(t_ce_string_3enteros*);
+
 void enviar_todas_tablas_segmentos(int, t_list*, int, t_log*);
 t_list* recibir_todas_tablas_segmentos(int);
 t_proceso* recibir_t_proceso(char*, int*);
