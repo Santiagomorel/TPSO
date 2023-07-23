@@ -408,15 +408,11 @@ t_proceso* borrar_segmento(int PID,int id_segmento_elim){
 //  CPU
 //
 
-void mov_in(int socket_cliente,int direc_fisica, int size/*sizeof(t_registro)*/){
+void mov_in(int socket_cliente,int direc_fisica, int size){
     //para guido: antes de enviar la direccion fisica, castearla a void* si es q no esta hecha
     char* registro;
     memcpy(registro, MEMORIA_PRINCIPAL+direc_fisica ,size);
-    t_paquete* paquete_ok = crear_paquete_op_code(MOV_IN_OK);
-    agregar_string_a_paquete(paquete_ok, registro);
-    enviar_paquete(paquete_ok ,socket_cliente);
-
-    eliminar_paquete(paquete_ok);
+    enviar_paquete_string(socket_cliente,registro,MOV_IN_OK,strlen(registro)+1);
     //ocuparMemoria(registro, direc_logica, size);
     //ocuparBitMap(direc_logica, size);
 }
