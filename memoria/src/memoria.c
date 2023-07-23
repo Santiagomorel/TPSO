@@ -120,9 +120,17 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
 
             if(puedoGuardar(tamanio)==1){
                 t_list* segmentosDisponibles = buscarSegmentosDisponibles();
+                log_warning(log_memoria, "segmentos disponibles = %d", list_size(segmentosDisponibles));
+                
 
-                if(list_is_empty(segmentosDisponibles)){
-                   enviar_CodOp(SOCKET_CLIENTE_KERNEL, NECESITO_COMPACTAR);
+                bool menorTamanio(t_segmento* unSegmento){
+                    return (unSegmento->tamanio_segmento < tamanio);
+                }
+                t_list* segmentosDisponibles2 = list_filter(segmentosDisponibles, menorTamanio);
+                log_info(log_memoria, "la cantidad de segmentos disponibles de menor tamaño al tamanio del segmento es %d", list_size(segmentosDisponibles2));
+                if(list_is_empty(segmentosDisponibles2)==0){//chequear que los espacios son de menor tamaño que el tamanio del segmento
+                    log_warning(log_memoria, "necesito compactar");
+                    enviar_CodOp(SOCKET_CLIENTE_KERNEL, NECESITO_COMPACTAR);
                 }
                 else{
                 //busco un espacio segun el algoritmo de ordenamiento
@@ -157,9 +165,10 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
 
 
          case COMPACTAR:
-             sleep(memoria_config.retardo_compactacion);
+             //sleep(memoria_config.retardo_compactacion);
              log_warning(log_memoria, "Solicitud de Compactación");
              compactacion2();
+             enviar_CodOp(SOCKET_CLIENTE_KERNEL,OK);
              break;
 
         case -1:
@@ -184,7 +193,7 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU)
     while (codigoOP != -1)
     {
         int codigoOperacion = recibir_operacion(SOCKET_CLIENTE_CPU);
-        //sleep(memoria_config.retardo_memoria);
+        sleep(memoria_config.retardo_memoria);
         switch (codigoOperacion)
         {
         case MENSAJE:
@@ -232,7 +241,7 @@ void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM)
     while (codigoOP != -1)
     {
         int codigoOperacion = recibir_operacion(SOCKET_CLIENTE_FILESYSTEM);
-        //sleep(memoria_config.retardo_memoria);
+        sleep(memoria_config.retardo_memoria);
         log_warning(log_memoria, "llegue a fs");
         switch (codigoOperacion)
         {
@@ -659,6 +668,8 @@ t_segmento* elegirSegCriterio(t_list* segmentos, int size){
     
     log_info(log_memoria,"Elijo segun %s", memoria_config.algoritmo_asignacion);
     
+    imprimir_tabla_segmentos(segmentos, log_memoria);
+
     if(strcmp(memoria_config.algoritmo_asignacion,"FIRST") == 0){//NO ENTRA LA CONCHA DE SU MADRE
         segmento = list_get(segmentos,0); //FIRST FIT DEVUELVE EL PRIMER SEGMENTO DONDE PUEDE GUARDARSE
     }else if(strcmp(memoria_config.algoritmo_asignacion,"BEST") == 0){
@@ -668,29 +679,37 @@ t_segmento* elegirSegCriterio(t_list* segmentos, int size){
         segmento = segmentoWorstFit(segmentos, size);
     }
 
+    if(segmento->tamanio_segmento>size){
+        segmento->tamanio_segmento=size;
+    }
+
     return segmento;
 }
 
 t_segmento* segmentoBestFit(t_list* segmentos, int size){
 
     t_segmento* segmento;
-
+    log_warning(log_memoria, "llega el size: %d", size);//borrar
     int igualTamanio(t_segmento* segmento){
         return(segmento -> tamanio_segmento == size); //SEGMENTO QUE TENGA EL MISMO TAMANIO QUE LO QUE QUIERO GUARDAR
     }
     t_segmento* segmentoDeIgualTamanio = list_find(segmentos, (void*)igualTamanio); //ME DEVUELVE EL SEGMENTO DE MISMO TAMANIO
 
     if(segmentoDeIgualTamanio != NULL){
-        segmento = segmentoDeIgualTamanio; 
+        segmento = segmentoDeIgualTamanio;
+        log_trace(log_memoria, "hay igual tamaño"); //borrar
     }else{      //SI NO ENCONTRE UN SEGMENTO DEL MISMO TAMANIO
+        log_error(log_memoria, "no hay igual tamaño, busco menor"); //borrar
         segmento = list_get_minimum(segmentos, (void*)segmentoMenorTamanio); //ME DEVUELVE EL SEGMENTO DE MENOR TAMANIO DONDE ENTRE LO QUE QUIERO GUARDAR
     }
+
+    
     return segmento;
 }
 
 t_segmento* segmentoMenorTamanio(t_segmento* segmento, t_segmento* otroSegmento){ //TODO aca estaban sin asterisco
 
-    if(segmento->tamanio_segmento < otroSegmento->tamanio_segmento){
+    if(segmento->tamanio_segmento <= otroSegmento->tamanio_segmento){
         return segmento;
     }else
         return otroSegmento; 
@@ -712,12 +731,11 @@ t_segmento* segmentoWorstFit(t_list* segmentos, int size){
 //Compactacion
 void compactacion2(){
     int base_aux=MEMORIA_PRINCIPAL;
+    log_trace(log_memoria, "entre en compactacion2");
     //libero todo el bitmap
-    liberarBitMap(MEMORIA_PRINCIPAL, memoria_config.tam_memoria);
+    liberarBitMap(0, memoria_config.tam_memoria);
     //De todos los procesos
-
-    
-    for (int i = 0; i < list_size(tabla_de_procesos)-1; i++)
+    for (int i = 0; i < list_size(tabla_de_procesos); i++)
     {
         t_proceso* unProceso = list_get(tabla_de_procesos, i);
         //las tablas de segmentos
@@ -732,7 +750,7 @@ void compactacion2(){
         }
         
     }
-    ocuparBitMap(MEMORIA_PRINCIPAL, base_aux-1);// les resto 1 por el ultimo +1 de la iteracion del for
+    ocuparBitMap(0, base_aux-1);// les resto 1 por el ultimo +1 de la iteracion del for
 
 }
 
@@ -911,7 +929,7 @@ void ocuparBitMap(int base, int size)
 
 void liberarBitMap(int base, int size)
 {
-
+    log_warning(log_memoria, "entre en liberarBitmap");
     pthread_mutex_lock(&mutexBitMapSegment);
     for (int i = 0; i < size; i++)
     {
