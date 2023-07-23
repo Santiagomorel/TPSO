@@ -451,7 +451,9 @@ void agregar_lista_ready_con_log(t_list* listaready,t_pcb* pcb_a_encolar,char* a
 t_pcb* actualizar_pcb_lget_devuelve_pcb(contexto_ejecucion* contexto_actualiza, t_list* lista_del_pcb, pthread_mutex_t sem)
 {
     pthread_mutex_lock(&sem);
+    log_warning(kernel_logger,"tamanio de lista: %d",list_size(lista_del_pcb));
         t_pcb * pcb_a_actualizar = (t_pcb *) list_get(lista_del_pcb, 0);
+        
         actualizar_pcb(pcb_a_actualizar, contexto_actualiza);
     pthread_mutex_unlock(&sem);
 
@@ -1173,11 +1175,11 @@ void atender_crear_segmento()
 
         case OK:
             int base_segmento = recibir_entero(memory_connection, kernel_logger);
-            
+            log_warning(kernel_logger,"recibi base segmento %d",base_segmento);
             t_segmento *nuevoElemento = crear_segmento(id_segmento, base_segmento, tamanio_segmento);
-            
-            t_pcb* pcb_crea_segmento = actualizar_pcb_lget_devuelve_pcb(contexto_crea_segmento, listaBloqueados, m_listaEjecutando);
-            
+            log_warning(kernel_logger,"despues de crear segmento");
+            t_pcb* pcb_crea_segmento = actualizar_pcb_lget_devuelve_pcb(contexto_crea_segmento, listaEjecutando, m_listaEjecutando);
+            log_warning(kernel_logger,"pcb crea segmento");
             list_add(pcb_crea_segmento->tabla_segmentos, nuevoElemento);
             
             contexto_ejecucion* nuevo_contexto_crea_segmento = obtener_ce(pcb_crea_segmento);
