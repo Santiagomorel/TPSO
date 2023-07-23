@@ -340,6 +340,8 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             //end_process = 1; // saca del while de ejecucion
             sale_proceso = 1;
 
+            exit(1);
+
             break;
 
         case I_WAIT:

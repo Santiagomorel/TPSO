@@ -452,10 +452,10 @@ t_pcb* actualizar_pcb_lget_devuelve_pcb(contexto_ejecucion* contexto_actualiza, 
 {
     pthread_mutex_lock(&sem);
         t_pcb * pcb_a_actualizar = (t_pcb *) list_get(lista_del_pcb, 0);
-        actualizar_pcb(pcb_a_finalizar, contexto_actualiza);
+        actualizar_pcb(pcb_a_actualizar, contexto_actualiza);
     pthread_mutex_unlock(&sem);
 
-    return pcb_a_actualizar
+    return pcb_a_actualizar;
 } // probar que funcione
 
 // ----------------------- Funciones planificador to - ready ----------------------- //
