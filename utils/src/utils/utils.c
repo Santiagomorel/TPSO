@@ -142,10 +142,9 @@ int crear_conexion(char *ip, char *puerto)
 	int socket_cliente = socket(server_info->ai_family, server_info->ai_socktype, server_info->ai_protocol);
 	// printf("\nel valor de retorno del socket cliente cuando se genera en crear_conexion es %d \n", socket_cliente);
 
+	
 	if (connect(socket_cliente, server_info->ai_addr, server_info->ai_addrlen) == -1)
 	{
-		log
-		free(socket_cliente);
 		return -1;
 	}
 
