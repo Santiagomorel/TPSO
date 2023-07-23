@@ -323,6 +323,7 @@ int leer_entero(char *buffer, int *desplazamiento) // Lee un entero en base a un
 	int ret;
 	memcpy(&ret, buffer + (*desplazamiento), sizeof(int)); // copia dentro de ret lo que tiene el buffer con un size de int
 	(*desplazamiento) += sizeof(int);
+		printf("allocating / copying entero %d \n", ret);
 	return ret;
 }
 
@@ -345,12 +346,12 @@ float leer_float(char *buffer, int *desplazamiento) // Lee un float en base a un
 char* leer_string(char *buffer, int *desplazamiento) // Lee un string en base a un buffer y un desplazamiento, ambos se pasan por referencia
 {
 	int tamanio = leer_entero(buffer, desplazamiento);
-	//printf("allocating / copying %d \n", tamanio);
+	//printf("allocating / copying string %d \n", tamanio);
 
 	char *valor = malloc(tamanio);
 	memcpy(valor, buffer + (*desplazamiento), tamanio);
 	(*desplazamiento) += tamanio;
-
+	printf("allocating / copying string %s \n", valor);
 	return valor;
 }
 
@@ -826,7 +827,7 @@ t_ce_string* recibir_ce_string(int socket)
 	return nuevo_ce_string;
 }
 
-t_ce_string_entero* recibir_ce_string_entero(int)
+t_ce_string_entero* recibir_ce_string_entero(int socket)
 {
 	t_ce_string_entero* nuevo_ce_string_entero = malloc(sizeof(t_ce_string_entero));
 	contexto_ejecucion *nuevoCe = malloc(sizeof(contexto_ejecucion));
@@ -844,9 +845,11 @@ t_ce_string_entero* recibir_ce_string_entero(int)
 
 	nuevo_ce_string_entero->ce = nuevoCe;
 
-	nuevo_ce_string_entero->string = leer_string(buffer, &desp);
-
 	nuevo_ce_string_entero->entero = leer_entero(buffer, &desp);
+	nuevo_ce_string_entero->string = leer_string(buffer, &desp);
+	
+
+
 
 	free(buffer);
 	return nuevo_ce_string_entero;
@@ -891,18 +894,20 @@ void enviar_string_3enteros(int client, char* string, int x, int y, int z, int c
     agregar_entero_a_paquete(paquete, x); 
     agregar_entero_a_paquete(paquete, y); 
 	agregar_entero_a_paquete(paquete, z); 
+ 
+	printf("se esta por enviar: %d , %d , %d ,%s.",x,y,z,string);
     enviar_paquete(paquete, client);
     eliminar_paquete(paquete);
 }
 void enviar_string_4enteros(int client, char* string, int x, int y, int z, int j, int codOP)
 {
 	t_paquete* paquete = crear_paquete_op_code(codOP);
-
-	agregar_a_paquete(paquete, string, sizeof(string)+1); 
     agregar_entero_a_paquete(paquete, x); 
     agregar_entero_a_paquete(paquete, y); 
 	agregar_entero_a_paquete(paquete, z); 
 	agregar_entero_a_paquete(paquete, j);
+
+	agregar_a_paquete(paquete, string, sizeof(string) +1); 
     enviar_paquete(paquete, client);
     eliminar_paquete(paquete);
 }
@@ -925,8 +930,27 @@ t_string_2enteros* recibir_string_2enteros(int)
 	free(buffer);
 	return nuevo_string_2enteros;
 }
+t_string_3enteros* recibir_string_3enteros(int socket){
+	t_string_3enteros* nuevo_string_3enteros = malloc(sizeof(t_string_3enteros));
+	int size = 0;
+	char *buffer;
+	int desp = 0;
 
-t_string_4enteros* recibir_string_4enteros(int)
+	buffer = recibir_buffer(&size, socket);
+
+	nuevo_string_3enteros->string = leer_string(buffer, &desp);
+
+	nuevo_string_3enteros->entero1 = leer_entero(buffer, &desp);
+
+	nuevo_string_3enteros->entero2 = leer_entero(buffer, &desp);
+
+	nuevo_string_3enteros->entero3 = leer_entero(buffer, &desp);
+
+	free(buffer);
+	return nuevo_string_3enteros;
+}
+
+t_string_4enteros* recibir_string_4enteros(int socket)
 {
 	t_string_4enteros* nuevo_string_4enteros = malloc(sizeof(t_string_4enteros));
 	int size = 0;
@@ -935,7 +959,6 @@ t_string_4enteros* recibir_string_4enteros(int)
 
 	buffer = recibir_buffer(&size, socket);
 
-	nuevo_string_4enteros->string = leer_string(buffer, &desp);
 
 	nuevo_string_4enteros->entero1 = leer_entero(buffer, &desp);
 
@@ -945,11 +968,13 @@ t_string_4enteros* recibir_string_4enteros(int)
 
 	nuevo_string_4enteros->entero4 = leer_entero(buffer, &desp);
 
+	nuevo_string_4enteros->string = leer_string(buffer, &desp);
+
 	free(buffer);
 	return nuevo_string_4enteros;
 }
 
-t_string_entero* recibir_string_entero(int)
+t_string_entero* recibir_string_entero(int socket)
 {
 	t_string_entero* nuevo_string_2enteros = malloc(sizeof(t_string_entero));
 	int size = 0;
@@ -961,6 +986,23 @@ t_string_entero* recibir_string_entero(int)
 	nuevo_string_2enteros->string = leer_string(buffer, &desp);
 
 	nuevo_string_2enteros->entero1 = leer_entero(buffer, &desp);
+
+	free(buffer);
+	return nuevo_string_2enteros;
+}
+
+t_string_entero* recibir_string_enterov2(int socket)
+{
+	t_string_entero* nuevo_string_2enteros = malloc(sizeof(t_string_entero));
+	int size = 0;
+	char *buffer;
+	int desp = 0;
+
+	buffer = recibir_buffer(&size, socket);
+	nuevo_string_2enteros->string = leer_string(buffer, &desp);
+	nuevo_string_2enteros->entero1 = leer_entero(buffer, &desp);
+
+
 
 	free(buffer);
 	return nuevo_string_2enteros;
@@ -1064,6 +1106,14 @@ void liberar_ce_string_2enteros(t_ce_string_2enteros* ce_string_entero)
 	free(ce_string_entero); //esto no se si funciona OJO
 }
 
+void liberar_ce_string_3enteros(t_ce_string_3enteros* ce_string_entero)
+{
+	liberar_ce(ce_string_entero->ce);
+	free(ce_string_entero->string);
+	free(ce_string_entero); //esto no se si funciona OJO
+	
+}
+
 
 
 
@@ -1119,6 +1169,15 @@ t_proceso* recibir_t_proceso(char* buffer, int* desp)
 void enviar_string_entero(int client_socket, char* parameter, int x, int codOP){
     t_paquete* paquete = crear_paquete_op_code(codOP);
     agregar_string_a_paquete(paquete, parameter); 
+    agregar_entero_a_paquete(paquete,x);
+    enviar_paquete(paquete, client_socket);
+    eliminar_paquete(paquete);
+    
+}
+
+void enviar_string_enterov2(int client_socket, char* parameter, int x, int codOP){
+    t_paquete* paquete = crear_paquete_op_code(codOP); 
+		agregar_a_paquete(paquete, parameter,sizeof(parameter)+1); 
     agregar_entero_a_paquete(paquete,x);
     enviar_paquete(paquete, client_socket);
     eliminar_paquete(paquete);

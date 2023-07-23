@@ -33,14 +33,14 @@ typedef struct{
 
 typedef struct
 {
-	char* nombreArchivo;
+	char nombreArchivo[100];
 	uint32_t puntero; //apunta al archivo
 	uint32_t tamanioArchivo;
 }t_entradaTAAP;
 
 typedef struct
 {
-	char* nombreArchivo;
+	char nombreArchivo[100];
 	t_entradaTAAP* puntero; // apunta a la entrada tabla por procesos
 	uint32_t tamanioArchivo;
 	t_list *lista_block_archivo;
@@ -127,6 +127,7 @@ char* obtenerEstado(estados);
 int estadoActual(t_pcb*);
 void agregar_a_lista_con_sems(t_pcb*, t_list*, pthread_mutex_t);
 void agregar_lista_ready_con_log(t_list*, t_pcb*, char*);
+t_pcb* actualizar_pcb_lget_devuelve_pcb(contexto_ejecucion*, t_list*, pthread_mutex_t);
 
 
 // Declaraciones de planificador to - ready
@@ -223,6 +224,7 @@ void atender_apertura_archivo();
 char* obtener_nombre_archivo(t_entradaTGAA*);
 bool existeArchivo(char*);
 t_list* nombre_en_lista_coincide(t_list*, char* );
+t_list* nombre_en_lista_nombres_coincide(t_list* , char* );
 void crear_entrada_TAAP(char*,t_entradaTAAP*);
 void crear_entrada_TGAA(char*,t_entradaTAAP*);
 bool encontrar_nombre(char*);
@@ -242,7 +244,7 @@ void atender_actualizar_puntero();
 void atender_lectura_archivo();
 typedef struct{
     t_pcb* pcb;
-    char* nombre;
+    char nombre [100];
     int puntero;
     int bytes;
     int offset;
@@ -254,9 +256,10 @@ void rutina_read(thread_args_read*);
 void atender_escritura_archivo();
 typedef struct{
     t_pcb* pcb;
-    char* nombre;
+    char nombre [100]; 
     int puntero;
     int bytes;
+    int offset;
 }thread_args_write;
 
 void rutina_write(thread_args_write*);
@@ -268,7 +271,7 @@ void desbloquear_FS();
 //Declaraciones MODIFICAR_TAMANIO_ARCHIVO
 typedef struct{
     t_pcb* pcb;
-    char* nombre;
+    char nombre [100];
     int tamanio;
 }thread_args_truncate;
 
