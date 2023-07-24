@@ -1272,11 +1272,11 @@ t_pcb* pcb_en_lista_coincide(t_list* lista_pcbs, t_proceso* proceso_a_matchear)
 
 void eliminar_tabla_segmentos(t_list* tabla_segmentos)
 {
-    //for (int i = 0; i < list_size(tabla_segmentos); i++)
-    //{
-    //    free(list_get(tabla_segmentos, i));
-    //}
-    list_clean_and_destroy_elements(tabla_segmentos, (void*)free);
+    for (int i = 0; i < list_size(tabla_segmentos); i++)
+    {
+        free(list_get(tabla_segmentos, i));
+    }
+    
 }
 
 // ----------------------- Funciones BORRAR_SEGMENTO ----------------------- //
