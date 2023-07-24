@@ -1,32 +1,25 @@
 #include "memoria.h"
 
-t_config* config_memoria;
-t_log *logger_memoria;
-t_log *logger_memoria_extra;
-
-int socket_servidor_memoria;
-
-int PUERTO_ESCUCHA_MEMORIA;
-int TAM_MEMORIA;
-int TAM_SEGMENTO_0;
-int CANT_SEGMENTOS;
-int RETARDO_MEMORIA;
-int RETARDO_COMPACTACION;
-t_algo_asig ALGORITMO_ASIGNACION;
-
-void* ESPACIO_USUARIO;
-int ESPACIO_LIBRE_TOTAL;
-t_list* LISTA_ESPACIOS_LIBRES;
-t_list* LISTA_GLOBAL_SEGMENTOS;
-pthread_mutex_t mutex_memoria;
 
 int main(int argc, char **argv)
 {
 	if (argc > 1 && strcmp(argv[1], "-test") == 0)
 	{
-		levantar_config_memoria();
+		        
 		levantar_loggers_memoria();
+
+        config_memoria = init_config(argv[1]);
+
+    if (config_memoria == NULL)
+    {
+        perror("Ocurrió un error al intentar abrir el archivo config");
+        exit(1);
+    }
+        load_config();
+        
+        log_warning(logger_memoria, "Levanto config");
 		levantar_estructuras_administrativas();
+        log_warning(logger_memoria, "Levanto estructuras administrativas");
 		//run_tests();
 		return EXIT_SUCCESS;
 	}
@@ -34,17 +27,27 @@ int main(int argc, char **argv)
 	{
 		
 
-		levantar_config_memoria();
 		levantar_loggers_memoria();
-		levantar_estructuras_administrativas();
-		pthread_mutex_init(&mutex_memoria, NULL);
 
+          config_memoria = init_config(argv[1]);
+
+    if (config_memoria == NULL)
+    {
+        perror("Ocurrió un error al intentar abrir el archivo config");
+        exit(1);
+    }
+        load_config();
+		log_warning(logger_memoria, "Levanto config");
+		levantar_estructuras_administrativas();
+        log_warning(logger_memoria, "Levanto estructuras administrativas");
+		pthread_mutex_init(&mutex_memoria, NULL);
+        log_warning(logger_memoria, "Inicio mutex");
 
 
 		//*********************
 		// SERVIDOR
-	socket_servidor_memoria = iniciar_servidor(PUERTO_ESCUCHA_MEMORIA, logger_memoria);
-    log_trace(logger_memoria, "Servidor Memoria listo para recibir al cliente");
+	socket_servidor_memoria = iniciar_servidor(memoria_config.puerto_escucha, logger_memoria);
+    log_warning(logger_memoria, "Servidor Memoria listo para recibir al cliente");
 
     pthread_t atiende_cliente_CPU, atiende_cliente_FILESYSTEM, atiende_cliente_KERNEL;
 
@@ -71,29 +74,62 @@ int main(int argc, char **argv)
     return 0;
 	}
 }
+
+void load_config(void)
+{
+    memoria_config.puerto_escucha = config_get_string_value(config_memoria, "PUERTO_ESCUCHA");
+    memoria_config.tam_memoria = config_get_int_value(config_memoria, "TAM_MEMORIA");
+    ESPACIO_LIBRE_TOTAL = memoria_config.tam_memoria;
+    memoria_config.tam_segmento_0 = config_get_int_value(config_memoria, "TAM_SEGMENTO_0");
+    memoria_config.cant_segmentos = config_get_int_value(config_memoria, "CANT_SEGMENTOS");
+    memoria_config.retardo_memoria = config_get_int_value(config_memoria, "RETARDO_MEMORIA");
+    memoria_config.retardo_compactacion = config_get_int_value(config_memoria, "RETARDO_COMPACTACION");
+    memoria_config.algoritmo_asignacion = config_get_string_value(config_memoria, "ALGORITMO_ASIGNACION");
+
+    if (strcmp(memoria_config.algoritmo_asignacion, "FIRST") == 0)
+    {
+        ALGORITMO_ASIGNACION = FIRST;
+    } else if (strcmp(memoria_config.algoritmo_asignacion, "BEST") == 0)
+    {
+        ALGORITMO_ASIGNACION = BEST;
+        
+    } else if (strcmp(memoria_config.algoritmo_asignacion, "WORST") == 0)
+    {
+        ALGORITMO_ASIGNACION = WORST;
+    } else {
+        log_error(logger_memoria_extra, "ALGORITMO DE ASIGNACION DESCONOCIDO");
+    }
+
+}
+
 void end_program()
 {
+    config_destroy(config_memoria);
     log_destroy(logger_memoria);
     liberar_conexion(socket_servidor_memoria);
 
 }
 
 void devolver_tabla_inicial(int socket) {
-    int size = sizeof(t_segmento) * CANT_SEGMENTOS + sizeof(int);
+    int size = sizeof(t_segmento) * memoria_config.cant_segmentos + sizeof(int);
     void* buffer = malloc(size);
 
-    memcpy(buffer, &CANT_SEGMENTOS, sizeof(int));
+    memcpy(buffer, &memoria_config.cant_segmentos, sizeof(int));
 
     void* tabla = crear_tabla_segmentos();
 
-    memcpy(buffer + sizeof(int), tabla, sizeof(t_segmento) * CANT_SEGMENTOS);
+    memcpy(buffer + sizeof(int), tabla, sizeof(t_segmento) * memoria_config.cant_segmentos);
 
+    enviar_CodOp(socket, TABLA_SEGMENTOS);
     send(socket, buffer, size, NULL);
+
 
     free(buffer);
     free(tabla);
 
 }
+
+
 
 void devolver_resultado_creacion(int resultado, int socket, int base) {
     int tam_buffer = sizeof(int);
@@ -153,10 +189,15 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
         int codigoOperacion = recibir_operacion(SOCKET_CLIENTE_KERNEL);
         switch (codigoOperacion)
         {
+        case MENSAJE:
+         log_warning(logger_memoria, "recibi el op_cod %d MENSAJE , codigoOperacion", codigoOperacion);
+
+            break;
         case INICIAR_ESTRUCTURAS:
             pthread_mutex_lock(&mutex_memoria);
             int pid = recibir_entero(SOCKET_CLIENTE_KERNEL, logger_memoria);
             devolver_tabla_inicial(SOCKET_CLIENTE_KERNEL);
+            //enviar_tabla_segmentos(SOCKET_CLIENTE_KERNEL, TABLA_SEGMENTOS, nuevo_proceso);
             log_info(logger_memoria, "Creacion de Proceso PID: %d", pid);
             pthread_mutex_unlock(&mutex_memoria);
 
@@ -188,7 +229,7 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
                 list_add_sorted(LISTA_GLOBAL_SEGMENTOS, n_seg, comparador_base_segmento);
 
                 enviar_3enteros(SOCKET_CLIENTE_KERNEL, id_seg, n_base, tam_seg, OK);
-
+                
                 log_info(logger_memoria, "PID: %d - Crear Segmento: %d - Base: %d - TAMAÑO: %d", pid_create_segment, id_seg, n_base, tam_seg);
 
                 
@@ -247,6 +288,7 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
     log_warning(logger_memoria, "se desconecto kernel");
     sem_post(&finModulo);
 }
+
 //CPU
 void recibir_cpu(int SOCKET_CLIENTE_CPU)
 {
@@ -257,10 +299,11 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU)
     while (codigoOP != -1)
     {
         int codigoOperacion = recibir_operacion(SOCKET_CLIENTE_CPU);
-        sleep(RETARDO_MEMORIA);
+        sleep(memoria_config.retardo_memoria);
         switch (codigoOperacion)
         {
         case MENSAJE:
+            log_warning(logger_memoria, "recibi el op_cod %d MENSAJE , codigoOperacion", codigoOperacion);
 
             break;
 
@@ -278,7 +321,7 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU)
 
             free(valor_in);
             log_info(logger_memoria, "PID: %d - Acción: LEER - Dirección física: %d - Tamaño: %d - Origen: CPU", pid_mov_in, dir_fisica_in, tam_a_leer);
-            sleep(RETARDO_MEMORIA/1000);
+            sleep(memoria_config.retardo_memoria/1000);
             pthread_mutex_unlock(&mutex_memoria);
 
             break;
@@ -298,7 +341,7 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU)
 
             escribir(dir_fisica, valor, tam_escrito);
             log_info(logger_memoria, "PID: %d - Acción: ESCRIBIR - Dirección física: %d - Tamaño: %d - Origen: CPU", pid_mov_out, dir_fisica, tam_escrito);
-            sleep(RETARDO_MEMORIA/1000);
+            sleep(memoria_config.retardo_memoria/1000);
             free(valor);
             enviar_CodOp(SOCKET_CLIENTE_CPU, MOV_OUT_OK);
             //char* cosita = leer(dir_fisica, tam_escrito);
@@ -323,11 +366,12 @@ void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM)
     while (codigoOP != -1)
     {
         int codigoOperacion = recibir_operacion(SOCKET_CLIENTE_FILESYSTEM);
-        sleep(RETARDO_MEMORIA);
+        sleep(memoria_config.retardo_memoria);
         log_warning(logger_memoria, "llegue a fs");
         switch (codigoOperacion)
         {
         case MENSAJE:
+        log_warning(logger_memoria, "recibi el op_cod %d MENSAJE , codigoOperacion", codigoOperacion);
 
         break;
         case F_READ:
@@ -343,7 +387,7 @@ void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM)
             escribir(dir_fisica_leer_archivo, valor_leer_archivo, tam_a_leer_archivo);
             free(valor_leer_archivo);
             log_info(logger_memoria, "PID: %d - Accion: ESCRIBIR - Dirección física: %d - Tamaño: %d - Origen: FS", pid_leer_archivo, dir_fisica_leer_archivo, tam_a_leer_archivo);
-            sleep(RETARDO_MEMORIA/1000);
+            sleep(memoria_config.retardo_memoria/1000);
             enviar_CodOp(SOCKET_CLIENTE_FILESYSTEM,OK);
             pthread_mutex_unlock(&mutex_memoria);
             break;
@@ -358,7 +402,7 @@ void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM)
             char* valor_escribir_archivo = leer(dir_fisica_escribir_archivo, tam_a_escribir_archivo);
 
             log_info(logger_memoria, "PID: %d - Accion: LEER - Dirección física: %d - Tamaño: %d - Origen: FS", pid_escribir_archivo, dir_fisica_escribir_archivo, tam_a_escribir_archivo);
-            sleep(RETARDO_MEMORIA/1000);
+            sleep(memoria_config.retardo_memoria/1000);
             enviar_paquete_string(SOCKET_CLIENTE_FILESYSTEM, valor_escribir_archivo,F_WRITE_OK, strlen(valor_escribir_archivo) + 1);
 
             free(valor_escribir_archivo);
@@ -426,44 +470,17 @@ void levantar_loggers_memoria() {
     logger_memoria_extra = log_create("./runlogs/memoria_extra.log", "MEMORIA", true, LOG_LEVEL_INFO);
 }
 
-void levantar_config_memoria() {
-    config_memoria = config_create("./config/memoria.config");
-    PUERTO_ESCUCHA_MEMORIA = config_get_int_value(config_memoria, "PUERTO_ESCUCHA");
-    TAM_MEMORIA = config_get_int_value(config_memoria, "TAM_MEMORIA");
-    ESPACIO_LIBRE_TOTAL = TAM_MEMORIA;
-    TAM_SEGMENTO_0 = config_get_int_value(config_memoria, "TAM_SEGMENTO_0");
-    CANT_SEGMENTOS = config_get_int_value(config_memoria, "CANT_SEGMENTOS");
-    RETARDO_MEMORIA = config_get_int_value(config_memoria, "RETARDO_MEMORIA");
-    RETARDO_COMPACTACION = config_get_int_value(config_memoria, "RETARDO_COMPACTACION");
-    char * algo_asig = config_get_string_value(config_memoria, "ALGORITMO_ASIGNACION");
-
-    if (strcmp(algo_asig, "FIRST") == 0)
-    {
-        ALGORITMO_ASIGNACION = FIRST;
-    } else if (strcmp(algo_asig, "BEST") == 0)
-    {
-        ALGORITMO_ASIGNACION = BEST;
-    } else if (strcmp(algo_asig, "WORST") == 0)
-    {
-        ALGORITMO_ASIGNACION = WORST;
-    } else {
-        log_error(logger_memoria_extra, "ALGORITMO DE ASIGNACION DESCONOCIDO");
-    }
-
-    config_destroy(config_memoria);
-}
-
 
 
 void crear_segmento_0() {
     t_esp* espacio = list_get(LISTA_ESPACIOS_LIBRES, 0);
-    espacio->base += TAM_SEGMENTO_0;
-    espacio->limite -= TAM_SEGMENTO_0;
-    ESPACIO_LIBRE_TOTAL -= TAM_SEGMENTO_0;
+    espacio->base += memoria_config.tam_segmento_0;
+    espacio->limite -= memoria_config.tam_segmento_0;
+    ESPACIO_LIBRE_TOTAL -= memoria_config.tam_segmento_0;
 }
 
 void levantar_estructuras_administrativas() {
-    ESPACIO_USUARIO = malloc(TAM_MEMORIA);
+    ESPACIO_USUARIO = malloc(memoria_config.tam_memoria);
     ESPACIO_LIBRE_TOTAL;
 
     LISTA_ESPACIOS_LIBRES = list_create();
@@ -471,11 +488,11 @@ void levantar_estructuras_administrativas() {
 
     t_esp* espacio_inicial = malloc(sizeof(t_esp));
     espacio_inicial->base = 0;
-    espacio_inicial->limite = TAM_MEMORIA;
+    espacio_inicial->limite = memoria_config.tam_memoria;
 
     list_add(LISTA_ESPACIOS_LIBRES, espacio_inicial);
-
     crear_segmento_0();
+    
 }
 
 bool comparador_base(void* data1, void* data2) {
@@ -509,7 +526,7 @@ void print_lista_segmentos() {
 }
 
 void* crear_tabla_segmentos() {
-    void* buffer = malloc(sizeof(t_segmento) * CANT_SEGMENTOS);
+    void* buffer = malloc(sizeof(t_segmento) * memoria_config.cant_segmentos);
     int despl = 0;
     int cero = 0;
     int i = 0;
@@ -522,7 +539,7 @@ void* crear_tabla_segmentos() {
     memcpy(buffer + despl,&cero, sizeof(int)); // BASE
     despl+=sizeof(int);
 
-    memcpy(buffer + despl,&TAM_SEGMENTO_0, sizeof(int)); // LIMITE
+    memcpy(buffer + despl,&memoria_config.tam_segmento_0, sizeof(int)); // LIMITE
     despl+=sizeof(int);
 
     //memcpy(buffer + despl, &estado_inicial, sizeof(uint8_t));
@@ -530,7 +547,7 @@ void* crear_tabla_segmentos() {
 
     //estado_inicial = 0;
 
-    for (; i < CANT_SEGMENTOS; i++)
+    for (; i < memoria_config.cant_segmentos; i++)
     {
         memcpy(buffer + despl,&i, sizeof(int)); // ID
         despl+=sizeof(int);
@@ -762,5 +779,5 @@ void compactar() {
         
     }
 
-    sleep(RETARDO_COMPACTACION/1000);
+    sleep(memoria_config.retardo_compactacion/1000);
 }

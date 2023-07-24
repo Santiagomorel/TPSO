@@ -30,17 +30,27 @@ typedef struct {
 	uint8_t activo;
 } t_ent_ts; // Entrada de la tabla de segmentos
 
+typedef struct{
+
+    char* puerto_escucha;
+    int tam_memoria;
+    int tam_segmento_0;
+    int cant_segmentos;
+    int retardo_memoria;
+    int retardo_compactacion;
+    char* algoritmo_asignacion;
+
+} Memoria_config;
+Memoria_config memoria_config;
+
 t_log *logger_memoria;
 t_log *logger_memoria_extra;
 t_config* config_memoria;
 
-int PUERTO_ESCUCHA_MEMORIA;
-int TAM_MEMORIA;
-int TAM_SEGMENTO_0;
-int CANT_SEGMENTOS;
-int RETARDO_MEMORIA;
-int RETARDO_COMPACTACION;
+
+
 t_algo_asig ALGORITMO_ASIGNACION;
+
 
 void* ESPACIO_USUARIO;
 int ESPACIO_LIBRE_TOTAL;
@@ -49,12 +59,16 @@ t_list* LISTA_GLOBAL_SEGMENTOS;
 pthread_mutex_t mutex_memoria;
 
 sem_t finModulo;
+int socket_servidor_memoria;
 int socket_cliente_memoria_KERNEL;
 int socket_cliente_memoria_FILESYSTEM;
 int socket_cliente_memoria_CPU;
 
+t_list* tabla_de_procesos;
+pthread_mutex_t listaProcesos;
+
+
 void levantar_loggers_memoria();
-void levantar_config_memoria();
 void levantar_estructuras_administrativas();
 bool comparador_base(void* data1, void* data2);
 bool comparador_base_segmento(void* data1, void* data2);
@@ -67,6 +81,10 @@ void borrar_segmento(int base, int limite);
 void* crear_tabla_segmentos();
 void print_lista_segmentos();
 void compactar();
+void enviar_tabla_segmentos(int conexion, int codOP, t_proceso* proceso);
+t_proceso* crear_proceso_en_memoria(int id_proceso);
+void generar_tabla_segmentos(t_proceso* proceso);
+void agregar_tabla_a_paquete(t_paquete *paquete, t_proceso *proceso, t_log *logger);
 
 void recibir_kernel(int);
 void recibir_cpu(int);

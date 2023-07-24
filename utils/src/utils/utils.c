@@ -14,6 +14,7 @@ int iniciar_servidor(char *port, t_log *logger)
 	hints.ai_flags = AI_PASSIVE;
 
 	getaddrinfo(IP, port, &hints, &servinfo);
+
 	// Creamos el socket de escucha del servidor
 	socket_servidor = socket(servinfo->ai_family,
 							 servinfo->ai_socktype,
@@ -27,6 +28,7 @@ int iniciar_servidor(char *port, t_log *logger)
 	log_trace(logger, "Listo para escuchar a mi cliente");
 
 	freeaddrinfo(servinfo);
+
 	return socket_servidor;
 }
 

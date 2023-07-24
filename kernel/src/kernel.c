@@ -1160,6 +1160,7 @@ void atender_crear_segmento()
     int compactacion = 1;
     while(compactacion){
         int cod_op_creacion = recibir_operacion(memory_connection);
+        log_warning(kernel_logger, "Recibi el codOP: %d", cod_op_creacion);
         switch (cod_op_creacion)
         {
         case OUT_OF_MEMORY:
@@ -1174,23 +1175,23 @@ void atender_crear_segmento()
         case OK:
             t_3_enteros* estructura_a_recibir = recibir_3_enteros(memory_connection);
             t_segmento* nuevoElemento = malloc(sizeof(t_segmento));
-
+            log_warning(kernel_logger, "Aca estoy en OK");
             nuevoElemento->id_segmento = estructura_a_recibir->entero1;
             nuevoElemento->direccion_base = estructura_a_recibir->entero2;
             nuevoElemento->tamanio_segmento = estructura_a_recibir->entero3;
-
+            //log_warning(kernel_logger, "Aca estoy en OK x1.5");
             //int base_segmento = recibir_entero(memory_connection, kernel_logger);
             
             //t_segmento *nuevoElemento = crear_segmento(id_segmento, base_segmento, tamanio_segmento);
             
             t_pcb* pcb_crea_segmento = actualizar_pcb_lget_devuelve_pcb(contexto_crea_segmento, listaBloqueados, m_listaEjecutando);
-            
+            log_warning(kernel_logger, "Aca estoy en OK x2");
             list_add(pcb_crea_segmento->tabla_segmentos, nuevoElemento);
             
             contexto_ejecucion* nuevo_contexto_crea_segmento = obtener_ce(pcb_crea_segmento);
 
             enviar_ce(cpu_dispatch_connection, nuevo_contexto_crea_segmento, EJECUTAR_CE, kernel_logger);
-
+            log_warning(kernel_logger, "Aca estoy en OK x3");
             liberar_ce(nuevo_contexto_crea_segmento);
 
             compactacion = 0;
