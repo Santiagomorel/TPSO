@@ -81,11 +81,7 @@ void establecer_conexion(char * ip_memoria, char* puerto_memoria, t_config* conf
 		log_trace(logger, "Error al conectar con Memoria. El servidor no esta activo");
             
 		exit(2);
-	}else{
-		//handshake_cliente(conexion_cpu);
-		enviar_mensaje(ip_memoria, conexion_cpu);
 	}
-
     recibir_operacion(conexion_cpu);
     recibir_mensaje(conexion_cpu, cpu_logger);
 
@@ -498,7 +494,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             int logical_address_mov_in = atoi(instruction[2]);
 
             int size_movin = tamanio_registro(register_mov_in);    
-            direccion_fisica = traducir_direccion_logica(logical_address_mov_in, ce, sizeof(register_mov_in));//fijarse si el sizeof(register_mov_in) es correcto
+            direccion_fisica = traducir_direccion_logica(logical_address_mov_in, ce, 0);//fijarse si el sizeof(register_mov_in) es correcto
 
             
             //------------SI NO TENEMOS SEG FAULT EJECUTAMOS LO DEMAS ------------ //
@@ -507,8 +503,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
                 char* value = fetch_value_in_memory(direccion_fisica, ce, size_movin);
 
                 store_value_in_register(register_mov_in, value);
-                log_info(cpu_logger, "PID: %d - Acción: LEER - Segmento: %d - Dirección Fisica: %d",
-                        ce->id, segmento->id_segmento, direccion_fisica);
+                log_info(cpu_logger, "PID: %d - Acción: LEER - Segmento: %d - Dirección Fisica: %d", ce->id, id_segmento, direccion_fisica);
                     log_info(cpu_logger,"YA GUARDE VALOR EN REGISTRO!!");
             }else{
                 //“PID: <PID> - Error SEG_FAULT- Segmento: <NUMERO SEGMENTO> - Offset: <OFFSET> - Tamaño: <TAMAÑO>”
@@ -527,17 +522,19 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             
             int size_movout = tamanio_registro(register_mov_out);
 
-            direccion_fisica = traducir_direccion_logica(logical_address_mov_out, ce, sizeof(register_mov_out));
+            direccion_fisica = traducir_direccion_logica(logical_address_mov_out, ce, 0);
 
             if(sigsegv != 1){
                  log_info(cpu_logger, "Recibimos una physical address valida!");
                 char* register_value_mov_out = encontrarValorDeRegistro(register_mov_out);
+                log_info(cpu_logger, "encontre el valor del registro: %s",register_value_mov_out);
                 
                 escribir_valor(direccion_fisica, register_value_mov_out, ce->id, size_movout);
                 int code_op = recibir_operacion(conexion_cpu); // Si ta todo ok prosigo, si no ta todo ok que hago?
+                log_info(cpu_logger, "recibo operacion :%d",code_op);
 
                 if(code_op == MOV_OUT_OK) {  
-                    log_info(cpu_logger, "PID: %d - Acción: ESCRIBIR - Segmento: %d -  Dirección Fisica: %d", ce->id, segmento->id_segmento, direccion_fisica);
+                    log_info(cpu_logger, "PID: %d - Acción: ESCRIBIR - Segmento: %d -  Dirección Fisica: %d", ce->id, id_segmento, direccion_fisica);
                 }
                 else {
                     log_error(conexion_cpu, "CODIGO DE OPERACION INVALIDO");
@@ -733,30 +730,70 @@ void enviar_ce_con_entero(int client_socket, contexto_ejecucion* ce, char* x, in
 
 /*---------------------------------- PARA MOV_OUT ----------------------------------*/
 
-char* encontrarValorDeRegistro(char* register_to_find_value){ //Es t_registro* o char* ?
-    if (strcmp(register_to_find_value, "AX") == 0) return registros->AX;
-    else if (strcmp(register_to_find_value, "BX") == 0) return registros->BX;
-    else if (strcmp(register_to_find_value, "CX") == 0) return registros->CX;
-    else if (strcmp(register_to_find_value, "DX") == 0) return registros->DX;
-    else if (strcmp(register_to_find_value, "EAX") == 0) return registros->EAX;
-    else if (strcmp(register_to_find_value, "EBX") == 0) return registros->EBX;
-    else if (strcmp(register_to_find_value, "ECX") == 0) return registros->ECX;
-    else if (strcmp(register_to_find_value, "EDX") == 0) return registros->EDX;
-    else if (strcmp(register_to_find_value, "RAX") == 0) return registros->RAX;
-    else if (strcmp(register_to_find_value, "RBX") == 0) return registros->RBX;
-    else if (strcmp(register_to_find_value, "RCX") == 0) return registros->RCX;
-    else if (strcmp(register_to_find_value, "RDX") == 0) return registros->RDX;
-
-    else return 0;
+char* encontrarValorDeRegistro(char* register_to_find_value){ 
+    char* retorno;
+    
+    if (strcmp(register_to_find_value, "AX") == 0){  
+        strncpy(retorno,registros->AX,4);
+        return retorno;
+        } 
+    else if (strcmp(register_to_find_value, "BX") == 0){ 
+        strncpy(retorno,registros->BX,4); 
+        return retorno;
+        } 
+    else if (strcmp(register_to_find_value, "CX") == 0) { 
+        strncpy(retorno,registros->CX,4);
+        return retorno;
+        } 
+    else if (strcmp(register_to_find_value, "DX") == 0) { 
+        strncpy(retorno,registros->DX,4);
+        return retorno;
+        } 
+    else if (strcmp(register_to_find_value, "EBX") == 0){  
+        strncpy(retorno,registros->EAX,8);
+        return retorno;
+        } 
+    else if (strcmp(register_to_find_value, "ECX") == 0){ 
+        strncpy(retorno,registros->EBX,8); 
+        return retorno;
+        } 
+    else if (strcmp(register_to_find_value, "EAX") == 0){  
+        strncpy(retorno,registros->ECX,8);
+        return retorno;
+        } 
+    else if (strcmp(register_to_find_value, "EDX") == 0){  
+        strncpy(retorno,registros->EDX,8);
+        return retorno;
+        } 
+    else if (strcmp(register_to_find_value, "RAX") == 0){ 
+        
+        strncpy(retorno,registros->RAX,16);
+        
+        return retorno;
+    }
+    else if (strcmp(register_to_find_value, "RBX") == 0){  
+        strncpy(retorno,registros->RBX,16);
+        return retorno;
+    }
+    else if (strcmp(register_to_find_value, "RCX") == 0){  
+        strncpy(retorno,registros->RCX,16);
+        return retorno;
+    }
+    else if (strcmp(register_to_find_value, "RDX") == 0){ 
+        strncpy(retorno,registros->RDX,16);
+        return retorno;
+    }
 }
 
 void escribir_valor(int physical_address, char* register_value_mov_out, int pid, int size){
     t_paquete* package = crear_paquete_op_code(MOV_OUT);
     agregar_entero_a_paquete(package, physical_address);
-    agregar_string_a_paquete(package, register_value_mov_out);
+    agregar_a_paquete(package, register_value_mov_out,strlen(register_value_mov_out)+1);
     agregar_entero_a_paquete(package, pid);
     agregar_entero_a_paquete(package, size);
     enviar_paquete(package, conexion_cpu);
+    log_warning(cpu_logger," envie: physical adress: %d, reg value :%s,pid:%d,size:%d",physical_address,register_value_mov_out,pid,size);
+
 }
 /*---------------------------------- MMU ----------------------------------*/
 
@@ -782,19 +819,19 @@ int traducir_direccion_logica(int logical_address, contexto_ejecucion* ce, int v
     log_trace(cpu_logger, "la direccion base del segmento es :%d",segment->direccion_base);
     log_trace(cpu_logger, "el tamanio es :%d",segment->tamanio_segmento);
 
-    /*segmento->id_segmento = num_segmento;
-    log_trace(cpu_logger, "el id del segmento es :%d",segmento->id_segmento);
-    segmento->tamanio_segmento = segment ->tamanio_segmento;
-    segmento->direccion_base = desplazamiento_segmento + segment->direccion_base ;*/
+    id_segmento = num_segmento;
+    log_trace(cpu_logger, "el id del segmento es :%d",id_segmento);
+    tamanio_segmento = segment ->tamanio_segmento;
+    direccion_base = desplazamiento_segmento + segment->direccion_base ;
 
     log_error(cpu_logger,"el calculo da: %d",desplazamiento_segmento+valor_a_sumar);
     if(desplazamiento_segmento + valor_a_sumar >= segment-> tamanio_segmento ){
         log_trace(cpu_logger, "entre en el if de segfault");
         desplazamiento_segfault = desplazamiento_segmento;
         log_trace(cpu_logger, "despues de desplazamiento segfault: %d",desplazamiento_segfault);
-        id_segmento_con_segfault = segmento->id_segmento;
-        log_trace(cpu_logger, "despues de segmento.idSegmento: %d",segmento->id_segmento);
-        tamanio_segfault = segmento->tamanio_segmento;   /* Esta linea y la anterior es porque hay que imprimir cual fue el 
+        id_segmento_con_segfault = id_segmento;
+        log_trace(cpu_logger, "despues de segmento.idSegmento: %d",id_segmento);
+        tamanio_segfault = tamanio_segmento;   /* Esta linea y la anterior es porque hay que imprimir cual fue el 
                                                             segmento que falló */
 
         sigsegv = 1;

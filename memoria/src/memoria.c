@@ -106,6 +106,7 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
             log_trace(log_memoria, "creando paquete con tabla de segmentos base");
             //- Creación de Proceso: “Creación de Proceso PID: <PID>”
             enviar_tabla_segmentos(SOCKET_CLIENTE_KERNEL, TABLA_SEGMENTOS, nuevo_proceso);
+            log_trace(log_memoria, "envio tabla de segmentos base");
         break;
         
         case DELETE_PROCESS:
@@ -192,13 +193,13 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU)
     int codigoOP = 0;
     while (codigoOP != -1)
     {
+        log_warning(log_memoria,"me quedo esperando");
         int codigoOperacion = recibir_operacion(SOCKET_CLIENTE_CPU);
-        sleep(memoria_config.retardo_memoria);
+        //sleep(memoria_config.retardo_memoria);
         switch (codigoOperacion)
         {
         case MENSAJE:
             log_trace(log_memoria, "recibi el op_cod %d MENSAJE , codigoOperacion", codigoOperacion);
-            recibir_mensaje(SOCKET_CLIENTE_CPU, log_memoria);
             break;
 
         case MOV_IN: //(Registro, Direc_base ,size): Lee el valor de memoria correspondiente a la Dirección Lógica y lo almacena en el Registro.
@@ -220,13 +221,14 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU)
 
             //falta chequear que el tipo que se pide para los size este bien
             enviar_CodOp(SOCKET_CLIENTE_CPU, MOV_OUT_OK);
+            log_info(log_memoria, "ya envie codop");
 
             break;
         case -1:
         codigoOP = codigoOperacion;
         break;
         default:
-            // log_trace(log_memoria, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
+             log_trace(log_memoria, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
             break;
         }
     }

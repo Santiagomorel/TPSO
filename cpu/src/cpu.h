@@ -22,6 +22,10 @@ int conexion_cpu;
 int socket_cpu;
 int socket_kernel;
 
+int id_segmento;
+int tamanio_segmento;
+int direccion_base;
+
 
 
 void load_config(void);
