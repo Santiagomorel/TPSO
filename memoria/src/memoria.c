@@ -141,8 +141,6 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
                 log_warning(log_memoria,"Creación de Segmento: PID: %d - Crear Segmento: %d - Base: %d - TAMAÑO: %d", id_proceso, id_segmento_nuevo, segmento_nuevo->direccion_base, segmento_nuevo->tamanio_segmento);
                 //list_add(proceso_con_nuevo_segmento->tabla_segmentos, segmento_nuevo);
                 enviar_paquete_entero(SOCKET_CLIENTE_KERNEL, segmento_nuevo->direccion_base, OK);
-                
-                log_warning(log_memoria,"envie paquete con entero %d",segmento_nuevo->direccion_base);
                 }
             }
             else{
