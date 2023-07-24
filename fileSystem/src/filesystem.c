@@ -484,7 +484,7 @@ void procesar_conexion()
             //free(buffer_memoria);
 
             void* buffer_escritura = malloc(cant2);
-            recv(socket_memoria, buffer_escritura, cant2, NULL);
+            
             log_trace(logger_filesystem, "recibimos operacion de memoria");
             eferrait(f_name2, offset2, cant2, buffer_escritura);
             log_trace(logger_filesystem, "aplicamos el F_WRITE");

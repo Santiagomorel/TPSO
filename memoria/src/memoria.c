@@ -267,7 +267,6 @@ void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM)
         enviar_CodOp(SOCKET_CLIENTE_FILESYSTEM, F_WRITE_OK);
             //FALTAN COSAS
         break;
-
         case -1:
         codigoOP = codigoOperacion;
         break;
