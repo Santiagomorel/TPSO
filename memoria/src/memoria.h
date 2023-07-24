@@ -40,6 +40,7 @@ t_list* tabla_de_procesos;
 char* datos;
 void* MEMORIA_PRINCIPAL;
 int idGlobal;
+t_segmento* segmento_compartido;
 
 
 //KERNEL
@@ -57,6 +58,8 @@ void mov_in(int socket_cliente, int direc_fisica, int size);
 
 
 int iniciarSegmentacion(void);
+void iniciar_segmento_0();
+
 
 // GuardarEnMemoria
 t_segmento *guardarElemento(void *elemento, int size);
@@ -106,6 +109,7 @@ void actualizarCadaSegmento(t_segmento* segmentoViejo, t_segmento* segmentoNuevo
 
 //Serializacion y creacion de tablas
 void generar_tabla_segmentos();
+void agregar_segmento_0(t_list*);
 //Serializacion
 void enviar_tabla_segmentos(int, int, t_proceso*);
 void agregar_tabla_a_paquete(t_paquete*,t_proceso* , t_log*);

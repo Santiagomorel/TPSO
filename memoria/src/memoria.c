@@ -140,7 +140,10 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
                 list_add(proceso_con_nuevo_segmento->tabla_segmentos, segmento_nuevo);
                 log_warning(log_memoria,"Creación de Segmento: PID: %d - Crear Segmento: %d - Base: %d - TAMAÑO: %d", id_proceso, id_segmento_nuevo, segmento_nuevo->direccion_base, segmento_nuevo->tamanio_segmento);
                 //list_add(proceso_con_nuevo_segmento->tabla_segmentos, segmento_nuevo);
+                ocuparBitMap(segmento_nuevo->direccion_base, segmento_nuevo->tamanio_segmento);
                 enviar_paquete_entero(SOCKET_CLIENTE_KERNEL, segmento_nuevo->direccion_base, OK);
+                
+                log_warning(log_memoria,"envie paquete con entero %d",segmento_nuevo->direccion_base);
                 }
             }
             else{
@@ -296,10 +299,13 @@ t_proceso* crear_proceso_en_memoria(int id_proceso){
 
 void generar_tabla_segmentos(t_proceso* proceso){
 	t_list* nuevaTabla = list_create();
-	t_segmento* nuevoElemento = crear_segmento(0,0,memoria_config.tam_segmento_0);
-
-    list_add(nuevaTabla, nuevoElemento);
+	agregar_segmento_0(nuevaTabla);
     proceso->tabla_segmentos = nuevaTabla;
+}
+
+void agregar_segmento_0(t_list* nueva_tabla_segmentos){
+
+    list_add(nueva_tabla_segmentos, segmento_compartido);
 }
 
 
@@ -417,15 +423,11 @@ t_proceso* borrar_segmento(int PID,int id_segmento_elim){
 //  CPU
 //
 
-void mov_in(int socket_cliente,int direc_fisica, int size/*sizeof(t_registro)*/){
+void mov_in(int socket_cliente,int direc_fisica, int size){
     //para guido: antes de enviar la direccion fisica, castearla a void* si es q no esta hecha
     char* registro;
     memcpy(registro, MEMORIA_PRINCIPAL+direc_fisica ,size);
-    t_paquete* paquete_ok = crear_paquete_op_code(MOV_IN_OK);
-    agregar_string_a_paquete(paquete_ok, registro);
-    enviar_paquete(paquete_ok ,socket_cliente);
-
-    eliminar_paquete(paquete_ok);
+    enviar_paquete_string(socket_cliente,registro,MOV_IN_OK,strlen(registro)+1);
     //ocuparMemoria(registro, direc_logica, size);
     //ocuparBitMap(direc_logica, size);
 }
@@ -465,7 +467,14 @@ int iniciarSegmentacion(void)
 
     bitMapSegment = bitarray_create_with_mode(datos, tamanio, MSB_FIRST);
 
+    iniciar_segmento_0();
+
     return 1; // SI FALLA DEVUELVE 0
+}
+
+void iniciar_segmento_0(){
+    segmento_compartido = crear_segmento(0,0,memoria_config.tam_segmento_0);
+    ocuparBitMap(0, memoria_config.tam_segmento_0);
 }
 
 int puedoGuardar(int quieroGuardar)
@@ -547,16 +556,16 @@ t_segmento* buscarSegmentoSegunTamanio(int size){
     todosLosSegLibres =  buscarSegmentosDisponibles(); //PONE TODOS LOS SEGMENTOS VACIOS EN UNA LISTA 
 
     t_list* segmentosCandidatos;
-    segmentosCandidatos = puedenGuardar( todosLosSegLibres , size); //ME DEVUELVE LOS SEGMENTOS QUE EL TIENEN ESPACIO NECESARIO PARA GUARDAR
+    segmentosCandidatos = puedenGuardar(todosLosSegLibres , size); //ME DEVUELVE LOS SEGMENTOS QUE EL TIENEN ESPACIO NECESARIO PARA GUARDAR
     //log_info(logger,"Hay %d segmentos candidatos", list_size(segmentosCandidatos));
     if(list_is_empty(segmentosCandidatos)){
         log_error(log_memoria,"No se ha compactado correctamente");
         
     }else if(list_size(segmentosCandidatos)== 1){
         segmento = list_get(segmentosCandidatos, 0);
+        segmento->tamanio_segmento = size;
     }else{
         segmento = elegirSegCriterio(segmentosCandidatos, size); //SI EN LA LISTA HAY MAS DE UN SEGMENTO VA A ELEGIR EN QUE SEGMENTO LO VA A GUARDAR SEGUN EL CRITERIO
-        
 
     }
     
@@ -631,7 +640,8 @@ t_list* puedenGuardar(t_list* segmentos, int size){
     int puedoGuardarSeg(t_segmento* segmento){
         return(segmento->tamanio_segmento >= size);
     }
-    aux= list_filter(segmentos, (void*)puedoGuardarSeg);
+    aux = list_filter(segmentos, (void*)puedoGuardarSeg);
+    log_error(log_memoria,"tamaño de la lista aux = %d", list_size(aux));
 
     return aux;
 }

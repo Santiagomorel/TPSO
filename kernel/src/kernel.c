@@ -1160,6 +1160,7 @@ void atender_crear_segmento()
     int compactacion = 1;
     while(compactacion){
         int cod_op_creacion = recibir_operacion(memory_connection);
+
         switch (cod_op_creacion)
         {
         case OUT_OF_MEMORY:
@@ -1172,11 +1173,12 @@ void atender_crear_segmento()
             break;
 
         case OK:
+        
             int base_segmento = recibir_entero(memory_connection, kernel_logger);
             
             t_segmento *nuevoElemento = crear_segmento(id_segmento, base_segmento, tamanio_segmento);
             
-            t_pcb* pcb_crea_segmento = actualizar_pcb_lget_devuelve_pcb(contexto_crea_segmento, listaBloqueados, m_listaEjecutando);
+            t_pcb* pcb_crea_segmento = actualizar_pcb_lget_devuelve_pcb(contexto_crea_segmento, listaEjecutando, m_listaEjecutando);
             
             list_add(pcb_crea_segmento->tabla_segmentos, nuevoElemento);
             
@@ -1192,6 +1194,7 @@ void atender_crear_segmento()
             log_error(kernel_logger, "El codigo de recepcion de la creacion del segmento es erroneo");
             break;
         }
+        log_error(kernel_logger, "rompe aca?");
     }
     
     liberar_ce_2enteros(estructura_crear_segmento); // VER SI FUNCIONA
