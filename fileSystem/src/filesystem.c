@@ -482,13 +482,14 @@ void procesar_conexion()
             log_trace(logger_filesystem, "enviamos el empaquetado de datos");
             //send(socket_memoria, buffer_memoria, sizeof(int) + sizeof(uint32_t)*3, NULL);
             //free(buffer_memoria);
+            int codOP_fwrite = recibir_operacion;
 
-            void* buffer_escritura = malloc(cant2);
-            recv(socket_memoria, buffer_escritura, cant2, NULL);
+            char* valor_a_escribir = malloc(cant2);
+            valor_a_escribir = recibir_string(socket_memoria, logger_filesystem);
             log_trace(logger_filesystem, "recibimos operacion de memoria");
-            eferrait(f_name2, offset2, cant2, buffer_escritura);
+            eferrait(f_name2, offset2, cant2, valor_a_escribir);
             log_trace(logger_filesystem, "aplicamos el F_WRITE");
-            free(buffer_escritura);
+            free(valor_a_escribir);
             
             enviar_CodOp(cliente_socket, OK); //CORREGIR CODOP PARA QUE KERNEL SIGA EJECUTANDO
             log_trace(logger_filesystem, "enviamos codigo de operacion a kernel");

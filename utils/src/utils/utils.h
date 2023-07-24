@@ -112,7 +112,7 @@ typedef enum
 	NECESITO_COMPACTAR,
 	DIR_FISICA,
 	VALOR_A_RECIBIR,	
-
+	MEMORIA_SEGMENTO_CREADO,
 	CONFIG_MEMORIA,
 	FIN_CONSOLA,		
 	OK,
@@ -135,7 +135,12 @@ typedef struct{
 	int tamanio_segmento;
 } t_segmento;
 
-
+typedef struct {
+    int pid;
+    int id;
+    int base;
+    int limite;
+} t_segmento_v2; // Para marcar un segmento de la memoria
 
 typedef struct{
 	char* archivo;
@@ -278,6 +283,12 @@ typedef struct{
 } t_3_enteros;
 
 typedef struct{
+	int entero1;
+	int entero2;
+	int entero3;
+	int entero4;
+} t_4_enteros;
+typedef struct{
 	int DF;
 	char* registro;
 	int PID;
@@ -360,6 +371,7 @@ t_string_entero* recibir_string_entero(int);
 t_string_entero* recibir_string_enterov2(int);
 t_2_enteros * recibir_2_enteros(int);
 void enviar_3enteros(int client, int x, int y, int z, int codOP);
+void enviar_4enteros(int client, int x, int y, int z, int j, int codOP);
 void enviar_string_2enteros(int, char*, int, int, int);
 void enviar_string_3enteros(int client, char* string, int x, int y, int z, int codOP);
 void enviar_string_4enteros(int client, char* string, int x, int y, int z, int j, int codOP);
@@ -367,6 +379,7 @@ t_ce_string_3enteros * recibir_ce_string_3enteros(int socket);
 void enviar_3_enteros(int client_socket, int x, int y, int z, int codOP);
 t_ce_string_2enteros* recibir_ce_string_2enteros(int);
 t_3_enteros * recibir_3_enteros(int);
+t_4_enteros * recibir_4_enteros(int);
 t_string_3enteros* recibir_string_3enteros(int);
 t_string_4enteros* recibir_string_4enteros(int);
 recive_mov_out * recibir_mov_out(int);

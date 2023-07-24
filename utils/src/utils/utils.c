@@ -885,6 +885,18 @@ void enviar_3enteros(int client, int x, int y, int z, int codOP)
     eliminar_paquete(paquete);
 }
 
+void enviar_4enteros(int client, int x, int y, int z, int j, int codOP)
+{
+	t_paquete* paquete = crear_paquete_op_code(codOP);
+
+    agregar_entero_a_paquete(paquete, x); 
+    agregar_entero_a_paquete(paquete, y); 
+	agregar_entero_a_paquete(paquete, z); 
+	agregar_entero_a_paquete(paquete, j); 
+    enviar_paquete(paquete, client);
+    eliminar_paquete(paquete);
+}
+
 void enviar_string_3enteros(int client, char* string, int x, int y, int z, int codOP)
 {
 	t_paquete* paquete = crear_paquete_op_code(codOP);
@@ -893,7 +905,7 @@ void enviar_string_3enteros(int client, char* string, int x, int y, int z, int c
     agregar_entero_a_paquete(paquete, x); 
     agregar_entero_a_paquete(paquete, y); 
 	agregar_entero_a_paquete(paquete, z); 
- 
+	 
 	printf("se esta por enviar: %d , %d , %d ,%s.",x,y,z,string);
     enviar_paquete(paquete, client);
     eliminar_paquete(paquete);
@@ -1050,6 +1062,27 @@ t_3_enteros * recibir_3_enteros(int socket)
 
 	free(buffer);
 	return nuevo_3_enteros;
+}
+
+t_4_enteros * recibir_4_enteros(int socket)
+{
+	t_4_enteros* nuevo_4_enteros = malloc(sizeof(t_4_enteros));
+	int size = 0;
+	char *buffer;
+	int desp = 0;
+
+	buffer = recibir_buffer(&size, socket);
+
+	nuevo_4_enteros->entero1 = leer_entero(buffer, &desp);
+
+	nuevo_4_enteros->entero2 = leer_entero(buffer, &desp);
+
+	nuevo_4_enteros->entero3 = leer_entero(buffer, &desp);
+
+	nuevo_4_enteros->entero4 = leer_entero(buffer, &desp);
+
+	free(buffer);
+	return nuevo_4_enteros;
 }
 
 recive_mov_out * recibir_mov_out(int socket)

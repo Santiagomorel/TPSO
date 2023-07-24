@@ -218,6 +218,8 @@ int f_execute;
 
 // Declaraciones BORRAR_SEGMENTO
 void atender_borrar_segmento();
+int obtener_tamanio_segmento(t_pcb* pcb,int id_segmento_elim);
+int obtener_base_segmento(t_pcb* pcb,int id_segmento_elim);
 
 //Declaraciones ABRIR_ARCHIVO
 void atender_apertura_archivo();

@@ -1172,9 +1172,16 @@ void atender_crear_segmento()
             break;
 
         case OK:
-            int base_segmento = recibir_entero(memory_connection, kernel_logger);
+            t_3_enteros* estructura_a_recibir = recibir_3_enteros(memory_connection);
+            t_segmento* nuevoElemento = malloc(sizeof(t_segmento));
+
+            nuevoElemento->id_segmento = estructura_a_recibir->entero1;
+            nuevoElemento->direccion_base = estructura_a_recibir->entero2;
+            nuevoElemento->tamanio_segmento = estructura_a_recibir->entero3;
+
+            //int base_segmento = recibir_entero(memory_connection, kernel_logger);
             
-            t_segmento *nuevoElemento = crear_segmento(id_segmento, base_segmento, tamanio_segmento);
+            //t_segmento *nuevoElemento = crear_segmento(id_segmento, base_segmento, tamanio_segmento);
             
             t_pcb* pcb_crea_segmento = actualizar_pcb_lget_devuelve_pcb(contexto_crea_segmento, listaBloqueados, m_listaEjecutando);
             
@@ -1212,7 +1219,7 @@ void atender_compactacion(int id_proceso, int id_segmento, int tamanio_segmento)
 
         switch (cod_op_compactacion){
             case OK:
-                actualizar_ts_x_proceso();
+                actualizar_ts_x_proceso(); // VER ESTO
 
                 log_info(kernel_logger, "Compactacion: [Finalizo el proceso de compactacion]");
 
@@ -1289,7 +1296,11 @@ void atender_borrar_segmento() //TODO
 
     int id_proceso = ((t_pcb *) list_get(listaEjecutando, 0))->id;
 
-    enviar_2_enteros(memory_connection, id_proceso, id_segmento, DELETE_SEGMENT); // mando a memoria idP, idS
+    int tamanio = obtener_tamanio_segmento(((t_pcb *) list_get(listaEjecutando, 0)), id_segmento);
+
+    int base = obtener_base_segmento(((t_pcb *) list_get(listaEjecutando, 0)), id_segmento);
+    
+    enviar_4enteros(memory_connection, id_proceso, id_segmento, tamanio, base, DELETE_SEGMENT);
 
     recibir_operacion(memory_connection);
     
@@ -1310,6 +1321,18 @@ void atender_borrar_segmento() //TODO
     liberar_ce_entero(estructura_borrar_segmento); // VER SI FUNCIONA
 }
 
+int obtener_tamanio_segmento(t_pcb* pcb,int id_segmento_elim){
+
+    t_segmento* segmento_a_eliminar = list_find(pcb->tabla_segmentos, id_segmento_elim);
+    return segmento_a_eliminar->tamanio_segmento;
+
+}
+int obtener_base_segmento(t_pcb* pcb,int id_segmento_elim){
+
+    t_segmento* segmento_a_eliminar = list_find(pcb->tabla_segmentos, id_segmento_elim);
+    return segmento_a_eliminar->direccion_base;
+
+}
 // ----------------------- Funciones ABRIR_ARCHIVO ----------------------- //
 void atender_apertura_archivo()
 {
