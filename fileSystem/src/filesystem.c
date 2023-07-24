@@ -674,8 +674,6 @@ void eferrait(char *f_name, uint32_t offset, uint32_t cantidad, char *data)
   int bloque_inicial = offset / BLOCK_SIZE;
   int bloque_final = (offset + cantidad) / BLOCK_SIZE;
 
-  log_warning(logger_filesystem,"adentro de eferrait por escribir: %s",data);
-
   if (bloque_inicial == 0 && bloque_final == 0)
   {
     memcpy(blocks_buffer + fcb->f_dp + offset, data, cantidad);

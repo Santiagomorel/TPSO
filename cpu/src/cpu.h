@@ -22,13 +22,6 @@ int conexion_cpu;
 int socket_cpu;
 int socket_kernel;
 
-int id_segmento;
-int tamanio_segmento;
-int direccion_base;
-t_segmento* segmento_global;
-char retorno1[4];
-char retorno2[8];
-char retorno3[16];
 
 
 void load_config(void);
