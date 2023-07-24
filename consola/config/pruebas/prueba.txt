@@ -1,8 +1,6 @@
-SET RAX SonicTheHedgehog
-MOV_OUT 0 RAX
-F_OPEN Consoles
-F_TRUNCATE Consoles 256
-F_SEEK Consoles 128
-F_WRITE Consoles 32 80
-F_CLOSE Consoles
+F_OPEN Videogames
+F_SEEK Videogames 0
+F_READ Videogames 16 16
+MOV_IN RAX 16
+F_CLOSE Videogames
 EXIT

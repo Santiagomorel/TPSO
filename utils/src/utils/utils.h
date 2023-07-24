@@ -85,6 +85,7 @@ typedef enum
 	F_TRUNCATE,
 	F_WRITE,
 	F_WRITE_OK,
+	F_READ_OK,
 	F_READ,
 	F_OPEN,
 	F_CREATE,

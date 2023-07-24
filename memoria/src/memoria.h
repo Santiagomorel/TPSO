@@ -69,6 +69,8 @@ t_segmento* buscarUnLugarLibre(int* base);
 void guardarEnMemoria(void *elemento, t_segmento *segmento, int size);
 void ocuparMemoria(void *elemento, int base, int size);
 t_list* puedenGuardar(t_list* segmentos, int size);
+char* leer(uint32_t dir_fisca , uint32_t size);
+void escribir(uint32_t dir_fisca, void* data, uint32_t size);
 
 int generarId();
 

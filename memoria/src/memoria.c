@@ -255,17 +255,37 @@ void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM)
         case F_READ:
         log_warning(log_memoria, "entre al fread");
         t_string_3enteros* fRead = recibir_string_3enteros(SOCKET_CLIENTE_FILESYSTEM);
-        log_info(log_memoria, "el stream recibido es %d", fRead->string);
-        log_info(log_memoria, "PID: %d - Accion: ESCRIBIR - Direccion física: %d - Tamaño: %d - Origen: FS",fRead->entero1, fRead->entero2,fRead->entero3);
         
+        uint32_t pid_leer_arhivo = fRead->entero1;
+        uint32_t direccion_fisica_leer_archivo = fRead->entero2;
+        uint32_t tam_a_leer_archivo = fRead->entero3;
+        char* valor_leer_archivo = malloc(tam_a_leer_archivo);
+        valor_leer_archivo = fRead->string;
+        log_info(log_memoria, "el stream recibido es %d", valor_leer_archivo);
+        escribir(direccion_fisica_leer_archivo, valor_leer_archivo, tam_a_leer_archivo);
+        
+        log_info(log_memoria, "PID: %d - Accion: ESCRIBIR - Direccion física: %d - Tamaño: %d - Origen: FS",fRead->entero1, fRead->entero2,fRead->entero3);
+
+        free(valor_leer_archivo);
+        
+        sleep(memoria_config.retardo_memoria/1000);
+        
+        enviar_CodOp(SOCKET_CLIENTE_FILESYSTEM,F_READ_OK);
             break;
         
         case F_WRITE:
         log_warning(log_memoria, "Entre al fwrite");
         t_3_enteros* fWrite = recibir_3_enteros(SOCKET_CLIENTE_FILESYSTEM);
+        uint32_t pid_escribir_arhivo = fWrite->entero1;
+        uint32_t direccion_fisica_escribir_archivo = fWrite->entero2;
+        uint32_t tam_a_escribir_archivo = fWrite->entero3;
+
+        char* valor_escribir_archivo = leer(direccion_fisica_escribir_archivo, tam_a_escribir_archivo);
         log_trace(log_memoria,"PID: %d - Acción: LEER - Dirección física: %d - Tamaño: %d - Origen: FS", fWrite->entero1, fWrite->entero2, fWrite->entero3); 
-        enviar_CodOp(SOCKET_CLIENTE_FILESYSTEM, F_WRITE_OK);
-            //FALTAN COSAS
+        sleep(memoria_config.retardo_memoria/1000);
+
+        enviar_paquete_string(SOCKET_CLIENTE_FILESYSTEM, valor_escribir_archivo,F_WRITE_OK, tam_a_escribir_archivo);
+        free(valor_escribir_archivo);
         break;
         case -1:
         codigoOP = codigoOperacion;
@@ -278,7 +298,14 @@ void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM)
     }
     log_warning(log_memoria, "se desconecto FILESYSTEM");
 }
-
+char* leer(uint32_t dir_fisca , uint32_t size) {
+    void* data = malloc(size);
+    memcpy(data, MEMORIA_PRINCIPAL + dir_fisca, size);
+    return data;
+}
+void escribir(uint32_t dir_fisca, void* data, uint32_t size) {
+    memcpy(MEMORIA_PRINCIPAL + dir_fisca, data, size);
+}
 /* LOGS NECESAIROS Y OBLIGATORIOS
 - Acceso a espacio de usuario: “PID: <PID> - Acción: <LEER / ESCRIBIR> - Dirección física: <DIRECCIÓN_FÍSICA> - Tamaño: <TAMAÑO> - Origen: <CPU / FS>”
 */
