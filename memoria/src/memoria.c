@@ -427,7 +427,8 @@ t_proceso* borrar_segmento(int PID,int id_segmento_elim){
 
 void mov_in(int socket_cliente,int direc_fisica, int size){
     //para guido: antes de enviar la direccion fisica, castearla a void* si es q no esta hecha
-    char* registro;
+    char* registro= malloc(size+1);
+
     memcpy(registro, MEMORIA_PRINCIPAL+direc_fisica ,size);
     enviar_paquete_string(socket_cliente,registro,MOV_IN_OK,strlen(registro)+1);
     //ocuparMemoria(registro, direc_logica, size);

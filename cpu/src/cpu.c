@@ -530,6 +530,8 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
                 log_info(cpu_logger, "encontre el valor del registro: %s",register_value_mov_out);
                 
                 escribir_valor(direccion_fisica, register_value_mov_out, ce->id, size_movout);
+
+                free(register_value_mov_out);
                 int code_op = recibir_operacion(conexion_cpu); // Si ta todo ok prosigo, si no ta todo ok que hago?
                 log_info(cpu_logger, "recibo operacion :%d",code_op);
 
@@ -731,7 +733,7 @@ void enviar_ce_con_entero(int client_socket, contexto_ejecucion* ce, char* x, in
 /*---------------------------------- PARA MOV_OUT ----------------------------------*/
 
 char* encontrarValorDeRegistro(char* register_to_find_value){ 
-    char* retorno;
+    char* retorno = malloc(strlen(register_to_find_value) +1);
     
     if (strcmp(register_to_find_value, "AX") == 0){  
         strncpy(retorno,registros->AX,4);
@@ -853,16 +855,15 @@ char* fetch_value_in_memory(int physical_adress, contexto_ejecucion* ce, int siz
     log_info(cpu_logger, "MOV IN enviado");    
 
     int code_op = recibir_operacion(conexion_cpu);
-    char* value_received = recibir_string(conexion_cpu, cpu_logger);
     log_info(cpu_logger, "CODIGO OPERACION RECIBIDO EN CPU: %d", code_op);
+    char* value_received = recibir_string(conexion_cpu, cpu_logger);
+    log_info(cpu_logger, "recibo string %s", value_received);
     
-    if(code_op == MOV_IN_OK) {  
-        log_info(cpu_logger,"ENTRE CARAJO");
 
-        log_info(conexion_cpu, "EL VALOR DEL REGISTRO RECIBIDO ES: %d", value_received);
-    } else {
-        log_error(conexion_cpu, "CODIGO DE OPERACION INVALIDO");
-    }
+    log_info(conexion_cpu, "EL VALOR DEL REGISTRO RECIBIDO ES: %d", value_received);
+
+
+
 
     return value_received;
 }
