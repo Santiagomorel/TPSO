@@ -23,7 +23,12 @@ typedef struct {
     int limite;
 } t_esp; // Para marcar un hueco de la memoria
 
-
+typedef struct {
+    uint32_t id_seg;
+    uint32_t base;
+    uint32_t tam;
+	uint8_t activo;
+} t_ent_ts; // Entrada de la tabla de segmentos
 
 t_log *logger_memoria;
 t_log *logger_memoria_extra;
@@ -66,5 +71,7 @@ void compactar();
 void recibir_kernel(int);
 void recibir_cpu(int);
 void recibir_fileSystem(int);
+
+void borrar_proceso(int PID);
 
 #endif

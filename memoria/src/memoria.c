@@ -71,17 +71,22 @@ int main(int argc, char **argv)
     return 0;
 	}
 }
+void end_program()
+{
+    log_destroy(logger_memoria);
+    liberar_conexion(socket_servidor_memoria);
 
+}
 
 void devolver_tabla_inicial(int socket) {
-    int size = sizeof(t_ent_ts) * CANT_SEGMENTOS + sizeof(int);
+    int size = sizeof(t_segmento) * CANT_SEGMENTOS + sizeof(int);
     void* buffer = malloc(size);
 
     memcpy(buffer, &CANT_SEGMENTOS, sizeof(int));
 
     void* tabla = crear_tabla_segmentos();
 
-    memcpy(buffer + sizeof(int), tabla, sizeof(t_ent_ts) * CANT_SEGMENTOS);
+    memcpy(buffer + sizeof(int), tabla, sizeof(t_segmento) * CANT_SEGMENTOS);
 
     send(socket, buffer, size, NULL);
 
@@ -157,10 +162,10 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
 
         break;
         
-        case DELETE_PROCESS:
-        int PID = recibir_entero(SOCKET_CLIENTE_KERNEL, logger_memoria);
-        borrar_proceso(PID);
-        break;
+        // case DELETE_PROCESS:
+        // int PID = recibir_entero(SOCKET_CLIENTE_KERNEL, logger_memoria);
+        // borrar_proceso(PID);
+        //break;
         case CREATE_SEGMENT:
             pthread_mutex_lock(&mutex_memoria);
             t_3_enteros* estructura = recibir_3_enteros(SOCKET_CLIENTE_KERNEL);
@@ -372,7 +377,47 @@ void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM)
     log_warning(logger_memoria, "se desconecto FILESYSTEM");
 }
 
-//---------------------------------------
+//---------------PARA BORRAR PROCESO------------------------
+/*
+void liberar_bitmap_segmento(t_segmento* segmento){
+// liberar bitmap
+    liberarBitMap(segmento->direccion_base, segmento->tamanio_segmento);
+}
+void eliminar_tabla_segmentos(t_list* tabla_segmentos)
+{
+// liberar cada segmento de la tabla
+    list_iterate(tabla_segmentos, (void*)liberar_bitmap_segmento);
+    for (int i = 0; i < list_size(tabla_segmentos); i++)
+    {
+        free(list_get(tabla_segmentos, i));
+    }
+    
+}
+void eliminar_tabla_segmentos(t_list* tabla_segmentos)
+{
+// liberar cada segmento de la tabla
+    list_iterate(tabla_segmentos, (void*)liberar_bitmap_segmento);
+    for (int i = 0; i < list_size(tabla_segmentos); i++)
+    {
+        free(list_get(tabla_segmentos, i));
+    }
+    
+}
+
+void eliminar_proceso(t_proceso* proceso){
+    // Eliminar la tabla de segmentos
+    list_clean_and_destroy_elements(proceso->tabla_segmentos, (void*)eliminar_tabla_segmentos);
+}
+
+void borrar_proceso(int PID){
+        // Eliminar la instancia de la tabla de procesos => list_remove_and_destroy_by_condition
+    bool mismoIdProc(t_proceso* unProceso){
+    return (unProceso->id == PID);
+    }
+    list_remove_and_destroy_by_condition(tabla_de_procesos, mismoIdProc , eliminar_proceso);
+    log_warning(logger_memoria,"Eliminación de Proceso PID: %d", PID);
+}*/
+//------------------------------------------------------------------------------
 
 char* t_algo_asig_desc[] = {"FIRST", "BEST", "WORST"};
 
@@ -464,11 +509,11 @@ void print_lista_segmentos() {
 }
 
 void* crear_tabla_segmentos() {
-    void* buffer = malloc(sizeof(t_ent_ts) * CANT_SEGMENTOS);
+    void* buffer = malloc(sizeof(t_segmento) * CANT_SEGMENTOS);
     int despl = 0;
     int cero = 0;
     int i = 0;
-    uint8_t estado_inicial = 1;
+    //uint8_t estado_inicial = 1;
 
     memcpy(buffer + despl,&i, sizeof(int)); // ID
     despl+=sizeof(int);
@@ -480,10 +525,10 @@ void* crear_tabla_segmentos() {
     memcpy(buffer + despl,&TAM_SEGMENTO_0, sizeof(int)); // LIMITE
     despl+=sizeof(int);
 
-    memcpy(buffer + despl, &estado_inicial, sizeof(uint8_t));
-    despl+=sizeof(uint8_t);
+    //memcpy(buffer + despl, &estado_inicial, sizeof(uint8_t));
+    //despl+=sizeof(uint8_t);
 
-    estado_inicial = 0;
+    //estado_inicial = 0;
 
     for (; i < CANT_SEGMENTOS; i++)
     {
@@ -497,8 +542,8 @@ void* crear_tabla_segmentos() {
         memcpy(buffer + despl,&cero, sizeof(int)); // LIMITE
         despl+=sizeof(int);
 
-        memcpy(buffer + despl, &estado_inicial, sizeof(uint8_t));
-        despl+=sizeof(uint8_t);
+        //memcpy(buffer + despl, &estado_inicial, sizeof(uint8_t));
+        //despl+=sizeof(uint8_t);
     }
     
     return buffer;
