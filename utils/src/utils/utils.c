@@ -1105,14 +1105,6 @@ void liberar_ce_string_2enteros(t_ce_string_2enteros* ce_string_entero)
 	free(ce_string_entero); //esto no se si funciona OJO
 }
 
-void liberar_ce_string_3enteros(t_ce_string_3enteros* ce_string_entero)
-{
-	liberar_ce(ce_string_entero->ce);
-	free(ce_string_entero->string);
-	free(ce_string_entero); //esto no se si funciona OJO
-	
-}
-
 
 
 

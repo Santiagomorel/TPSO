@@ -1635,7 +1635,7 @@ void atender_lectura_archivo(){
 
     liberar_ce_string_2enteros(estructura_leer_archivo);
 
-    //desbloquear_FS();
+    desbloquear_FS();
 }
    
    void rutina_read(thread_args_read* args)
@@ -1663,8 +1663,6 @@ void atender_lectura_archivo(){
     agregar_a_lista_con_sems(pcb, listaReady, m_listaReady);
     
     sem_post(&proceso_en_ready);
-
-    desbloquear_FS();
 
 }
 
@@ -1710,17 +1708,9 @@ void atender_escritura_archivo(){
     pthread_create(&hiloWrite, NULL, (void*) rutina_write, (void*) (thread_args_write*) argumentos);
     pthread_detach(hiloWrite);
 
-    log_warning(kernel_logger," sali del hilo");
+    liberar_ce_string_2enteros(estructura_escribir_archivo);
 
- 
-
-    liberar_ce_string_3enteros(estructura_escribir_archivo);
-
-    log_warning(kernel_logger," ya libere cosas");
-
-    //desbloquear_FS();
-
-    //log_warning(kernel_logger," ya desbloquie fs");
+    desbloquear_FS();
 
 }
 
@@ -1753,9 +1743,6 @@ void rutina_write(thread_args_write* args)
     
     sem_post(&proceso_en_ready);
 
-    desbloquear_FS();
-
-    log_warning(kernel_logger,"termine rutina write");
 }
 
 void bloquear_FS(){
@@ -1765,7 +1752,7 @@ void bloquear_FS(){
 
 void desbloquear_FS(){
     f_execute = 0;
-    pthread_mutex_unlock(&m_F_operation);
+    pthread_mutex_lock(&m_F_operation);
 }
 
 // ----------------------- Funciones MODIFICAR_TAMANIO_ARCHIVO ----------------------- //
