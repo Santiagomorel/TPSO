@@ -97,9 +97,6 @@ t_segmento* segmentoWorstFit(t_list* segmentos, int size); // este "size" puede 
 t_segmento* segmentoMenorTamanio(t_segmento* segmento, t_segmento* otroSegmento);
 t_segmento* segmentoMayorTamanio(t_segmento* segmento, t_segmento* otroSegmento);
 
-//Compactacion
-void compactacion2();
-//el resto de compactacion puede q no vaya
 void compactacion();
 t_list* buscarSegmentosOcupados();
 t_list* copiarContenidoSeg(t_list* segmentosNoCompactados);
@@ -141,6 +138,7 @@ pthread_mutex_t mutexBitMapSegment;
 pthread_mutex_t mutexMemoria;
 pthread_mutex_t mutexIdGlobal;
 pthread_mutex_t listaProcesos;
+pthread_mutex_t mutexUnicaEjecucion;
 
 
 

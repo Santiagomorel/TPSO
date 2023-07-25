@@ -114,6 +114,7 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
         borrar_proceso(PID);
         break;
         case CREATE_SEGMENT:
+            pthread_mutex_lock(&mutexUnicaEjecucion);
             t_3_enteros* estructura_3_enteros = recibir_3_enteros(SOCKET_CLIENTE_KERNEL);
             int id_proceso = estructura_3_enteros->entero1;
             int id_segmento_nuevo = estructura_3_enteros->entero2;
@@ -151,25 +152,29 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
             log_warning(log_memoria, "sin memoria");
             enviar_CodOp(SOCKET_CLIENTE_KERNEL, OUT_OF_MEMORY);
             }
-            
+            pthread_mutex_unlock(&mutexUnicaEjecucion);
             break;
 
         case DELETE_SEGMENT:
             // Debe recibir el id del segmento que desea eliminar
-            
+            pthread_mutex_lock(&mutexUnicaEjecucion);
             t_2_enteros* data_delete = recibir_2_enteros(SOCKET_CLIENTE_KERNEL);
             int id_proceso_delete = data_delete->entero1;
             int id_segmento_delete = data_delete->entero2;
             t_proceso* proceso_sin_segmento = borrar_segmento(id_proceso_delete,id_segmento_delete);
             enviar_tabla_segmentos(SOCKET_CLIENTE_KERNEL, TABLA_SEGMENTOS, proceso_sin_segmento);
+            pthread_mutex_unlock(&mutexUnicaEjecucion);
             break;
 
 
          case COMPACTAR:
+            pthread_mutex_lock(&mutexUnicaEjecucion);
              //sleep(memoria_config.retardo_compactacion);
              log_warning(log_memoria, "Solicitud de Compactación");
-             compactacion2();
-             enviar_CodOp(SOCKET_CLIENTE_KERNEL,OK);
+             compactacion();
+             log_warning(log_memoria,"sali de compactacion");
+             enviar_CodOp(SOCKET_CLIENTE_KERNEL,OK_COMPACTACION);
+             pthread_mutex_unlock(&mutexUnicaEjecucion);
              break;
 
         case -1:
@@ -202,16 +207,18 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU)
             log_trace(log_memoria, "recibi el op_cod %d MENSAJE , codigoOperacion", codigoOperacion);
             break;
 
-        case MOV_IN: //(Registro, Direc_base ,size): Lee el valor de memoria correspondiente a la Dirección Lógica y lo almacena en el Registro.
+        case MOV_IN: 
+            pthread_mutex_lock(&mutexUnicaEjecucion);//(Registro, Direc_base ,size): Lee el valor de memoria correspondiente a la Dirección Lógica y lo almacena en el Registro.
             //falta el PID
             //PID|direc_base|size
             //int PID = recibir_entero(SOCKET_CLIENTE_CPU, log_memoria)
             t_3_enteros* movin = recibir_3_enteros(SOCKET_CLIENTE_CPU);
             log_info(log_memoria, "PID: %d - Accion: LEER - Direccion física: %d - Tamaño: %d - Origen: CPU",movin->entero1, movin->entero2,movin->entero3);
             mov_in(SOCKET_CLIENTE_CPU, movin->entero2, movin->entero3);
-
+            pthread_mutex_unlock(&mutexUnicaEjecucion);
             break;
         case MOV_OUT: //(Dirección Fisica, Registro): Lee el valor del Registro y lo escribe en la dirección física de memoria obtenida a partir de la Dirección Lógica.
+            pthread_mutex_lock(&mutexUnicaEjecucion);
             recive_mov_out* data_mov_out = recibir_mov_out(SOCKET_CLIENTE_CPU);
             //void * registro = (void*)recibir_string(SOCKET_CLIENTE_CPU, log_memoria);
             void* registro = (void*) data_mov_out->registro;
@@ -222,7 +229,7 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU)
             //falta chequear que el tipo que se pide para los size este bien
             enviar_CodOp(SOCKET_CLIENTE_CPU, MOV_OUT_OK);
             log_info(log_memoria, "ya envie codop");
-
+            pthread_mutex_unlock(&mutexUnicaEjecucion);
             break;
         case -1:
         codigoOP = codigoOperacion;
@@ -248,11 +255,13 @@ void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM)
         switch (codigoOperacion)
         {
         case MENSAJE:
+            
             log_trace(log_memoria, "recibi el op_cod %d MENSAJE , codigoOperacion", codigoOperacion);
 
             break;
 
         case F_READ:
+        pthread_mutex_lock(&mutexUnicaEjecucion);
         log_warning(log_memoria, "entre al fread");
         t_string_3enteros* fRead = recibir_string_3enteros(SOCKET_CLIENTE_FILESYSTEM);
         
@@ -271,9 +280,11 @@ void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM)
         sleep(memoria_config.retardo_memoria/1000);
         
         enviar_CodOp(SOCKET_CLIENTE_FILESYSTEM,F_READ_OK);
+        pthread_mutex_unlock(&mutexUnicaEjecucion);
             break;
         
         case F_WRITE:
+        pthread_mutex_lock(&mutexUnicaEjecucion);
         log_warning(log_memoria, "Entre al fwrite");
         t_3_enteros* fWrite = recibir_3_enteros(SOCKET_CLIENTE_FILESYSTEM);
         uint32_t pid_escribir_arhivo = fWrite->entero1;
@@ -286,9 +297,11 @@ void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM)
 
         enviar_paquete_string(SOCKET_CLIENTE_FILESYSTEM, valor_escribir_archivo,F_WRITE_OK, tam_a_escribir_archivo);
         free(valor_escribir_archivo);
+        pthread_mutex_unlock(&mutexUnicaEjecucion);
         break;
         case -1:
         codigoOP = codigoOperacion;
+        
         break;
 
         default:
@@ -377,6 +390,7 @@ void iniciar_semaforos()
     pthread_mutex_init(&mutexMemoria, NULL);
     pthread_mutex_init(&mutexIdGlobal, NULL);
     pthread_mutex_init(&listaProcesos, NULL);
+    pthread_mutex_init(&mutexUnicaEjecucion, NULL);
 }
 //
 //  KERNEL
@@ -456,7 +470,8 @@ void mov_in(int socket_cliente,int direc_fisica, int size){
     char* registro= malloc(size+1);
 
     memcpy(registro, MEMORIA_PRINCIPAL+direc_fisica ,size);
-    enviar_paquete_string(socket_cliente,registro,MOV_IN_OK,strlen(registro)+1);
+    log_error(log_memoria, "el valor a enviar es %s",registro);
+    enviar_paquete_string(socket_cliente,registro,MOV_IN_OK,sizeof(registro));
     //ocuparMemoria(registro, direc_logica, size);
     //ocuparBitMap(direc_logica, size);
 }
@@ -757,18 +772,21 @@ t_segmento* segmentoWorstFit(t_list* segmentos, int size){
     return segmento = list_get_maximum(segmentos, (void*)segmentoMayorTamanio);
 }
 
-//Compactacion
-void compactacion2(){
-    int base_aux=MEMORIA_PRINCIPAL;
-    log_trace(log_memoria, "entre en compactacion2");
+void compactacion(){
+    int base_aux=MEMORIA_PRINCIPAL + memoria_config.tam_segmento_0;
+    int base_aux2=MEMORIA_PRINCIPAL + memoria_config.tam_segmento_0;
+    log_trace(log_memoria, "entre en compactacion3, base aux: %d",base_aux);
     //libero todo el bitmap
-    liberarBitMap(0, memoria_config.tam_memoria);
+    liberarBitMap(memoria_config.tam_segmento_0-1, memoria_config.tam_memoria);
     //De todos los procesos
+
     for (int i = 0; i < list_size(tabla_de_procesos); i++)
     {
+         log_error(log_memoria,"el tamanio de la lista  de procesoses: %d",list_size(tabla_de_procesos));
         t_proceso* unProceso = list_get(tabla_de_procesos, i);
+        log_error(log_memoria,"el tamanio de la lista  de segmentos es: %d",list_size(unProceso->tabla_segmentos));
         //las tablas de segmentos
-        for (int j = 0; i < list_size(unProceso->tabla_segmentos); j++)
+        for (int j = 1; j < list_size(unProceso->tabla_segmentos); j++)
         {
             t_segmento* unSegmento = list_get(unProceso->tabla_segmentos, j);
             unSegmento->direccion_base = base_aux;
@@ -777,52 +795,14 @@ void compactacion2(){
         //- Resultado Compactación: Por cada segmento de cada proceso se deberá imprimir una línea con el siguiente formato:
         log_warning(log_memoria,"PID: %d - Segmento: %d - Base: %d - Tamaño %d", unProceso->id, unSegmento->id_segmento, unSegmento->direccion_base, unSegmento->tamanio_segmento);
         }
-        
     }
-    ocuparBitMap(0, base_aux-1);// les resto 1 por el ultimo +1 de la iteracion del for
 
+    ocuparBitMap(memoria_config.tam_segmento_0-1, (base_aux - (base_aux2)));// les resto 1 por el ultimo +1 de la iteracion del for
 }
 
 ////
 //// Hasta BITARRAYS no se usa nada
 ////
-
-void compactacion(){
-    //BUSCO SEGMENTOS OCUPADOS, CON EL BITMAP EN 1
-    t_list* segmentosNoCompactados = buscarSegmentosOcupados();
-
-    //SACO LO QUE TENGO GUARDADO EN ESOS SEGMENTOS
-    t_list* cosasDeLosSegmentos = copiarContenidoSeg(segmentosNoCompactados); //HACER
-
-    //LIMPIO EL BITMAP -> TODO EN 0
-    liberarBitMap(0, memoria_config.tam_memoria);
-
-    int cantidadS = list_size(segmentosNoCompactados);
-
-    //NUEVA LISTA DE SEGMENTOS
-    t_list* segmentosCompactados = list_create();
-
-    //GUARDO LA LISTA COSASDELOSSEGMENTOS EN LA MEMORIA, EN ORDEN, TODOS PEGADOS
-    for(int i =0 ; i<cantidadS ; i++){
-        //AGARRO UNO
-        t_segmento* miSegmento = list_get(segmentosNoCompactados, i);
-        
-        //LO GUARDO 
-        t_segmento* nuevoSegmento = guardarElemento(list_get(cosasDeLosSegmentos,i), miSegmento->tamanio_segmento);
-        
-        //LO AGREGO A LA NUEVA LISTA
-        list_add(segmentosCompactados, nuevoSegmento);
-    }
-
-    //ACTUALIZO LOS SEGMENTOS VIEJOS NO COMPACTADOS
-    actualizarCompactacion(segmentosNoCompactados, segmentosCompactados); //HACER
-
-    //LIBERO LISTAS
-    eliminarLista(cosasDeLosSegmentos);   
-    list_destroy(segmentosCompactados);
-    list_destroy(segmentosNoCompactados);
-    
-} 
 //CAMBIAR
 t_list* buscarSegmentosOcupados(){
     t_list* segmentos = list_create();
@@ -947,7 +927,8 @@ int bitsToBytes(int bits){
 
 void ocuparBitMap(int base, int size)
 {
-
+    log_warning(log_memoria,"entre en ocupar bitmap");
+    
     pthread_mutex_lock(&mutexBitMapSegment);
     for (int i = 0; i < size; i++)
     {

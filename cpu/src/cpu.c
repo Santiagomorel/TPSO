@@ -527,7 +527,6 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             if(sigsegv != 1){
                  log_info(cpu_logger, "Recibimos una physical address valida!");
                 char* register_value_mov_out = encontrarValorDeRegistro(register_mov_out);
-                log_info(cpu_logger, "encontre el valor del registro: %s",register_value_mov_out);
                 
                 escribir_valor(direccion_fisica, register_value_mov_out, ce->id, size_movout);
 
@@ -733,7 +732,7 @@ void enviar_ce_con_entero(int client_socket, contexto_ejecucion* ce, char* x, in
 /*---------------------------------- PARA MOV_OUT ----------------------------------*/
 
 char* encontrarValorDeRegistro(char* register_to_find_value){ 
-    char* retorno = malloc(strlen(register_to_find_value) +1);
+    char* retorno = malloc(strlen(register_to_find_value));
     
     if (strcmp(register_to_find_value, "AX") == 0){  
         strncpy(retorno,registros->AX,4);
@@ -860,7 +859,7 @@ char* fetch_value_in_memory(int physical_adress, contexto_ejecucion* ce, int siz
     log_info(cpu_logger, "recibo string %s", value_received);
     
 
-    log_info(conexion_cpu, "EL VALOR DEL REGISTRO RECIBIDO ES: %d", value_received);
+    //log_info(conexion_cpu, "EL VALOR DEL REGISTRO RECIBIDO ES: %d", value_received);
 
 
 
