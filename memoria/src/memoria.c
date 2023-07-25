@@ -470,8 +470,9 @@ void mov_in(int socket_cliente,int direc_fisica, int size){
     char* registro= malloc(size+1);
 
     memcpy(registro, MEMORIA_PRINCIPAL+direc_fisica ,size);
+    registro[size] = '\0';
     log_error(log_memoria, "el valor a enviar es %s",registro);
-    enviar_paquete_string(socket_cliente,registro,MOV_IN_OK,sizeof(registro));
+    enviar_paquete_string(socket_cliente,registro,MOV_IN_OK,strlen(registro)+1);
     //ocuparMemoria(registro, direc_logica, size);
     //ocuparBitMap(direc_logica, size);
 }
