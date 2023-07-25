@@ -732,7 +732,7 @@ void enviar_ce_con_entero(int client_socket, contexto_ejecucion* ce, char* x, in
 /*---------------------------------- PARA MOV_OUT ----------------------------------*/
 
 char* encontrarValorDeRegistro(char* register_to_find_value){ 
-    char* retorno = malloc(strlen(register_to_find_value));
+    char* retorno = malloc(strlen(register_to_find_value)+1);
     
     if (strcmp(register_to_find_value, "AX") == 0){  
         strncpy(retorno,registros->AX,4);
@@ -871,7 +871,7 @@ char* fetch_value_in_memory(int physical_adress, contexto_ejecucion* ce, int siz
 
 void store_value_in_register(char* register_mov_in, char* value){
 
-    log_info(cpu_logger, "El registro %s quedara el valor: %d",register_mov_in ,value);
+    log_info(cpu_logger, "El registro %s quedara el valor: %s",register_mov_in ,value);
 
     add_value_to_register(register_mov_in, value);
 }
