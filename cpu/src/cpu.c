@@ -732,56 +732,56 @@ void enviar_ce_con_entero(int client_socket, contexto_ejecucion* ce, char* x, in
 /*---------------------------------- PARA MOV_OUT ----------------------------------*/
 
 char* encontrarValorDeRegistro(char* register_to_find_value){ 
-    char* retorno = malloc(strlen(register_to_find_value)+1);
+    char *retorno = string_new();
     
     if (strcmp(register_to_find_value, "AX") == 0){  
-        strncpy(retorno,registros->AX,4);
+        string_n_append(&retorno, registros->AX, 4);
         return retorno;
         } 
     else if (strcmp(register_to_find_value, "BX") == 0){ 
-        strncpy(retorno,registros->BX,4); 
+        string_n_append(&retorno, registros->BX, 4);
         return retorno;
         } 
     else if (strcmp(register_to_find_value, "CX") == 0) { 
-        strncpy(retorno,registros->CX,4);
+        string_n_append(&retorno, registros->CX, 4);
         return retorno;
         } 
     else if (strcmp(register_to_find_value, "DX") == 0) { 
-        strncpy(retorno,registros->DX,4);
-        return retorno;
-        } 
-    else if (strcmp(register_to_find_value, "EBX") == 0){  
-        strncpy(retorno,registros->EAX,8);
-        return retorno;
-        } 
-    else if (strcmp(register_to_find_value, "ECX") == 0){ 
-        strncpy(retorno,registros->EBX,8); 
+        string_n_append(&retorno, registros->DX, 4);
         return retorno;
         } 
     else if (strcmp(register_to_find_value, "EAX") == 0){  
-        strncpy(retorno,registros->ECX,8);
+        string_n_append(&retorno, registros->EAX, 8);
+        return retorno;
+        } 
+    else if (strcmp(register_to_find_value, "EBX") == 0){ 
+        string_n_append(&retorno, registros->EBX, 8); 
+        return retorno;
+        } 
+    else if (strcmp(register_to_find_value, "ECX") == 0){  
+        string_n_append(&retorno, registros->ECX, 8);
         return retorno;
         } 
     else if (strcmp(register_to_find_value, "EDX") == 0){  
-        strncpy(retorno,registros->EDX,8);
+        string_n_append(&retorno, registros->EDX, 8);
         return retorno;
         } 
     else if (strcmp(register_to_find_value, "RAX") == 0){ 
         
-        strncpy(retorno,registros->RAX,16);
+        string_n_append(&retorno, registros->RAX, 16);
         
         return retorno;
     }
     else if (strcmp(register_to_find_value, "RBX") == 0){  
-        strncpy(retorno,registros->RBX,16);
+        string_n_append(&retorno, registros->RBX, 16);
         return retorno;
     }
     else if (strcmp(register_to_find_value, "RCX") == 0){  
-        strncpy(retorno,registros->RCX,16);
+        string_n_append(&retorno, registros->RCX, 16);
         return retorno;
     }
     else if (strcmp(register_to_find_value, "RDX") == 0){ 
-        strncpy(retorno,registros->RDX,16);
+       string_n_append(&retorno, registros->RDX, 16);
         return retorno;
     }
 }
