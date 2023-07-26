@@ -81,11 +81,11 @@ $(sort $(dir $(BIN) $(OBJS))):
 files:
 	mkdir config
 	mkdir runlogs
-
-.PHONY: default
-default: CFLAGS = $(CDEBUG)
-default: $(BIN)
-	./$(BIN) $(ARGS)
+	
+.PHONY: helgrind
+helgrind: CFLAGS = $(CDEBUG)
+helgrind: $(BIN)
+	valgrind --tool=helgrind $(HELGRIND_FLAGS) ./$(BIN) $(ARGS)
 
 .PHONY: start
 start: $(BIN)
