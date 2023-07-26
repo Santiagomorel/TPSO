@@ -82,10 +82,11 @@ files:
 	mkdir config
 	mkdir runlogs
 	
-.PHONY: helgrind
-helgrind: CFLAGS = $(CDEBUG)
-helgrind: $(BIN)
-	valgrind --tool=helgrind $(HELGRIND_FLAGS) ./$(BIN) $(ARGS)
+.PHONY: default
+default: CFLAGS = $(CDEBUG)
+default: $(BIN)
+	./$(BIN) $(ARGS)
+
 
 .PHONY: start
 start: $(BIN)
