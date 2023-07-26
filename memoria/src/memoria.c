@@ -942,6 +942,7 @@ void ocuparBitMap(int base, int size)
     {
         bitarray_set_bit(bitMapSegment, base + i); // REEMPLAZA LOS 0 POR 1, ASI SABEMOS QUE ESTA OCUPADO
     }
+    log_warning(log_memoria,"sali  de ocupar bitmap");
     pthread_mutex_unlock(&mutexBitMapSegment);
 }
 
