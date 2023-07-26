@@ -1218,8 +1218,6 @@ void atender_compactacion(int id_proceso, int id_segmento, int tamanio_segmento)
         
         switch (cod_op_compactacion){
             case OK_COMPACTACION:
-                log_warning(kernel_logger, "Entro en la compactacion y actualizo los procesos");
-                sleep(5);
                 actualizar_ts_x_proceso();
 
                 log_info(kernel_logger, "Compactacion: [Finalizo el proceso de compactacion]");
@@ -1248,9 +1246,8 @@ void actualizar_ts_x_proceso() // PROBAR
 
     for(int i = 0; i < cantidad_instancias; i++)
     {
-        list_add_all(lista_de_pcbs, list_get(lista_recurso, i));
+        list_add_all(lista_de_pcbs, lista_recurso[i]);
     }
-    
 
     int cantidad_procesos = list_size(lista_ts_x_procesos);
     for(int i = 0; i < cantidad_procesos; i++)
@@ -1259,9 +1256,11 @@ void actualizar_ts_x_proceso() // PROBAR
 
         t_pcb* pcb_encontrado = pcb_en_lista_coincide(lista_de_pcbs, proceso_i);
 
-        list_clean_and_destroy_elements(pcb_encontrado->tabla_segmentos, (void*)eliminar_tabla_segmentos);
+        list_clean_and_destroy_elements(pcb_encontrado->tabla_segmentos, (void*)free);
 
         list_add_all(pcb_encontrado->tabla_segmentos, proceso_i->tabla_segmentos);
+
+        imprimir_tabla_segmentos(pcb_encontrado->tabla_segmentos, kernel_logger);
     }
     
     list_destroy(lista_de_pcbs); 
@@ -1274,15 +1273,6 @@ t_pcb* pcb_en_lista_coincide(t_list* lista_pcbs, t_proceso* proceso_a_matchear)
     }
 
     return list_find(lista_pcbs, (void*) encontrar_pcb);
-}
-
-void eliminar_tabla_segmentos(t_list* tabla_segmentos)
-{
-    for (int i = 0; i < list_size(tabla_segmentos); i++)
-    {
-        free(list_get(tabla_segmentos, i));
-    }
-    
 }
 
 // ----------------------- Funciones BORRAR_SEGMENTO ----------------------- //
@@ -1305,7 +1295,7 @@ void atender_borrar_segmento() //TODO
     
     t_pcb* pcb_borrar_segmento = actualizar_pcb_lget_devuelve_pcb(contexto_borrar_segmento, listaEjecutando, m_listaEjecutando);
 
-    eliminar_tabla_segmentos(pcb_borrar_segmento->tabla_segmentos);
+    limpiar_tabla_segmentos(pcb_borrar_segmento->tabla_segmentos); // 
 
     list_add_all(pcb_borrar_segmento->tabla_segmentos, nueva_tabla_segmentos);
 
@@ -1316,6 +1306,11 @@ void atender_borrar_segmento() //TODO
     liberar_ce(nuevo_contexto_borrar_segmento);
 
     liberar_ce_entero(estructura_borrar_segmento); // VER SI FUNCIONA
+}
+
+void limpiar_tabla_segmentos(t_list* tabla_segmentos)
+{
+    list_clean_and_destroy_elements(tabla_segmentos, (void*) free);
 }
 
 // ----------------------- Funciones ABRIR_ARCHIVO ----------------------- //

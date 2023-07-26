@@ -523,7 +523,7 @@ int iniciarSegmentacion(void)
 }
 
 void iniciar_segmento_0(){
-    segmento_compartido = crear_segmento(0,0,memoria_config.tam_segmento_0);
+    segmento_compartido = crear_segmento(0,MEMORIA_PRINCIPAL,memoria_config.tam_segmento_0);
     ocuparBitMap(0, memoria_config.tam_segmento_0);
 }
 
@@ -781,14 +781,14 @@ t_segmento* segmentoWorstFit(t_list* segmentos, int size){
 void compactacion(){
     int base_aux=MEMORIA_PRINCIPAL + memoria_config.tam_segmento_0;
     int base_aux2=MEMORIA_PRINCIPAL + memoria_config.tam_segmento_0;
-    log_trace(log_memoria, "entre en compactacion3, base aux: %d",base_aux);
+    log_trace(log_memoria, "entre en compactacion, base aux: %d",base_aux);
     //libero todo el bitmap
     liberarBitMap(memoria_config.tam_segmento_0-1, memoria_config.tam_memoria);
     //De todos los procesos
 
     for (int i = 0; i < list_size(tabla_de_procesos); i++)
     {
-         log_error(log_memoria,"el tamanio de la lista  de procesoses: %d",list_size(tabla_de_procesos));
+        log_error(log_memoria,"el tamanio de la lista  de procesoses: %d",list_size(tabla_de_procesos));
         t_proceso* unProceso = list_get(tabla_de_procesos, i);
         log_error(log_memoria,"el tamanio de la lista  de segmentos es: %d",list_size(unProceso->tabla_segmentos));
         //las tablas de segmentos
@@ -796,10 +796,11 @@ void compactacion(){
         {
             t_segmento* unSegmento = list_get(unProceso->tabla_segmentos, j);
             unSegmento->direccion_base = base_aux;
-            base_aux += unSegmento->tamanio_segmento +1;
+            base_aux += unSegmento->tamanio_segmento;
 
         //- Resultado Compactación: Por cada segmento de cada proceso se deberá imprimir una línea con el siguiente formato:
-        log_warning(log_memoria,"PID: %d - Segmento: %d - Base: %d - Tamaño %d", unProceso->id, unSegmento->id_segmento, unSegmento->direccion_base, unSegmento->tamanio_segmento);
+        int base_log = unSegmento->direccion_base - base_aux2;
+        log_info(log_memoria,"PID: %d - Segmento: %d - Base: %d - Tamaño %d", unProceso->id, unSegmento->id_segmento, base_log, unSegmento->tamanio_segmento);
         }
     }
 

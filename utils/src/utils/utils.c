@@ -345,7 +345,7 @@ int leer_entero(char *buffer, int *desplazamiento) // Lee un entero en base a un
 	int ret;
 	memcpy(&ret, buffer + (*desplazamiento), sizeof(int)); // copia dentro de ret lo que tiene el buffer con un size de int
 	(*desplazamiento) += sizeof(int);
-		printf("allocating / copying entero %d \n", ret);
+	//printf("allocating / copying entero %d \n", ret);
 	return ret;
 }
 
@@ -373,7 +373,7 @@ char* leer_string(char *buffer, int *desplazamiento) // Lee un string en base a 
 	char *valor = malloc(tamanio);
 	memcpy(valor, buffer + (*desplazamiento), tamanio);
 	(*desplazamiento) += tamanio;
-	printf("allocating / copying string %s \n", valor);
+	//printf("allocating / copying string %s \n", valor);
 	return valor;
 }
 
@@ -1160,7 +1160,7 @@ t_list* recibir_todas_tablas_segmentos(int conexion)
 	buffer = recibir_buffer(&size, conexion);
 
 	int cant_t_procesos = leer_entero(buffer, &desp);
-	sleep(10);
+
 	for (int i = 0; i < cant_t_procesos; i++)
 	{
 		t_proceso* nuevoProceso = recibir_t_proceso(buffer, &desp);
