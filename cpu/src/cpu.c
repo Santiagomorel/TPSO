@@ -84,8 +84,6 @@ void establecer_conexion(char * ip_memoria, char* puerto_memoria, t_config* conf
 	}
     recibir_operacion(conexion_cpu);
     recibir_mensaje(conexion_cpu, cpu_logger);
-
-
 }
 
 void handshake_servidor(int socket_cliente){
@@ -504,7 +502,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
 
                 store_value_in_register(register_mov_in, value);
                 log_info(cpu_logger, "PID: %d - Acción: LEER - Segmento: %d - Dirección Fisica: %d", ce->id, id_segmento, direccion_fisica);
-                    log_info(cpu_logger,"YA GUARDE VALOR EN REGISTRO!!");
+                log_info(cpu_logger,"YA GUARDE VALOR EN REGISTRO!!");
             }else{
                 //“PID: <PID> - Error SEG_FAULT- Segmento: <NUMERO SEGMENTO> - Offset: <OFFSET> - Tamaño: <TAMAÑO>”
                 enviar_ce(socket_kernel, ce, SEG_FAULT, cpu_logger);
@@ -525,7 +523,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             direccion_fisica = traducir_direccion_logica(logical_address_mov_out, ce, 0);
 
             if(sigsegv != 1){
-                 log_info(cpu_logger, "Recibimos una physical address valida!");
+                log_info(cpu_logger, "Recibimos una physical address valida!");
                 char* register_value_mov_out = encontrarValorDeRegistro(register_mov_out);
                 
                 escribir_valor(direccion_fisica, register_value_mov_out, ce->id, size_movout);
@@ -853,10 +851,27 @@ char* fetch_value_in_memory(int physical_adress, contexto_ejecucion* ce, int siz
     eliminar_paquete(package);
     log_info(cpu_logger, "MOV IN enviado");    
 
-    int code_op = recibir_operacion(conexion_cpu);
-    log_info(cpu_logger, "CODIGO OPERACION RECIBIDO EN CPU: %d", code_op);
-    char* value_received = recibir_string(conexion_cpu, cpu_logger);
-    log_info(cpu_logger, "recibo string %s", value_received);
+    while(1){
+        int code_op = recibir_operacion(conexion_cpu);
+        switch(code_op){
+            case 0:
+                log_error(cpu_logger, "Llego el codop 0");
+                break;
+            case 49:
+                log_error(cpu_logger, "Llego el codigo Correcto");
+                log_info(cpu_logger, "CODIGO OPERACION RECIBIDO EN CPU: %d", code_op);
+                char* value_received = recibir_string(conexion_cpu, cpu_logger);
+                log_info(cpu_logger, "recibo string %s", value_received);
+                return value_received;
+                break;
+            default:
+                log_warning(cpu_logger, "Llego un codigo de operacion desconocido, %d", code_op);
+                exit(54);
+                break;
+        }
+    }
+    
+    
     
 
     //log_info(conexion_cpu, "EL VALOR DEL REGISTRO RECIBIDO ES: %d", value_received);
@@ -864,7 +879,7 @@ char* fetch_value_in_memory(int physical_adress, contexto_ejecucion* ce, int siz
 
 
 
-    return value_received;
+   
 }
 
 

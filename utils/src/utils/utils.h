@@ -192,6 +192,11 @@ typedef struct
 	t_buffer* buffer;
 } t_paquete;
 
+typedef struct
+{
+	op_code codigo_operacion;
+} t_cod;
+
 typedef struct{
 	int id;
 	t_list* tabla_segmentos;
@@ -290,6 +295,8 @@ int crear_conexion(char* ip, char* puerto);
 void enviar_mensaje(char* mensaje, int socket_cliente);
 t_paquete* crear_paquete(void);
 t_paquete* crear_paquete_op_code(op_code codigo_op);
+t_cod* crear_codigo(op_code codigo_op);
+void enviar_codigo(t_cod*, int);
 t_paquete* crear_super_paquete(void);
 void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio);
 void agregar_entero_a_paquete(t_paquete* , int );
@@ -299,6 +306,7 @@ void agregar_registros_a_paquete(t_paquete* , t_registro*);
 void enviar_paquete(t_paquete* paquete, int socket_cliente);
 void liberar_conexion(int socket_cliente);
 void eliminar_paquete(t_paquete* paquete);
+void eliminar_codigo(t_cod* codigo);
 void send_handshake(int socket_cliente);
 
 /*    Definiciones de Funcionalidad para Configuracion Inicial    */

@@ -1197,8 +1197,6 @@ void atender_crear_segmento()
             log_error(kernel_logger, "El codigo de recepcion de la creacion del segmento es erroneo");
             break;
         }
-        log_error(kernel_logger,"el codop es %d",cod_op_creacion);
-        log_error(kernel_logger, "rompe aca?");
     }
     
     liberar_ce_2enteros(estructura_crear_segmento); // VER SI FUNCIONA
@@ -1216,9 +1214,12 @@ void atender_compactacion(int id_proceso, int id_segmento, int tamanio_segmento)
         enviar_CodOp(memory_connection, COMPACTAR);
 
         int cod_op_compactacion = recibir_operacion(memory_connection);
-            log_error(kernel_logger,"el codop es %d",cod_op_compactacion);
+        log_error(kernel_logger,"el codop es %d",cod_op_compactacion);
+        
         switch (cod_op_compactacion){
             case OK_COMPACTACION:
+                log_warning(kernel_logger, "Entro en la compactacion y actualizo los procesos");
+                sleep(5);
                 actualizar_ts_x_proceso();
 
                 log_info(kernel_logger, "Compactacion: [Finalizo el proceso de compactacion]");

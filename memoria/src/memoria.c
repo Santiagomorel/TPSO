@@ -173,7 +173,7 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
              log_warning(log_memoria, "Solicitud de Compactación");
              compactacion();
              log_warning(log_memoria,"sali de compactacion");
-             enviar_CodOp(SOCKET_CLIENTE_KERNEL,OK_COMPACTACION);
+             enviar_todas_tablas_segmentos(SOCKET_CLIENTE_KERNEL, tabla_de_procesos, OK_COMPACTACION, log_memoria);
              pthread_mutex_unlock(&mutexUnicaEjecucion);
              break;
 
@@ -217,6 +217,7 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU)
             mov_in(SOCKET_CLIENTE_CPU, movin->entero2, movin->entero3);
             pthread_mutex_unlock(&mutexUnicaEjecucion);
             break;
+
         case MOV_OUT: //(Dirección Fisica, Registro): Lee el valor del Registro y lo escribe en la dirección física de memoria obtenida a partir de la Dirección Lógica.
             pthread_mutex_lock(&mutexUnicaEjecucion);
             recive_mov_out* data_mov_out = recibir_mov_out(SOCKET_CLIENTE_CPU);
@@ -225,15 +226,16 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU)
             log_trace(log_memoria,"PID: %d - Acción: ESCRIBIR - Dirección física: %d - Tamaño: %d - Origen: CPU", data_mov_out->PID, data_mov_out->DF, data_mov_out->size); 
             ocuparBitMap(data_mov_out->DF, data_mov_out->size);
             ocuparMemoria(registro, data_mov_out->DF, data_mov_out->size);
-
             //falta chequear que el tipo que se pide para los size este bien
             enviar_CodOp(SOCKET_CLIENTE_CPU, MOV_OUT_OK);
             log_info(log_memoria, "ya envie codop");
             pthread_mutex_unlock(&mutexUnicaEjecucion);
             break;
+
         case -1:
-        codigoOP = codigoOperacion;
+            codigoOP = codigoOperacion;
         break;
+        
         default:
              log_trace(log_memoria, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
             break;
@@ -470,9 +472,12 @@ void mov_in(int socket_cliente,int direc_fisica, int size){
     char *registro = string_new();
 
     memcpy(registro, MEMORIA_PRINCIPAL+direc_fisica ,size);
+
     registro[size] = '\0';
-    log_error(log_memoria, "el valor a enviar es %s",registro);
-    enviar_paquete_string(socket_cliente,registro,MOV_IN_OK,strlen(registro)+1);
+
+    log_error(log_memoria, "el valor a enviar es %s", registro);
+
+    enviar_paquete_string(socket_cliente, registro, MOV_IN_OK, strlen(registro)+1);
     //ocuparMemoria(registro, direc_logica, size);
     //ocuparBitMap(direc_logica, size);
 }
