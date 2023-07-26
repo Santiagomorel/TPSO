@@ -173,6 +173,7 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
              log_warning(log_memoria, "Solicitud de Compactación");
              compactacion();
              log_warning(log_memoria,"sali de compactacion");
+             imprimir_tabla_segmentos(((t_proceso*)(list_get(tabla_de_procesos, 0)))->tabla_segmentos, log_memoria);// pero si me llegan en orden xd
              enviar_todas_tablas_segmentos(SOCKET_CLIENTE_KERNEL, tabla_de_procesos, OK_COMPACTACION, log_memoria);
              pthread_mutex_unlock(&mutexUnicaEjecucion);
              break;
@@ -799,7 +800,7 @@ void compactacion(){
             base_aux += unSegmento->tamanio_segmento;
 
         //- Resultado Compactación: Por cada segmento de cada proceso se deberá imprimir una línea con el siguiente formato:
-        int base_log = unSegmento->direccion_base - base_aux2;
+        int base_log = unSegmento->direccion_base - base_aux2 + memoria_config.tam_segmento_0;
         log_info(log_memoria,"PID: %d - Segmento: %d - Base: %d - Tamaño %d", unProceso->id, unSegmento->id_segmento, base_log, unSegmento->tamanio_segmento);
         }
     }
