@@ -173,21 +173,24 @@ void desocupar_bloque(int numero_bloque)
 
 char *levantar_bloques()
 {
-  char *blocks_buffer = calloc(BLOCK_COUNT, BLOCK_SIZE); // Crea un buffer con todo inicializado en ceros
+ 
 
   log_warning(logger_filesystem,"antes del fopen");
   FILE *blocks_file = fopen(PATH_BLOQUES, "r");
   log_warning(logger_filesystem,"antes del if");
+
+  char *blocks_buffer = mmap (NULL, BLOCK_SIZE * BLOCK_COUNT, PROT_WRITE | PROT_READ, MAP_SHARED, blocks_file, 0);
+
   if (blocks_file == NULL)
   {
-      log_warning(logger_filesystem,"antes del fopen del if");
+    log_warning(logger_filesystem,"antes del fopen del if");
     blocks_file = fopen(PATH_BLOQUES, "w");
-    fwrite(blocks_buffer, BLOCK_SIZE, BLOCK_COUNT, blocks_file);
+    memcpy(blocks_buffer, blocks_file, BLOCK_SIZE * BLOCK_COUNT);
 
   }
 
-  fread(blocks_buffer, BLOCK_SIZE, BLOCK_COUNT, blocks_file);
-  log_warning(logger_filesystem,"el blocks buffer tiene: %s",blocks_buffer);
+  memcpy(blocks_buffer, blocks_file, BLOCK_SIZE * BLOCK_COUNT);
+  
   fclose(blocks_file);
   return blocks_buffer;
 }
