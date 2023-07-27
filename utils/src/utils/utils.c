@@ -109,6 +109,26 @@ t_list *recibir_paquete(int socket_cliente)
 	return valores;
 }
 
+
+
+int server_escuchar(t_log *logger, int server_socket, void *(*procesar_conexion)(void *))
+{
+	int cliente_socket = esperar_cliente(logger, server_socket);
+
+	if (cliente_socket != -1)
+	{
+		pthread_t hilo;
+		t_conexion *args = malloc(sizeof(t_conexion));
+		args->log = logger;
+		args->socket = cliente_socket;
+		pthread_create(&hilo, NULL, procesar_conexion, (void *)args);
+		pthread_detach(hilo);
+		return 1;
+	}
+
+	return 0;
+}
+
 /*      -------------------  Funciones Cliente  -------------------      */
 
 void *serializar_paquete(t_paquete *paquete, int bytes)
@@ -208,6 +228,13 @@ t_paquete *crear_paquete_op_code(op_code codigo_op)
 	return paquete;
 }
 
+t_cod* crear_codigo(op_code codigo_op)
+{
+	t_cod *paquete = malloc(sizeof(t_cod));
+	paquete->codigo_operacion = codigo_op;
+	return paquete;
+}
+
 void agregar_a_paquete(t_paquete *paquete, void *valor, int tamanio)
 {
 	paquete->buffer->stream = realloc(paquete->buffer->stream, paquete->buffer->size + tamanio + sizeof(int));
@@ -269,11 +296,27 @@ void enviar_paquete(t_paquete *paquete, int socket_cliente)
 	free(a_enviar);
 }
 
+void enviar_codigo(t_cod* codigo, int socket_cliente)
+{
+	void *magic = malloc(sizeof(int));
+
+	memcpy(magic, &(codigo->codigo_operacion), sizeof(int));
+
+	send(socket_cliente, magic, sizeof(int), 0);
+
+	free(magic);
+}
+
 void eliminar_paquete(t_paquete *paquete)
 {
 	free(paquete->buffer->stream);
 	free(paquete->buffer);
 	free(paquete);
+}
+
+void eliminar_codigo(t_cod* codigo)
+{
+	free(codigo);
 }
 
 void liberar_conexion(int socket_cliente)
@@ -322,7 +365,7 @@ int leer_entero(char *buffer, int *desplazamiento) // Lee un entero en base a un
 	int ret;
 	memcpy(&ret, buffer + (*desplazamiento), sizeof(int)); // copia dentro de ret lo que tiene el buffer con un size de int
 	(*desplazamiento) += sizeof(int);
-		printf("allocating / copying entero %d \n", ret);
+	//printf("allocating / copying entero %d \n", ret);
 	return ret;
 }
 
@@ -350,7 +393,7 @@ char* leer_string(char *buffer, int *desplazamiento) // Lee un string en base a 
 	char *valor = malloc(tamanio);
 	memcpy(valor, buffer + (*desplazamiento), tamanio);
 	(*desplazamiento) += tamanio;
-	printf("allocating / copying string %s \n", valor);
+	//printf("allocating / copying string %s \n", valor);
 	return valor;
 }
 
@@ -540,11 +583,11 @@ void enviar_ce(int conexion, contexto_ejecucion *ce, int codOP, t_log *logger)
 
 void enviar_CodOp(int conexion, int codOP)
 {
-	t_paquete *paquete = crear_paquete_op_code(codOP);
+	t_cod *codigo = crear_codigo(codOP);
 
-	enviar_paquete(paquete, conexion);
+	enviar_codigo(codigo, conexion);
 
-	eliminar_paquete(paquete);
+	eliminar_codigo(codigo);
 }
 
 void agregar_ce_a_paquete(t_paquete *paquete, contexto_ejecucion *ce, t_log *logger)
@@ -1113,6 +1156,7 @@ void enviar_todas_tablas_segmentos(int conexion, t_list* lista_t_procesos, int c
 	t_paquete* paquete = crear_paquete_op_code(codOP);
 
 	int cantidad_procesos = list_size(lista_t_procesos);
+	log_debug(logger, "la funcion enviar, lee %d cantidad de procesos", cantidad_procesos);
 	agregar_entero_a_paquete(paquete, cantidad_procesos);
 
 	for (int i = 0; i < cantidad_procesos; i++)
@@ -1133,7 +1177,7 @@ t_list* recibir_todas_tablas_segmentos(int conexion)
 	char *buffer;
 	int desp = 0;
 
-	buffer = recibir_buffer(&size, socket);
+	buffer = recibir_buffer(&size, conexion);
 
 	int cant_t_procesos = leer_entero(buffer, &desp);
 
@@ -1174,3 +1218,6 @@ void enviar_string_enterov2(int client_socket, char* parameter, int x, int codOP
     eliminar_paquete(paquete);
     
 }
+
+
+//memoria extra

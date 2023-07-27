@@ -211,13 +211,13 @@ void atender_crear_segmento();
 void atender_compactacion(int, int, int);
 void actualizar_ts_x_proceso();
 t_pcb* pcb_en_lista_coincide(t_list*, t_proceso*);
-void eliminar_tabla_segmentos(t_list*);
 
 // Variables COMPACTACION
 int f_execute;
 
 // Declaraciones BORRAR_SEGMENTO
 void atender_borrar_segmento();
+void limpiar_tabla_segmentos(t_list*);
 
 //Declaraciones ABRIR_ARCHIVO
 void atender_apertura_archivo();
