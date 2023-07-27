@@ -226,7 +226,7 @@ t_fcb *levantar_fcb(char *f_name)
   log_warning(logger_filesystem, "levanto fcb con path: %s", path);
   t_config *FCB = config_create(path);
   t_fcb *fcb = malloc(sizeof(t_fcb));
-  strcpy(fcb->f_name, f_name, strlen(f_name)+1); // Si la cadena de origen tiene menos de 29 caracteres, los faltantes se llenan con caracteres nulos
+  strcpy(fcb->f_name, f_name); // Si la cadena de origen tiene menos de 29 caracteres, los faltantes se llenan con caracteres nulos
   // fcb->f_name = '\0';           // Agrega el carácter nulo al final
   fcb->f_size = config_get_int_value(FCB, "TAMANIO_ARCHIVO");
   fcb->f_dp = config_get_int_value(FCB, "PUNTERO_DIRECTO");
