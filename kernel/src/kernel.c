@@ -1152,8 +1152,10 @@ void atender_crear_segmento()
     int id_segmento = estructura_crear_segmento->entero1;
 
     int tamanio_segmento = estructura_crear_segmento->entero2;
-
+    
     int id_proceso = ((t_pcb *) list_get(listaEjecutando, 0))->id;
+
+    log_info(kernel_logger, "PID: [%d] - Crear Segmento - Id: [%d] - Tamaño: [%d]", id_proceso, id_segmento, tamanio_segmento);
 
     enviar_3_enteros(memory_connection, id_proceso, id_segmento, tamanio_segmento, CREATE_SEGMENT); // mando a memoria idP, idS, tamanio
 
@@ -1172,6 +1174,13 @@ void atender_crear_segmento()
             break;
         
         case NECESITO_COMPACTAR:
+
+            if (f_execute) { // si se ejecuta una instruccion f_* bloqueante
+                log_info(kernel_logger, "Compactacion: [Esperando Fin de Operaciones de FS]");
+                pthread_mutex_lock(&m_F_operation);
+                pthread_mutex_unlock(&m_F_operation); // esto me parece una warangada, pero creo que funciona
+            }
+
             atender_compactacion(id_proceso, id_segmento, tamanio_segmento);
             break;
 
@@ -1204,33 +1213,27 @@ void atender_crear_segmento()
 
 void atender_compactacion(int id_proceso, int id_segmento, int tamanio_segmento)
 {
-    if (f_execute) { // si se ejecuta una instruccion f_* bloqueante
-        log_info(kernel_logger, "Compactacion: [Esperando Fin de Operaciones de FS]");
-        pthread_mutex_lock(&m_F_operation);
-        pthread_mutex_unlock(&m_F_operation); // esto me parece una warangada, pero creo que funciona
-    } else {
-        log_info(kernel_logger, "Compactacion: [Se Solicito Compactacion]");
+    log_info(kernel_logger, "Compactacion: [Se Solicito Compactacion]");
 
-        enviar_CodOp(memory_connection, COMPACTAR);
+    enviar_CodOp(memory_connection, COMPACTAR);
 
-        int cod_op_compactacion = recibir_operacion(memory_connection);
-        log_error(kernel_logger,"el codop es %d",cod_op_compactacion);
+    int cod_op_compactacion = recibir_operacion(memory_connection);
+    log_error(kernel_logger,"el codop es %d",cod_op_compactacion);
+    
+    switch (cod_op_compactacion){
+        case OK_COMPACTACION:
+            actualizar_ts_x_proceso();
+
+            log_info(kernel_logger, "Compactacion: [Finalizo el proceso de compactacion]");
+
+            enviar_3_enteros(memory_connection, id_proceso, id_segmento, tamanio_segmento, CREATE_SEGMENT);
+
+            break;
         
-        switch (cod_op_compactacion){
-            case OK_COMPACTACION:
-                actualizar_ts_x_proceso();
+        default:
+            log_error(kernel_logger, "El codigo de recepcion de la compactacion del segmento es erroneo");
 
-                log_info(kernel_logger, "Compactacion: [Finalizo el proceso de compactacion]");
-
-                enviar_3_enteros(memory_connection, id_proceso, id_segmento, tamanio_segmento, CREATE_SEGMENT);
-
-                break;
-            
-            default:
-                log_error(kernel_logger, "El codigo de recepcion de la compactacion del segmento es erroneo");
-
-                break;
-        }
+            break;
     }
 }
 
@@ -1259,7 +1262,7 @@ void actualizar_ts_x_proceso() // PROBAR
         list_clean_and_destroy_elements(pcb_encontrado->tabla_segmentos, (void*)free);
 
         list_add_all(pcb_encontrado->tabla_segmentos, proceso_i->tabla_segmentos);
-
+        log_warning(kernel_logger, "El id encontrado es : %d",pcb_encontrado->id);
         imprimir_tabla_segmentos(pcb_encontrado->tabla_segmentos, kernel_logger);
     }
     
@@ -1287,6 +1290,8 @@ void atender_borrar_segmento() //TODO
 
     int id_proceso = ((t_pcb *) list_get(listaEjecutando, 0))->id;
 
+    log_info(kernel_logger, "PID: [%d] - Eliminar Segmento - Id Segmento: [%d]", id_proceso, id_segmento);
+
     enviar_2_enteros(memory_connection, id_proceso, id_segmento, DELETE_SEGMENT); // mando a memoria idP, idS
 
     recibir_operacion(memory_connection);
@@ -1298,6 +1303,8 @@ void atender_borrar_segmento() //TODO
     limpiar_tabla_segmentos(pcb_borrar_segmento->tabla_segmentos); // 
 
     list_add_all(pcb_borrar_segmento->tabla_segmentos, nueva_tabla_segmentos);
+
+    imprimir_tabla_segmentos(pcb_borrar_segmento->tabla_segmentos, kernel_logger);
 
     contexto_ejecucion* nuevo_contexto_borrar_segmento = obtener_ce(pcb_borrar_segmento);
     
@@ -1386,7 +1393,7 @@ void atender_apertura_archivo()
         }   
     }
 
-    log_trace(kernel_logger, "PID: <%d> - Abrir Archivo: <%s>",pcb_en_ejecucion->id, nombreArchivo);
+    log_info(kernel_logger, "PID: [%d] - Abrir Archivo: [%s]",pcb_en_ejecucion->id, nombreArchivo);
     liberar_ce_string_entero(estructuraApertura);
 }
 
@@ -1459,7 +1466,7 @@ void atender_cierre_archivo(){
         actualizar_pcb(pcb_en_ejecucion, contextoDeEjecucion);
     pthread_mutex_unlock(&m_listaEjecutando);
 
-    log_trace(kernel_logger, "PID: <%d> - Cerrar Archivo: <%s>",pcb_en_ejecucion->id,nombreArchivo);
+    log_info(kernel_logger, "PID: [%d] - Cerrar Archivo: [%s]",pcb_en_ejecucion->id,nombreArchivo);
     
     t_list* listaFiltrada = nombre_en_lista_coincide(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso,(char*) nombreArchivo);
     
@@ -1585,7 +1592,7 @@ void atender_actualizar_puntero(){
     contexto_ejecucion* contextoAEnviar = obtener_ce(pcb_en_ejecucion);
     enviar_ce(cpu_dispatch_connection,contextoAEnviar,EJECUTAR_CE,kernel_logger);
     //falta liberar algo?
-    log_trace(kernel_logger, "PID: <%d> - Actualizar puntero Archivo: <%s> - Puntero <%u>",pcb_en_ejecucion->id,entradaProceso->nombreArchivo,entradaProceso->puntero);
+    log_info(kernel_logger, "PID: [%d] - Actualizar puntero Archivo: [%s] - Puntero [%u]",pcb_en_ejecucion->id,entradaProceso->nombreArchivo,entradaProceso->puntero);
 
 liberar_ce_string_entero(estructura_actualizacion);
     
@@ -1608,7 +1615,7 @@ void atender_lectura_archivo(){
 
     int puntero_archivo = estructura_leer_archivo->entero3;
 
-    
+    log_info(kernel_logger, "PID: [%d] - Leer Archivo: [%s] - Puntero [%d] - Dirección Memoria [%d] - Tamaño [%d]", ce_a_updatear->id, nombre_archivo, puntero_archivo, offset, bytes_a_leer); // verificar con el resto
 
         
     pthread_mutex_lock(&m_listaEjecutando);
@@ -1686,6 +1693,7 @@ void atender_escritura_archivo(){
     int bytes_a_leer = estructura_escribir_archivo->entero2;
     int puntero_archivo = estructura_escribir_archivo->entero3;
 
+    log_info(kernel_logger, "PID: [%d] - Escribir Archivo: [%s] - Puntero [%d] - Dirección Memoria [%d] - Tamaño [%d]", ce_a_updatear->id, nombre_archivo, puntero_archivo, offset, bytes_a_leer);
         
     pthread_mutex_lock(&m_listaEjecutando);
         t_pcb * pcb_escritura = (t_pcb *) list_get(listaEjecutando, 0);
@@ -1774,7 +1782,9 @@ void atender_modificar_tamanio_archivo(){
     log_error(kernel_logger,"el nombre es :%s",nombre_archivo);
     int tamanio_archivo = estructura_mod_tam_archivo->entero;
     log_error(kernel_logger,"el tamanio es :%d",tamanio_archivo);
-        
+    
+    log_info(kernel_logger, "PID: [%d] - Archivo: [%s] - Tamaño: [%d]", contexto_mod_tam_arch->id, nombre_archivo, tamanio_archivo);
+
     pthread_mutex_lock(&m_listaEjecutando);
         t_pcb * pcb_mod_tam_arch = (t_pcb *) list_get(listaEjecutando, 0);
         actualizar_pcb(pcb_mod_tam_arch, contexto_mod_tam_arch);
@@ -1843,24 +1853,5 @@ void destruirSemaforos()
 
 /*
 Logs minimos obligatorios TODO
-Fin de Proceso: Finaliza el proceso <PID> - Motivo: <SEG_FAULT / OUT_OF_MEMORY>
-Motivo de Bloqueo: PID: <PID> - Bloqueado por: <IO / NOMBRE_RECURSO / NOMBRE_ARCHIVO>
-Ingreso a Ready: Cola Ready <ALGORITMO>: [<LISTA DE PIDS>]
-Wait: PID: <PID> - Wait: <NOMBRE RECURSO> - Instancias: <INSTANCIAS RECURSO>    Nota: El valor de las instancias es después de ejecutar el Wait
-Signal: PID: <PID> - Signal: <NOMBRE RECURSO> - Instancias: <INSTANCIAS RECURSO>    Nota: El valor de las instancias es después de ejecutar el Signal
-Crear Segmento: PID: <PID> - Crear Segmento - Id: <ID SEGMENTO> - Tamaño: <TAMAÑO>
-Eliminar Segmento: PID: <PID> - Eliminar Segmento - Id Segmento: <ID SEGMENTO>
-Inicio Compactación: Compactación: <Se solicitó compactación / Esperando Fin de Operaciones de FS>
-Fin Compactación: Se finalizó el proceso de compactación
-Abrir Archivo: PID: <PID> - Abrir Archivo: <NOMBRE ARCHIVO>
-Cerrar Archivo: PID: <PID> - Cerrar Archivo: <NOMBRE ARCHIVO>
-Actualizar Puntero Archivo: PID: <PID> - Actualizar puntero Archivo: <NOMBRE ARCHIVO> - Puntero <PUNTERO>   Nota: El valor del puntero debe ser luego de ejecutar F_SEEK.
-Truncar Archivo: PID: <PID> - Archivo: <NOMBRE ARCHIVO> - Tamaño: <TAMAÑO>
-Leer Archivo: PID: <PID> - Leer Archivo: <NOMBRE ARCHIVO> - Puntero <PUNTERO> - Dirección Memoria <DIRECCIÓN MEMORIA> - Tamaño <TAMAÑO>
-Escribir Archivo: PID: <PID> -  Escribir Archivo: <NOMBRE ARCHIVO> - Puntero <PUNTERO> - Dirección Memoria <DIRECCIÓN MEMORIA> - Tamaño <TAMAÑO>
-
-
-TODO:
-PID: <PID> - Bloqueado por: <NOMBRE_ARCHIVO>
- 
+Escribir Archivo: PID: <PID> -  Escribir Archivo: <NOMBRE ARCHIVO> - Puntero <PUNTERO> - Dirección Memoria <DIRECCIÓN MEMORIA> - Tamaño <TAMAÑO> 
 */
