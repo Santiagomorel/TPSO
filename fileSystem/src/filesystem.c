@@ -176,10 +176,10 @@ char *levantar_bloques()
 {
   char *blocks_buffer = calloc(BLOCK_COUNT, BLOCK_SIZE); // Crea un buffer con todo inicializado en ceros
 
-  FILE *blocks_file = open(PATH_BLOQUES, O_CREAT | O_RDWR);
+  FILE *blocks_file = fopen(PATH_BLOQUES, "r");
   if (blocks_file == NULL)
   {
-    blocks_file = open(PATH_BLOQUES, O_CREAT | O_RDWR);
+    blocks_file = fopen(PATH_BLOQUES, "w");
     
     fwrite(blocks_buffer, BLOCK_SIZE, BLOCK_COUNT, blocks_file);
   }

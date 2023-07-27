@@ -34,7 +34,7 @@ int main(int argc, char **argv)
     iniciarSegmentacion();
 
     /*Fin Estructuras Admin*/
-
+    
     // ----------------------- levanto el servidor de memoria ----------------------- //
 
     socket_servidor_memoria = iniciar_servidor(memoria_config.puerto_escucha, log_memoria);
@@ -104,8 +104,12 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
             t_proceso* nuevo_proceso = crear_proceso_en_memoria(id_inicio_estructura);
             log_trace(log_memoria, "recibi el op_cod %d INICIAR_ESTRUCTURAS", codigoOperacion);
             log_trace(log_memoria, "creando paquete con tabla de segmentos base");
+            log_warning(log_memoria, "la pos de memoria es %d", MEMORIA_PRINCIPAL);
+            t_list* tabla_adaptada = adaptar_TDP_salida();
+            imprimir_tabla_segmentos(((t_proceso*)(list_get(tabla_adaptada, 0)))->tabla_segmentos, log_memoria);
             //- Creación de Proceso: “Creación de Proceso PID: <PID>”
-            enviar_tabla_segmentos(SOCKET_CLIENTE_KERNEL, TABLA_SEGMENTOS, nuevo_proceso);
+            t_proceso* proceso_adaptado = buscar_proceso_aux(id_inicio_estructura, tabla_adaptada);
+            enviar_tabla_segmentos(SOCKET_CLIENTE_KERNEL, TABLA_SEGMENTOS, proceso_adaptado);//tabla adaptada
             log_trace(log_memoria, "envio tabla de segmentos base");
         break;
         
@@ -119,6 +123,7 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
             int id_proceso = estructura_3_enteros->entero1;
             int id_segmento_nuevo = estructura_3_enteros->entero2;
             int tamanio = estructura_3_enteros->entero3;
+
 
             if(puedoGuardar(tamanio)==1){
                 t_list* segmentosDisponibles = buscarSegmentosDisponibles();
@@ -228,7 +233,7 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU)
             ocuparBitMap(data_mov_out->DF, data_mov_out->size);
             log_info(log_memoria, "ya ocupe bitmap");
 
-            ocuparMemoria(registro, data_mov_out->DF, data_mov_out->size);
+            ocuparMemoria(registro, MEMORIA_PRINCIPAL + data_mov_out->DF, data_mov_out->size);
             log_info(log_memoria, "ya ocupe memoria");
             //falta chequear que el tipo que se pide para los size este bien
             enviar_CodOp(SOCKET_CLIENTE_CPU, MOV_OUT_OK);
@@ -353,6 +358,7 @@ void generar_tabla_segmentos(t_proceso* proceso){
 void agregar_segmento_0(t_list* nueva_tabla_segmentos){
 
     list_add(nueva_tabla_segmentos, segmento_compartido);
+
 }
 
 
@@ -450,6 +456,18 @@ t_proceso* buscar_proceso(int id_proceso){
     return proceso;
 }
 
+t_proceso* buscar_proceso_aux(int id_proceso, t_list* tabla_aux){
+    
+    bool mismoIdProc(t_proceso* unProceso){
+    return (unProceso->id == id_proceso);
+    }
+
+    pthread_mutex_lock(&listaProcesos);
+    t_proceso* proceso = list_find(tabla_aux, mismoIdProc);
+    pthread_mutex_unlock(&listaProcesos);
+    return proceso;
+}
+
 t_proceso* borrar_segmento(int PID,int id_segmento_elim){
     
     bool mismoIdProc(t_proceso* unProceso){
@@ -495,7 +513,6 @@ void mov_in(int socket_cliente,int direc_fisica, int size){
 int iniciarSegmentacion(void)
 {
     MEMORIA_PRINCIPAL = malloc(memoria_config.tam_memoria); // el acrhivo de config de ejemplo es 4096 = 2¹²
-
     if (MEMORIA_PRINCIPAL == NULL)
     {
         // NO SE RESERVO LA MEMORIA
@@ -1014,3 +1031,21 @@ void eliminarTablaDeSegmentos(t_proceso* proceso){
     list_destroy_and_destroy_elements(proceso->tabla_segmentos, (void*)free);
     free(proceso);
 }
+
+int adaptar_base(t_segmento* unSegAux){
+    int base = MEMORIA_PRINCIPAL;
+    log_info(log_memoria, "la base es: %d", base);
+    return unSegAux->direccion_base -= base; 
+}
+t_list* adaptar_TDP_salida(){
+    t_list* tabla_de_procesos_aux = list_duplicate(tabla_de_procesos);
+    for (int i = 0; i < list_size(tabla_de_procesos_aux); i++)
+    {
+       t_proceso* unProceso_aux = list_get(tabla_de_procesos_aux, i);
+
+        list_map(unProceso_aux->tabla_segmentos, (void*)adaptar_base);
+       
+    }
+    return tabla_de_procesos_aux;
+}
+
