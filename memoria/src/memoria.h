@@ -3,46 +3,71 @@
 
 
 #include <utils/utils.h>
-//typedef enum{
-//    KERNEL,
-//    CPU,
-//    FILESYSTEM,
-//    OTRO
-//}cod_mod;
 
-//cod_mod recibir_handshake(int socket_cliente){
-//    cod_mod rta_handshake;
-//
-//    recv(socket_cliente, &rta_handshake, sizeof(cod_mod), MSG_WAITALL);
-//    return rta_handshake;
-//}
+typedef enum {
+    FIRST,
+    BEST,
+    WORST
+} t_algo_asig;
 
 typedef struct{
 
-    char* puerto_escucha;
-    int tam_memoria;
-    int tam_segmento_0;
-    int cant_segmentos;
-    int retardo_memoria;
-    int retardo_compactacion;
-    char* algoritmo_asignacion;
+    int puerto_escucha;
+    uint32_t tam_memoria;
+    uint32_t tam_segmento_0;
+    uint32_t cant_segmentos;
+    uint32_t retardo_memoria;
+    uint32_t retardo_compactacion;
+    t_algo_asig algoritmo_asignacion;
 
 } Memoria_config;
 Memoria_config memoria_config;
 
-//t_list* tabla_segmentos_global;
-//esta tabla estara compuesta por segmentos
-
-t_list* tabla_de_procesos;
-
-
-//esta mal (casi seguro)
-char* datos;
-void* MEMORIA_PRINCIPAL;
-int idGlobal;
-t_segmento* segmento_compartido;
+t_config* memoria_config_file;
+t_log* log_memoria;
+/////
+/////comienza memoria.h juanpi
+/////
 
 
+int socket_servidor_memoria;
+
+void* ESPACIO_USUARIO;
+uint32_t ESPACIO_LIBRE_TOTAL;
+t_list* LISTA_ESPACIOS_LIBRES;
+t_list* LISTA_GLOBAL_SEGMENTOS;
+pthread_mutex_t mutex_memoria;
+
+typedef struct {
+    uint32_t base;
+    uint32_t limite;
+} t_esp; // Para marcar un hueco de la memoria
+
+//comunicacion
+void procesar_conexion(void *void_args);
+//
+
+
+
+void levantar_estructuras_administrativas();
+void crear_segmento_0();
+void print_lista_esp(t_list* lista);
+void print_lista_segmentos();
+void* crear_tabla_segmentos();
+int buscar_espacio_libre(uint32_t tam);
+cod_op_kernel crear_segmento(uint32_t tam, uint32_t* base_resultante);
+bool son_contiguos(t_esp* esp1, t_esp* esp2);
+int buscar_segmento_por_base(uint32_t base);
+void borrar_segmento(uint32_t base, uint32_t limite);
+void escribir(uint32_t dir_fisca, void* data, uint32_t size);
+char* leer(uint32_t dir_fisca , uint32_t size);
+void compactar();
+/////
+/////termina memoria.h juanpi
+/////
+
+
+/*
 //KERNEL
 void liberar_bitmap_segmento(t_segmento* segmento);
 void eliminar_tabla_segmentos(t_list* tabla_segmentos);
@@ -121,8 +146,7 @@ int socket_cliente_memoria_KERNEL;
 
 
 
-t_config* memoria_config_file;
-t_log* log_memoria;
+
 
 void load_config(void);
 
@@ -159,6 +183,7 @@ t_list* adaptar_TDP_salida();
 //void enviar_tabla_segmentos();
 //void* serializar_segmento(t_segmento* segmento);
 //void* serializar_segmento(void* segmento);
+*/
 #endif /*MEMORIA_H_*/
 
 
