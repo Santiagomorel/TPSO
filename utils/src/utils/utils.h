@@ -42,6 +42,14 @@ void recibir_mensaje(int,t_log*);
 int recibir_operacion(int);
 void recieve_handshake(int);
 
+int server_escuchar(t_log *logger, int server_socket, void *(*procesar_conexion)(void *));
+
+typedef struct
+{
+	t_log *log;
+	int socket;
+} t_conexion;
+
 /*    Definiciones de Funcionalidad para Cliente    */
 
 typedef enum
@@ -115,13 +123,57 @@ typedef enum
 	NECESITO_COMPACTAR,
 	DIR_FISICA,
 	VALOR_A_RECIBIR,	
-
 	CONFIG_MEMORIA,
 	FIN_CONSOLA,		
 	OK,
     FAIL = -1,
 	NUEVO_FCB_OK,
 } op_code;
+
+// codOPs juanpi
+typedef enum
+{
+	HANDSHAKE_CONSOLA,
+	HANDSHAKE_KERNEL,
+	HANDSHAKE_CPU,
+	HANDSHAKE_FILESYSTEM,
+	HANDSHAKE_MEMORIA,
+	PAQUETE_INSTRUCCIONES,
+	NUEVO_CONTEXTO_PCB,
+	CREATE_SEGTABLE,
+	MEMORIA_CREATE_SEGMENT,
+	MEMORIA_FREE_SEGMENT,
+	MEMORIA_MOV_IN,
+	MEMORIA_MOV_OUT,
+	ABRIR_ARCHIVO,
+	CREAR_ARCHIVO,
+	TRUNCAR_ARCHIVO,
+	COMPACTAR,
+	LEER_ARCHIVO,
+	ESCRIBIR_ARCHIVO
+} cod_op;
+
+typedef enum
+{
+	CPU_EXIT,
+	CPU_YIELD,
+	CPU_IO,
+	CPU_WAIT, 
+	CPU_SIGNAL,
+	CPU_CREATE_SEGMENT,
+	CPU_DELETE_SEGMENT,
+	EXIT_RESOURCE_NOT_FOUND,
+	EXIT_OUT_OF_MEMORY,
+	MEMORIA_NECESITA_COMPACTACION,
+	MEMORIA_SEGMENTO_CREADO,
+	CPU_SEG_FAULT,
+	CPU_F_OPEN,
+  	CPU_F_CLOSE,
+  	CPU_F_SEEK,
+  	CPU_F_TRUNCATE,
+  	CPU_EFERRID,
+  	CPU_EFERRAIT
+} cod_op_kernel;
 
 typedef enum { // Los estados que puede tener un PCB
     NEW,
@@ -132,13 +184,28 @@ typedef enum { // Los estados que puede tener un PCB
     EXIT,
 } estados;
 
-typedef struct{
-	int id_segmento;
-	int direccion_base;		//falta definir tipo
-	int tamanio_segmento;
-} t_segmento;
+//typedef struct{
+//	int id_segmento;
+//	int direccion_base;		//falta definir tipo
+//	int tamanio_segmento;
+//} t_segmento;
 
+//t_segmento juanpi => comento el anterior
 
+typedef struct {
+    uint32_t pid;
+    uint32_t id;
+    uint32_t base;
+    uint32_t limite;
+} t_segmento; // Para marcar un segmento de la memoria
+
+//de juanpi
+typedef struct {
+    uint32_t id_seg;
+    uint32_t base;
+    uint32_t tam;
+	uint8_t activo;
+} t_ent_ts; // Entrada de la tabla de segmentos
 
 typedef struct{
 	char* archivo;

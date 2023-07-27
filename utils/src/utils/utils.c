@@ -109,6 +109,26 @@ t_list *recibir_paquete(int socket_cliente)
 	return valores;
 }
 
+
+
+int server_escuchar(t_log *logger, int server_socket, void *(*procesar_conexion)(void *))
+{
+	int cliente_socket = esperar_cliente(logger, server_socket);
+
+	if (cliente_socket != -1)
+	{
+		pthread_t hilo;
+		t_conexion *args = malloc(sizeof(t_conexion));
+		args->log = logger;
+		args->socket = cliente_socket;
+		pthread_create(&hilo, NULL, procesar_conexion, (void *)args);
+		pthread_detach(hilo);
+		return 1;
+	}
+
+	return 0;
+}
+
 /*      -------------------  Funciones Cliente  -------------------      */
 
 void *serializar_paquete(t_paquete *paquete, int bytes)
@@ -1198,3 +1218,6 @@ void enviar_string_enterov2(int client_socket, char* parameter, int x, int codOP
     eliminar_paquete(paquete);
     
 }
+
+
+//memoria extra
