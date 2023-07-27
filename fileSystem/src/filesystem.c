@@ -176,10 +176,10 @@ char *levantar_bloques()
 {
   char *blocks_buffer = calloc(BLOCK_COUNT, BLOCK_SIZE); // Crea un buffer con todo inicializado en ceros
 
-  FILE *blocks_file = open(PATH_BLOQUES, O_CREAT | O_RDWR);
+  FILE *blocks_file = fopen(PATH_BLOQUES, "r");
   if (blocks_file == NULL)
   {
-    blocks_file = open(PATH_BLOQUES, O_CREAT | O_RDWR);
+    blocks_file = fopen(PATH_BLOQUES, "w");
     
     fwrite(blocks_buffer, BLOCK_SIZE, BLOCK_COUNT, blocks_file);
   }
@@ -223,10 +223,10 @@ t_fcb *levantar_fcb(char *f_name)
   strcat(path, "/");
   strcat(path, f_name);
   strcat(path, ".config");
-
+  log_warning(logger_filesystem, "levanto fcb con path: %s", path);
   t_config *FCB = config_create(path);
   t_fcb *fcb = malloc(sizeof(t_fcb));
-  strcpy(fcb->f_name, f_name); // Si la cadena de origen tiene menos de 29 caracteres, los faltantes se llenan con caracteres nulos
+  strcpy(fcb->f_name, f_name, strlen(f_name)+1); // Si la cadena de origen tiene menos de 29 caracteres, los faltantes se llenan con caracteres nulos
   // fcb->f_name = '\0';           // Agrega el carácter nulo al final
   fcb->f_size = config_get_int_value(FCB, "TAMANIO_ARCHIVO");
   fcb->f_dp = config_get_int_value(FCB, "PUNTERO_DIRECTO");
@@ -517,7 +517,7 @@ int abrir_archivo(char* f_name)
   strcat(path, "/");
   strcat(path, f_name);
   strcat(path, ".config");
-  log_trace(logger_filesystem, "aca estoy despues del path");
+  log_trace(logger_filesystem, "aca estoy despues del path: %s", path);
   FILE *archivo_fcb = fopen(path, "r");
   log_trace(logger_filesystem, "aca estoy despues del f_open");
 
@@ -553,7 +553,7 @@ void crear_archivo(char* f_name)
   strcat(path, "/");
   strcat(path, f_name);
   strcat(path, ".config");
-  log_trace(logger_filesystem,"seteamos path en F_CREATE");
+  log_trace(logger_filesystem,"seteamos path en F_CREATE: %s", path);
   FILE *archivo_fcb = fopen(path, "w");
   fprintf(archivo_fcb, "NOMBRE_ARCHIVO=%s\n", new_fcb->f_name);
   fprintf(archivo_fcb, "TAMANIO_ARCHIVO=%u\n", new_fcb->f_size);
