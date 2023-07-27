@@ -49,6 +49,7 @@ void eliminar_tabla_segmentos(t_list* tabla_segmentos);
 void eliminar_proceso(t_proceso* proceso);
 void borrar_proceso(int PID);
 t_proceso* buscar_proceso(int id_proceso);
+t_proceso* buscar_proceso_aux(int, t_list*);
 t_proceso* borrar_segmento(int PID, int segmento);
 
 //CPU
@@ -153,6 +154,8 @@ t_proceso*  crear_proceso_en_memoria(int);
 
 void eliminarTablaDeProcesos();
 void eliminarTablaDeSegmentos(t_proceso* proceso);
+
+t_list* adaptar_TDP_salida();
 //void enviar_tabla_segmentos();
 //void* serializar_segmento(t_segmento* segmento);
 //void* serializar_segmento(void* segmento);

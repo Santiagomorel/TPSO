@@ -492,7 +492,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             int logical_address_mov_in = atoi(instruction[2]);
 
             int size_movin = tamanio_registro(register_mov_in);    
-            direccion_fisica = traducir_direccion_logica(logical_address_mov_in, ce, 0);//fijarse si el sizeof(register_mov_in) es correcto
+            direccion_fisica = traducir_direccion_logica(logical_address_mov_in, ce, size_movin);//fijarse si el sizeof(register_mov_in) es correcto
 
             
             //------------SI NO TENEMOS SEG FAULT EJECUTAMOS LO DEMAS ------------ //
@@ -520,7 +520,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             
             int size_movout = tamanio_registro(register_mov_out);
 
-            direccion_fisica = traducir_direccion_logica(logical_address_mov_out, ce, 0);
+            direccion_fisica = traducir_direccion_logica(logical_address_mov_out, ce, size_movout);
 
             if(sigsegv != 1){
                 log_info(cpu_logger, "Recibimos una physical address valida!");
@@ -813,7 +813,6 @@ int traducir_direccion_logica(int logical_address, contexto_ejecucion* ce, int v
     log_trace(cpu_logger, "tamanio segment table es :%d",list_size(segment_table_ce));
     
     t_segmento* segment = list_get(segment_table_ce, num_segmento);
-
     log_trace(cpu_logger, "el id del segmento es :%d",segment->id_segmento);
     log_trace(cpu_logger, "la direccion base del segmento es :%d",segment->direccion_base);
     log_trace(cpu_logger, "el tamanio es :%d",segment->tamanio_segmento);

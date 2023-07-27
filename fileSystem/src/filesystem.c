@@ -30,6 +30,7 @@ int main(int argc, char **argv)
     log_trace(logger_filesystem, "Estoy despues de levantar bitmap");
 		blocks_buffer = levantar_bloques();
     log_trace(logger_filesystem, "Estoy despues de levantar bloques");
+    mem_hexdump(blocks_buffer, BLOCK_COUNT);
 		// Prueba de archivo de bloques
 		// truncar_archivo("elpicante", 0);
 
@@ -175,19 +176,18 @@ char *levantar_bloques()
 {
   char *blocks_buffer = calloc(BLOCK_COUNT, BLOCK_SIZE); // Crea un buffer con todo inicializado en ceros
 
-  log_warning(logger_filesystem,"antes del fopen");
   FILE *blocks_file = fopen(PATH_BLOQUES, "r");
-  log_warning(logger_filesystem,"antes del if");
   if (blocks_file == NULL)
   {
-      log_warning(logger_filesystem,"antes del fopen del if");
     blocks_file = fopen(PATH_BLOQUES, "w");
+    
     fwrite(blocks_buffer, BLOCK_SIZE, BLOCK_COUNT, blocks_file);
-
   }
 
+
   fread(blocks_buffer, BLOCK_SIZE, BLOCK_COUNT, blocks_file);
-  log_warning(logger_filesystem,"el blocks buffer tiene: %s",blocks_buffer);
+
+
   fclose(blocks_file);
   return blocks_buffer;
 }
@@ -201,6 +201,7 @@ char *leer_bloque(uint32_t puntero_a_bloque)
   return bloque_leido;
 }
 
+
 void modificar_bloque(uint32_t puntero_a_bloque, char *bloque_nuevo)
 {
   size_t offset = puntero_a_bloque;
@@ -209,6 +210,7 @@ void modificar_bloque(uint32_t puntero_a_bloque, char *bloque_nuevo)
   FILE *blocks_file = fopen(PATH_BLOQUES, "r+");
   fseek(blocks_file, offset, SEEK_SET);
   fwrite(blocks_buffer + offset, BLOCK_SIZE, 1, blocks_file);
+
 
   free(bloque_nuevo);
   fclose(blocks_file);
@@ -398,6 +400,7 @@ void procesar_conexion()
             log_trace(logger_filesystem, "archivo recibido");
             truncar_archivo(estructura->string, (uint32_t)estructura->entero1);
             log_trace(logger_filesystem, "archivo truncado");
+            enviar_CodOp(cliente_socket,OK);
             break;
         case F_READ:
             t_string_4enteros* estructura_string_4enteros_l = recibir_string_4enteros(cliente_socket);
@@ -488,6 +491,7 @@ void procesar_conexion()
             log_trace(logger_filesystem, "recibimos operacion de memoria");
             eferrait(f_name2, offset2, cant2, buffer_escritura);
             log_trace(logger_filesystem, "aplicamos el F_WRITE");
+            mem_hexdump(blocks_buffer, BLOCK_COUNT);
             free(buffer_escritura);
             
             enviar_CodOp(cliente_socket, OK); //CORREGIR CODOP PARA QUE KERNEL SIGA EJECUTANDO

@@ -16,6 +16,7 @@
 #include <commons/temporal.h>
 #include <commons/collections/list.h>
 #include <commons/bitarray.h>
+#include <commons/memory.h>
 #include <string.h>
 #include <assert.h>
 #include <errno.h>
