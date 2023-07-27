@@ -226,7 +226,10 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU)
             void* registro = (void*) data_mov_out->registro;
             log_trace(log_memoria,"PID: %d - Acción: ESCRIBIR - Dirección física: %d - Tamaño: %d - Origen: CPU", data_mov_out->PID, data_mov_out->DF, data_mov_out->size); 
             ocuparBitMap(data_mov_out->DF, data_mov_out->size);
+            log_info(log_memoria, "ya ocupe bitmap");
+
             ocuparMemoria(registro, data_mov_out->DF, data_mov_out->size);
+            log_info(log_memoria, "ya ocupe memoria");
             //falta chequear que el tipo que se pide para los size este bien
             enviar_CodOp(SOCKET_CLIENTE_CPU, MOV_OUT_OK);
             log_info(log_memoria, "ya envie codop");
@@ -942,7 +945,6 @@ void ocuparBitMap(int base, int size)
     {
         bitarray_set_bit(bitMapSegment, base + i); // REEMPLAZA LOS 0 POR 1, ASI SABEMOS QUE ESTA OCUPADO
     }
-    log_warning(log_memoria,"sali  de ocupar bitmap");
     pthread_mutex_unlock(&mutexBitMapSegment);
 }
 

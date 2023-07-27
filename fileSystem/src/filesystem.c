@@ -173,22 +173,30 @@ void desocupar_bloque(int numero_bloque)
 
 char *levantar_bloques()
 {
-  char *blocks_buffer = calloc(BLOCK_COUNT, BLOCK_SIZE); // Crea un buffer con todo inicializado en ceros
-
+  
+  int size = BLOCK_COUNT * BLOCK_SIZE;
+  char * malloc_bloques = malloc(size);
+  
   log_warning(logger_filesystem,"antes del fopen");
-  FILE *blocks_file = fopen(PATH_BLOQUES, "r");
+  FILE * blocks_file = open(PATH_BLOQUES, O_CREAT | O_RDWR);
   log_warning(logger_filesystem,"antes del if");
+
+  // ftruncate(blocks_file,BLOCK_COUNT * BLOCK_SIZE);
+
+  char *blocks_buffer = mmap (NULL, size, PROT_WRITE | PROT_READ, MAP_SHARED, blocks_file, 0);
+
   if (blocks_file == NULL)
   {
-      log_warning(logger_filesystem,"antes del fopen del if");
-    blocks_file = fopen(PATH_BLOQUES, "w");
-    fwrite(blocks_buffer, BLOCK_SIZE, BLOCK_COUNT, blocks_file);
+    log_warning(logger_filesystem,"antes del fopen del if");
+    blocks_file = open(PATH_BLOQUES, O_CREAT | O_RDWR);
+    memcpy(blocks_file, blocks_buffer, size);
 
   }
-
-  fread(blocks_buffer, BLOCK_SIZE, BLOCK_COUNT, blocks_file);
-  log_warning(logger_filesystem,"el blocks buffer tiene: %s",blocks_buffer);
-  fclose(blocks_file);
+  log_warning(logger_filesystem,"dsp del if");
+  read(blocks_file, blocks_buffer, size);
+  log_warning(logger_filesystem,"dsp del memcpy");
+  close(blocks_file);
+  log_warning(logger_filesystem,"dsp del close");
   return blocks_buffer;
 }
 
@@ -208,8 +216,8 @@ void modificar_bloque(uint32_t puntero_a_bloque, char *bloque_nuevo)
 
   FILE *blocks_file = fopen(PATH_BLOQUES, "r+");
   fseek(blocks_file, offset, SEEK_SET);
-  fwrite(blocks_buffer + offset, BLOCK_SIZE, 1, blocks_file);
-
+  // fwrite(blocks_buffer + offset, BLOCK_SIZE, 1, blocks_file);
+  memcpy(blocks_file, blocks_buffer + offset , BLOCK_SIZE);
   free(bloque_nuevo);
   fclose(blocks_file);
 }
@@ -735,7 +743,8 @@ void eferrait(char *f_name, uint32_t offset, uint32_t cantidad, char *data)
 
   // Actualizar block_file
   FILE *blocks_file = fopen(PATH_BLOQUES, "w");
-  fwrite(blocks_buffer, BLOCK_SIZE, BLOCK_COUNT, blocks_file);
+  // fwrite(blocks_buffer, BLOCK_SIZE, BLOCK_COUNT, blocks_file);
+  memcpy(blocks_file, blocks_buffer, BLOCK_COUNT*BLOCK_SIZE);
   fclose(blocks_file);
   free(fcb);
 }
