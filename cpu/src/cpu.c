@@ -334,8 +334,6 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             //end_process = 1; // saca del while de ejecucion
             sale_proceso = 1;
 
-            exit(1);
-
             break;
 
         case I_WAIT:
@@ -822,7 +820,7 @@ int traducir_direccion_logica(int logical_address, contexto_ejecucion* ce, int v
     tamanio_segmento = segment ->tamanio_segmento;
     direccion_base = desplazamiento_segmento + segment->direccion_base ;
 
-    log_error(cpu_logger,"el calculo da: %d",desplazamiento_segmento+valor_a_sumar);
+    // log_error(cpu_logger,"el calculo da: %d",desplazamiento_segmento+valor_a_sumar);
     if(desplazamiento_segmento + valor_a_sumar >= segment-> tamanio_segmento ){
         log_trace(cpu_logger, "entre en el if de segfault");
         desplazamiento_segfault = desplazamiento_segmento;

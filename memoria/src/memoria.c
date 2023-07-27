@@ -105,11 +105,11 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
             log_trace(log_memoria, "recibi el op_cod %d INICIAR_ESTRUCTURAS", codigoOperacion);
             log_trace(log_memoria, "creando paquete con tabla de segmentos base");
             log_warning(log_memoria, "la pos de memoria es %d", MEMORIA_PRINCIPAL);
-            t_list* tabla_adaptada = adaptar_TDP_salida();
-            imprimir_tabla_segmentos(((t_proceso*)(list_get(tabla_adaptada, 0)))->tabla_segmentos, log_memoria);
+            // t_list* tabla_adaptada = adaptar_TDP_salida();
+            imprimir_tabla_segmentos(((t_proceso*)(list_get(tabla_de_procesos, 0)))->tabla_segmentos, log_memoria);
             //- Creación de Proceso: “Creación de Proceso PID: <PID>”
-            t_proceso* proceso_adaptado = buscar_proceso_aux(id_inicio_estructura, tabla_adaptada);
-            enviar_tabla_segmentos(SOCKET_CLIENTE_KERNEL, TABLA_SEGMENTOS, proceso_adaptado);//tabla adaptada
+            // t_proceso* proceso_adaptado = buscar_proceso_aux(id_inicio_estructura, tabla_adaptada);
+            enviar_tabla_segmentos(SOCKET_CLIENTE_KERNEL, TABLA_SEGMENTOS, nuevo_proceso);//tabla adaptada
             log_trace(log_memoria, "envio tabla de segmentos base");
         break;
         
@@ -228,13 +228,18 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU)
             pthread_mutex_lock(&mutexUnicaEjecucion);
             recive_mov_out* data_mov_out = recibir_mov_out(SOCKET_CLIENTE_CPU);
             //void * registro = (void*)recibir_string(SOCKET_CLIENTE_CPU, log_memoria);
+            int dir_fis = data_mov_out->DF;
+            int size = data_mov_out->size;
             void* registro = (void*) data_mov_out->registro;
-            log_trace(log_memoria,"PID: %d - Acción: ESCRIBIR - Dirección física: %d - Tamaño: %d - Origen: CPU", data_mov_out->PID, data_mov_out->DF, data_mov_out->size); 
-            ocuparBitMap(data_mov_out->DF, data_mov_out->size);
+            log_info(log_memoria,"PID: %d - Acción: ESCRIBIR - Dirección física: %d - Tamaño: %d - Origen: CPU", data_mov_out->PID, dir_fis, size); 
+            ocuparBitMap(dir_fis, size);
             log_info(log_memoria, "ya ocupe bitmap");
 
-            ocuparMemoria(registro, MEMORIA_PRINCIPAL + data_mov_out->DF, data_mov_out->size);
+            ocuparMemoria(registro, dir_fis, size);
             log_info(log_memoria, "ya ocupe memoria");
+            char* aux = string_new();
+            memcpy(aux, MEMORIA_PRINCIPAL + dir_fis, size);
+            log_info(log_memoria, "Lo que se escribio en memoria es: %s", aux);
             //falta chequear que el tipo que se pide para los size este bien
             enviar_CodOp(SOCKET_CLIENTE_CPU, MOV_OUT_OK);
             log_info(log_memoria, "ya envie codop");
@@ -673,7 +678,7 @@ t_list* buscarSegmentosDisponibles(){
 t_segmento* buscarUnLugarLibre(int* base){
     t_segmento* unSegmento = malloc(sizeof(t_segmento));
     int tamanio = 0;
-    
+     
     pthread_mutex_lock(&mutexBitMapSegment);
     if(bitarray_test_bit(bitMapSegment, *base) == 1){ //SI EL PRIMERO ES UN UNO, VA A CONTAR CUANDOS ESTAN OCUPADOS DESDE ESE Y CAMBIA LA BASE	
         int desplazamiento = contarEspaciosOcupadosDesde(bitMapSegment, *base); //CUENTA ESPACIOS OCUPADOS DESDE LA ABASE INDICADA
@@ -821,7 +826,7 @@ void compactacion(){
 
         //- Resultado Compactación: Por cada segmento de cada proceso se deberá imprimir una línea con el siguiente formato:
         int base_log = unSegmento->direccion_base - base_aux2 + memoria_config.tam_segmento_0;
-        log_info(log_memoria,"PID: %d - Segmento: %d - Base: %d - Tamaño %d", unProceso->id, unSegmento->id_segmento, base_log, unSegmento->tamanio_segmento);
+        log_info(log_memoria,"PID: %d - Segmento: %d - Base: %d - Tamaño %d, Baseliteral: %d", unProceso->id, unSegmento->id_segmento, base_log, unSegmento->tamanio_segmento, base_aux);
         }
     }
 

@@ -1262,7 +1262,7 @@ void actualizar_ts_x_proceso() // PROBAR
         list_clean_and_destroy_elements(pcb_encontrado->tabla_segmentos, (void*)free);
 
         list_add_all(pcb_encontrado->tabla_segmentos, proceso_i->tabla_segmentos);
-
+        log_warning(kernel_logger, "El id encontrado es : %d",pcb_encontrado->id);
         imprimir_tabla_segmentos(pcb_encontrado->tabla_segmentos, kernel_logger);
     }
     
@@ -1303,6 +1303,8 @@ void atender_borrar_segmento() //TODO
     limpiar_tabla_segmentos(pcb_borrar_segmento->tabla_segmentos); // 
 
     list_add_all(pcb_borrar_segmento->tabla_segmentos, nueva_tabla_segmentos);
+
+    imprimir_tabla_segmentos(pcb_borrar_segmento->tabla_segmentos, kernel_logger);
 
     contexto_ejecucion* nuevo_contexto_borrar_segmento = obtener_ce(pcb_borrar_segmento);
     

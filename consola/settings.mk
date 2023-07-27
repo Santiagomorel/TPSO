@@ -11,7 +11,7 @@ CDEBUG=-g -Wall -DDEBUG
 CRELEASE=-O3 -Wall -DNDEBUG
 
 # Arguments when executing with start, memcheck or helgrind
-ARGS=./config/consola.config ./config/pruebas/prueba.txt
+ARGS=./config/consola.config ./config/pruebas/FS_1
 
 # Valgrind flags
 MEMCHECK_FLAGS=--track-origins=yes --log-file="runlogs/memcheck.log"
