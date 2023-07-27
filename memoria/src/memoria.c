@@ -544,7 +544,7 @@ int iniciarSegmentacion(void)
 }
 
 void iniciar_segmento_0(){
-    segmento_compartido = crear_segmento(0,MEMORIA_PRINCIPAL,memoria_config.tam_segmento_0);
+    segmento_compartido = crear_segmento(0,0,memoria_config.tam_segmento_0);
     ocuparBitMap(0, memoria_config.tam_segmento_0);
 }
 
