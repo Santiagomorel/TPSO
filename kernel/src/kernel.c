@@ -477,6 +477,8 @@ void planificar_sig_to_ready()
 
         list_add_all(pcb_a_ready->tabla_segmentos, nuevo_segmento);
 
+        imprimir_tabla_segmentos(nuevo_segmento, kernel_logger);
+
         cambiar_estado_a(pcb_a_ready, READY, estadoActual(pcb_a_ready));
 
         agregar_a_lista_con_sems(pcb_a_ready, listaReady, m_listaReady);
@@ -496,7 +498,7 @@ void inicializar_estructuras(t_pcb* pcb)
 
 t_list* pedir_tabla_segmentos()
 {
-    uint32_t codigoOperacion = recibir_operacion(memory_connection);
+    int codigoOperacion = recibir_operacion(memory_connection);
     if (codigoOperacion != TABLA_SEGMENTOS)
     {
         log_error(kernel_logger, "Perdir tabla de segmentos no recibio una Tabla");

@@ -119,23 +119,22 @@ void end_program()
 void devolver_tabla_inicial(int socket) {
     //cod_op
 
-    op_code cod = TABLA_SEGMENTOS;
+    int cod = TABLA_SEGMENTOS;
 
-    uint32_t size = sizeof(op_code) + sizeof(t_ent_ts) * memoria_config.cant_segmentos + sizeof(uint32_t);
+    uint32_t size = sizeof(int) + sizeof(t_ent_ts) * memoria_config.cant_segmentos + sizeof(uint32_t);
     void* buffer = malloc(size);
 
-    memcpy(buffer, &cod, sizeof(cod_op));
-    memcpy(buffer + sizeof(cod_op), &memoria_config.cant_segmentos, sizeof(uint32_t));
+    memcpy(buffer, &cod, sizeof(int));
+    memcpy(buffer + sizeof(int), &memoria_config.cant_segmentos, sizeof(uint32_t));
 
     void* tabla = crear_tabla_segmentos();
 
-    memcpy(buffer + sizeof(cod_op) + sizeof(uint32_t), tabla, sizeof(t_ent_ts) * memoria_config.cant_segmentos);
+    memcpy(buffer + sizeof(int) + sizeof(uint32_t), tabla, sizeof(t_ent_ts) * memoria_config.cant_segmentos);
 
     send(socket, buffer, size, NULL);
 
     free(buffer);
     free(tabla);
-
 }
 
 void devolver_resultado_creacion(op_code resultado, int socket, uint32_t base) {
@@ -413,7 +412,7 @@ void* crear_tabla_segmentos() {
     memcpy(buffer + despl,&cero, sizeof(uint32_t)); // BASE
     despl+=sizeof(uint32_t);
 
-    memcpy(buffer + despl,&memoria_config.cant_segmentos, sizeof(uint32_t)); // LIMITE
+    memcpy(buffer + despl,&memoria_config.tam_segmento_0, sizeof(uint32_t)); // LIMITE
     despl+=sizeof(uint32_t);
 
     memcpy(buffer + despl, &estado_inicial, sizeof(uint8_t));
@@ -425,7 +424,6 @@ void* crear_tabla_segmentos() {
     {
         memcpy(buffer + despl,&i, sizeof(uint32_t)); // ID
         despl+=sizeof(uint32_t);
-
 
         memcpy(buffer + despl,&cero, sizeof(uint32_t)); // BASE
         despl+=sizeof(uint32_t);

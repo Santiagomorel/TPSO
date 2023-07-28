@@ -66,6 +66,17 @@ void *recibir_buffer(int *size, int socket_cliente)
 	return buffer;
 }
 
+void *recibir_bufferv2(uint32_t *size, int socket_cliente)
+{
+	void *buffer;
+
+	recv(socket_cliente, size, sizeof(uint32_t), MSG_WAITALL);
+	buffer = malloc(*size);
+	recv(socket_cliente, buffer, *size, MSG_WAITALL);
+
+	return buffer;
+}
+
 void recibir_mensaje(int socket_cliente, t_log *logger)
 {
 	int size;
@@ -378,6 +389,15 @@ uint32_t leer_entero_u32(char *buffer, int *desplazamiento) // Lee un entero en 
 	return ret;
 }
 
+uint8_t leer_entero_u8(char *buffer, int *desplazamiento) // Lee un entero en base a un buffer y un desplazamiento, ambos se pasan por referencia
+{
+	uint8_t ret;
+	memcpy(&ret, buffer + (*desplazamiento), sizeof(uint8_t)); // copia dentro de ret lo que tiene el buffer con un size de int
+	(*desplazamiento) += sizeof(uint8_t);
+	//printf("allocating / copying entero %d \n", ret);
+	return ret;
+}
+
 t_list *leer_segmento(char *buffer, int *desplazamiento) // Lee un entero en base a un buffer y un desplazamiento, ambos se pasan por referencia
 {
 	t_list *ret;
@@ -668,6 +688,7 @@ void imprimir_registros(t_registro* registros , t_log* logger) {
 
 void imprimir_tabla_segmentos(t_list* tabla_segmentos, t_log* logger){
 	int tamanio = list_size(tabla_segmentos);
+	log_warning(logger, "el tamanio de la tabla a imprimir es: %d", tamanio);
 	for(int i=0; i<tamanio; i++){
 		log_trace(logger, "id_segmento es: %d", (((t_segmento*)list_get(tabla_segmentos, i))->id_segmento));
 		log_trace(logger, "direccion_base es: %d", (((t_segmento*)list_get(tabla_segmentos, i))->direccion_base));
@@ -723,13 +744,13 @@ t_proceso* recibir_tabla_segmentos_como_proceso(int socket, t_log *logger)
 
 t_list* recibir_tabla_segmentos(int socket)
 {
-    int size = 0;
+    uint32_t size = 0;
     char *buffer;
     int desp = 0;
 
-    buffer = recibir_buffer(&size, socket);
+    buffer = recibir_bufferv2(&size, socket);
     
-	t_list* nuevaTablaSegmentos = leer_tabla_segmentos(buffer, &desp);
+	t_list* nuevaTablaSegmentos = leer_tabla_segmentosv2(buffer, &desp);
 
     return nuevaTablaSegmentos;
 }
@@ -749,7 +770,23 @@ t_list* leer_tabla_segmentos(char *buffer, int *desp)
     return nuevalista;
 }
 
-t_segmento *crear_segmento(int id_seg, int base, int tamanio)
+t_list* leer_tabla_segmentosv2(char *buffer, int *desp)
+{
+    t_list *nuevalista = list_create();
+    u_int32_t tamanio = leer_entero_u32(buffer, desp);
+    for (int i = 0; i < tamanio; i++)
+    {
+        uint32_t id_segmento = leer_entero_u32(buffer, desp);
+        uint32_t direccion_base = leer_entero_u32(buffer, desp);
+        uint32_t tamanio_segmento = leer_entero_u32(buffer, desp);
+		uint8_t datobasuraquenonosinteresadelmodulodejuampi = leer_entero_u8(buffer, desp);
+        t_segmento *nuevoElemento = crear_segmento(id_segmento, direccion_base, tamanio_segmento);
+        list_add(nuevalista, nuevoElemento);
+    }
+    return nuevalista;
+}
+
+t_segmento *crear_segmento(uint32_t id_seg, uint32_t base, uint32_t tamanio)
 {
     t_segmento *unSegmento = malloc(sizeof(t_segmento));
     unSegmento->id_segmento = id_seg;

@@ -448,7 +448,6 @@ t_proceso* recibir_tabla_segmentos_como_proceso(int, t_log*);
 t_list* recibir_tabla_segmentos(int);
 t_list* leer_tabla_segmentos(char*, int*);
 
-t_segmento* crear_segmento(int, int, int);
 
 void enviar_string_entero(int,char*,int,int codOP);
 void enviar_string_enterov2(int,char*,int,int codOP);
@@ -489,5 +488,14 @@ void agregar_entero_32_a_paquete(t_paquete*, uint32_t);
 
 // declaraciones de recepcion de datos
 uint32_t recibir_entero_u32(int , t_log*);
+void* recibir_bufferv2(uint32_t* , int);
+
+// declaraciones de segmentos
+t_list* leer_tabla_segmentosv2(char*, int*);
+t_segmento* crear_segmento(uint32_t, uint32_t, uint32_t);
+
+
+// declaraciones de lectura de datos
+uint8_t leer_entero_u8(char*, int*);
 
 #endif /* UTILS_H_ */
