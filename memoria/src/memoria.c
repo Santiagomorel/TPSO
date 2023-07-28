@@ -670,6 +670,7 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
     int codigoOP = 0;
     while (codigoOP != -1)
     {
+        log_warning(log_memoria,"me quedo esperando");
         int codigoOperacion = recibir_operacion(SOCKET_CLIENTE_KERNEL);
         switch (codigoOperacion)
         {
@@ -758,7 +759,6 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU)
     int codigoOP = 0;
     while (codigoOP != -1)
     {
-        log_warning(log_memoria,"me quedo esperando");
         int codigoOperacion = recibir_operacion(SOCKET_CLIENTE_CPU);
         //sleep(memoria_config.retardo_memoria);
         switch (codigoOperacion)
@@ -787,12 +787,16 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU)
 
         case MOV_OUT: //(Dirección Fisica, Registro): Lee el valor del Registro y lo escribe en la dirección física de memoria obtenida a partir de la Dirección Lógica.
             pthread_mutex_lock(&mutex_memoria);
-            t_3_enteros* mov_out_data = recibir_3_enteros(SOCKET_CLIENTE_CPU);
-            uint32_t pid_mov_out = mov_out_data->entero1;
-            uint32_t dir_fisica = mov_out_data->entero2;
+            log_warning(log_memoria,"estoy en mov_out");
+            t_string_3enteros* mov_out_data = recibir_string_3enteros(SOCKET_CLIENTE_CPU);
+            uint32_t dir_fisica = mov_out_data->entero1;
+            uint32_t pid_mov_out = mov_out_data->entero2;
             uint32_t tam_escrito = mov_out_data->entero3;
+            char* escritura = mov_out_data->string;
+
             char* valor = malloc(tam_escrito);
-            recv(SOCKET_CLIENTE_CPU, valor, tam_escrito, NULL);
+            strcpy(valor,escritura);
+
             // Para probar
             // char* cadena = imprimir_cadena(valor, tam_escrito);
             // printf("Valor recibido: %s\n", cadena);

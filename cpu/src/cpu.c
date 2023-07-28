@@ -784,12 +784,12 @@ char* encontrarValorDeRegistro(char* register_to_find_value){
 
 void escribir_valor(uint32_t physical_address, char* register_value_mov_out, uint32_t pid, uint32_t size){
     t_paquete* package = crear_paquete_op_code(MOV_OUT);
-    agregar_entero_a_paquete(package, physical_address);
     agregar_a_paquete(package, register_value_mov_out,strlen(register_value_mov_out)+1);
+    agregar_entero_a_paquete(package, physical_address);
     agregar_entero_a_paquete(package, pid);
     agregar_entero_a_paquete(package, size);
     enviar_paquete(package, conexion_cpu);
-    log_warning(cpu_logger," envie: physical adress: %d, reg value :%s,pid:%d,size:%d",physical_address,register_value_mov_out,pid,size);
+    log_warning(cpu_logger,"envie: physical adress: %d, reg value :%s,pid:%d,size:%d",physical_address,register_value_mov_out,pid,size);
 
 }
 /*---------------------------------- MMU ----------------------------------*/
@@ -854,8 +854,7 @@ char* fetch_value_in_memory(uint32_t physical_adress, contexto_ejecucion* ce, ui
             case 0:
                 log_error(cpu_logger, "Llego el codop 0");
                 break;
-            case 49:
-                log_error(cpu_logger, "Llego el codigo Correcto");
+            case MOV_IN_OK:
                 log_info(cpu_logger, "CODIGO OPERACION RECIBIDO EN CPU: %d", code_op);
                 char* value_received = recibir_string(conexion_cpu, cpu_logger);
                 log_info(cpu_logger, "recibo string %s", value_received);
