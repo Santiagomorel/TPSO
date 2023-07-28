@@ -118,11 +118,14 @@ char** parsearPorSaltosDeLinea(char*);
 t_registro* crear_registros();
 
 // Variables de parte consola
-int contador_id = 60;
+uint32_t contador_id = 60;
 
 // Declaraciones de parte planificadores
 void cambiar_estado_a(t_pcb*, estados, estados);
-int obtenerPid(t_pcb*);
+uint32_t obtenerPid(t_pcb*);
+char* obtener_nombre_archivo(t_entradaTGAA*);
+bool existeArchivo(char*);
+t_entradaTGAA* obtenerEntrada(char*);
 char* obtenerEstado(estados);
 int estadoActual(t_pcb*);
 void agregar_a_lista_con_sems(t_pcb*, t_list*, pthread_mutex_t);
@@ -221,14 +224,12 @@ void limpiar_tabla_segmentos(t_list*);
 
 //Declaraciones ABRIR_ARCHIVO
 void atender_apertura_archivo();
-char* obtener_nombre_archivo(t_entradaTGAA*);
-bool existeArchivo(char*);
 t_list* nombre_en_lista_coincide(t_list*, char* );
 t_list* nombre_en_lista_nombres_coincide(t_list* , char* );
 void crear_entrada_TAAP(char*,t_entradaTAAP*);
 void crear_entrada_TGAA(char*,t_entradaTAAP*);
 bool encontrar_nombre(char*);
-t_entradaTGAA* obtenerEntrada(char* );
+
 
 //Declaraciones CERRAR_ARCHIVO
 void atender_cierre_archivo();
