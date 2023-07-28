@@ -483,6 +483,38 @@ t_registro * leer_registros(char* buffer, int * desp) {
 	return retorno;
 }
 
+//Deserializar tabla segmentos V2 JP
+
+t_list* deserializar_tabla_segmentos(void* buffer, uint32_t size) {
+    t_list* tabla = list_create();
+    uint32_t despl = 0;
+
+    t_ent_ts* entrada;
+    
+    for (int i = 0; i < size; i++)
+    {
+
+        entrada = malloc(sizeof(t_ent_ts));
+
+        memcpy(&entrada->id_seg, buffer + despl, sizeof(uint32_t));
+        despl += sizeof(uint32_t);
+
+        memcpy(&entrada->base, buffer + despl, sizeof(uint32_t));
+        despl += sizeof(uint32_t);
+
+        memcpy(&entrada->tam, buffer + despl, sizeof(uint32_t));
+        despl += sizeof(uint32_t);
+
+        memcpy(&entrada->activo, buffer + despl, sizeof(uint8_t));
+        despl += sizeof(uint8_t);
+
+        list_add(tabla, entrada);
+
+    }
+    return tabla;
+}
+
+
 void loggear_pcb(t_pcb *pcb, t_log *logger)
 {
 	int i = 0;

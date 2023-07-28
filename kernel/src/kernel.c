@@ -499,12 +499,18 @@ void inicializar_estructuras(t_pcb* pcb)
 t_list* pedir_tabla_segmentos()
 {
     int codigoOperacion = recibir_operacion(memory_connection);
+    log_trace(kernel_logger, "el codop es: %d", codigoOperacion);
     if (codigoOperacion != TABLA_SEGMENTOS)
     {
         log_error(kernel_logger, "Perdir tabla de segmentos no recibio una Tabla");
     }
-
-    return recibir_tabla_segmentos(memory_connection);
+    uint32_t size;
+    recv(memory_connection, &size, sizeof(uint32_t), NULL);
+    void* buffer = malloc(size * sizeof(t_ent_ts));
+    recv(memory_connection, buffer, size * sizeof(t_ent_ts), NULL);
+    t_list* tabla_de_segmentos = deserializar_tabla_segmentos(buffer, size);
+    free(buffer);
+    return tabla_de_segmentos;
 }
 
 // ----------------------- Funciones planificador to - running ----------------------- //

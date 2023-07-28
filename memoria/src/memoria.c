@@ -118,7 +118,6 @@ void end_program()
 //comienza comunicacion.c juanpi
 void devolver_tabla_inicial(int socket) {
     //cod_op
-
     int cod = TABLA_SEGMENTOS;
 
     uint32_t size = sizeof(int) + sizeof(t_ent_ts) * memoria_config.cant_segmentos + sizeof(uint32_t);
@@ -135,6 +134,8 @@ void devolver_tabla_inicial(int socket) {
 
     free(buffer);
     free(tabla);
+
+
 }
 
 void devolver_resultado_creacion(op_code resultado, int socket, uint32_t base) {

@@ -417,6 +417,10 @@ char* leer_string(char* , int* );
 char** leer_string_array(char* , int* );
 t_registro * leer_registros(char* , int * );
 
+//Deserializar tabla segmentos V2 JP
+
+t_list* deserializar_tabla_segmentos(void*, uint32_t);
+
 void loggear_pcb(t_pcb* , t_log* );
 void loggear_estado(t_log* , int );
 
