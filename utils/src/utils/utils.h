@@ -180,9 +180,9 @@ typedef enum { // Los estados que puede tener un PCB
 } estados;
 
 typedef struct{
-	int id_segmento;
-	int direccion_base;		//falta definir tipo
-	int tamanio_segmento;
+	uint32_t id_segmento;
+	uint32_t direccion_base;		//falta definir tipo
+	uint32_t tamanio_segmento;
 } t_segmento;
 
 //t_segmento juanpi => comento el anterior
@@ -223,9 +223,9 @@ typedef struct{
 }t_registro;
 
 typedef struct {
-    int id;
+    uint32_t id;
 	char** instrucciones;
-    int program_counter;
+    uint32_t program_counter;
 	t_registro* registros_cpu;
 	t_list* tabla_segmentos;
 	double estimacion_rafaga;
@@ -261,29 +261,29 @@ typedef struct
 } t_cod;
 
 typedef struct{
-	int id;
+	uint32_t id;
 	t_list* tabla_segmentos;
 }t_proceso;
 
 
 
 typedef struct {
-	int id;
+	uint32_t id;
 	char** instrucciones;
-	int program_counter;
+	uint32_t program_counter;
 	t_registro* registros_cpu;
 	t_list* tabla_segmentos;
 } contexto_ejecucion;
 
 typedef struct{
 	contexto_ejecucion* ce;
-	int entero1;
-	int entero2;
+	uint32_t entero1;
+	uint32_t entero2;
 } t_ce_2enteros;
 
 typedef struct{
 	contexto_ejecucion* ce;
-	int entero;
+	uint32_t entero;
 } t_ce_entero;
 
 typedef struct{
@@ -294,85 +294,85 @@ typedef struct{
 typedef struct{
 	contexto_ejecucion* ce;
 	char* string;
-	int entero;
+	uint32_t entero;
 } t_ce_string_entero;
 typedef struct{
 	contexto_ejecucion* ce;
 	char* string;
-	int entero1;
-	int entero2;
+	uint32_t entero1;
+	uint32_t entero2;
 } t_ce_string_2enteros;
 
 typedef struct{
 	contexto_ejecucion* ce;
 	char* string;
-	int entero1;
-	int entero2;
-	int entero3;
+	uint32_t entero1;
+	uint32_t entero2;
+	uint32_t entero3;
 } t_ce_string_3enteros;
 
 typedef struct{
-	int entero1;
-	int entero2;
+	uint32_t entero1;
+	uint32_t entero2;
 } t_2_enteros;
 
 typedef struct{
 	char* string;
-	int entero1;
+	uint32_t entero1;
 } t_string_entero;
 typedef struct{
 	char* string;
-	int entero1;
-	int entero2;
+	uint32_t entero1;
+	uint32_t entero2;
 } t_string_2enteros;
 
 typedef struct{
 	char* string;
-	int entero1;
-	int entero2;
-	int entero3;
+	uint32_t entero1;
+	uint32_t entero2;
+	uint32_t entero3;
 } t_string_3enteros;
 
-typedef struct{
-	char* string;
-	uint32_t entero1;
-	uint32_t entero2;
-	uint32_t entero3;
-} t_string_3_u32;
+// typedef struct{
+// 	char* string;
+// 	uint32_t entero1;
+// 	uint32_t entero2;
+// 	uint32_t entero3;
+// } t_string_3_u32;
 
 typedef struct{
 	char* string;
-	int entero1;
-	int entero2;
-	int entero3;
-	int entero4;
-} t_string_4enteros;
-
-
-typedef struct{
-	int entero1;
-	int entero2;
-	int entero3;
-} t_3_enteros;
-
-typedef struct{
-	uint32_t entero1;
-	uint32_t entero2;
-	uint32_t entero3;
-} t_3_u32;
-
-typedef struct{
 	uint32_t entero1;
 	uint32_t entero2;
 	uint32_t entero3;
 	uint32_t entero4;
-} t_4_u32;
+} t_string_4enteros;
+
 
 typedef struct{
-	int DF;
+	uint32_t entero1;
+	uint32_t entero2;
+	uint32_t entero3;
+} t_3_enteros;
+
+// typedef struct{
+// 	uint32_t entero1;
+// 	uint32_t entero2;
+// 	uint32_t entero3;
+// } t_3_u32;
+
+// typedef struct{
+// 	uint32_t entero1;
+// 	uint32_t entero2;
+// 	uint32_t entero3;
+// 	uint32_t entero4;
+// } t_4_u32;
+
+typedef struct{
+	uint32_t DF;
 	char* registro;
-	int PID;
-	int size;
+	uint32_t PID;
+	uint32_t size;
 } recive_mov_out;
 
 int crear_conexion(char* ip, char* puerto);
@@ -416,7 +416,6 @@ t_list* recibir_paquete_segmento(int );
 contexto_ejecucion * recibir_ce(int );
 char* recibir_string(int, t_log*);
 int recibir_entero(int, t_log*);
-uint32_t recibir_entero_u32(int socket, t_log* logger);
 
 
 void enviar_paquete_string(int, char*, int, int);
@@ -477,4 +476,12 @@ void liberar_ce_string_2enteros(t_ce_string_2enteros*);
 void enviar_todas_tablas_segmentos(int, t_list*, int, t_log*);
 t_list* recibir_todas_tablas_segmentos(int);
 t_proceso* recibir_t_proceso(char*, int*);
+
+
+// declaraciones de agregar_a_paquete
+void agregar_entero_32_a_paquete(t_paquete*, uint32_t);
+
+// declaraciones de recepcion de datos
+uint32_t recibir_entero_u32(int , t_log*);
+
 #endif /* UTILS_H_ */

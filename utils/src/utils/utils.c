@@ -252,6 +252,13 @@ void agregar_entero_a_paquete(t_paquete *paquete, int x)
 	paquete->buffer->size += sizeof(int);
 }
 
+void agregar_entero_32_a_paquete(t_paquete *paquete, uint32_t x)
+{
+	paquete->buffer->stream = realloc(paquete->buffer->stream, paquete->buffer->size + sizeof(uint32_t));
+	memcpy(paquete->buffer->stream + paquete->buffer->size, &x, sizeof(uint32_t));
+	paquete->buffer->size += sizeof(uint32_t);
+
+
 void agregar_string_a_paquete(t_paquete *paquete, char* palabra)
 {
 	paquete->buffer->stream = realloc(paquete->buffer->stream, paquete->buffer->size + sizeof(char*));
@@ -370,9 +377,9 @@ int leer_entero(char *buffer, int *desplazamiento) // Lee un entero en base a un
 }
 uint32_t leer_entero_u32(char *buffer, int *desplazamiento) // Lee un entero en base a un buffer y un desplazamiento, ambos se pasan por referencia
 {
-	int ret;
-	memcpy(&ret, buffer + (*desplazamiento), sizeof(u_int32_t)); // copia dentro de ret lo que tiene el buffer con un size de int
-	(*desplazamiento) += sizeof(u_int32_t);
+	uint32_t ret;
+	memcpy(&ret, buffer + (*desplazamiento), sizeof(uint32_t)); // copia dentro de ret lo que tiene el buffer con un size de int
+	(*desplazamiento) += sizeof(uint32_t);
 	//printf("allocating / copying entero %d \n", ret);
 	return ret;
 }
@@ -562,6 +569,7 @@ int recibir_entero(int socket, t_log* logger)
 	free(buffer);
 	return nuevoEntero;
 }
+
 uint32_t recibir_entero_u32(int socket, t_log* logger)
 {
 	int size = 0;

@@ -33,7 +33,7 @@ int main(int argc, char **argv)
     iniciarSemaforos();
 
     // ----------------------- contecto el kernel con los servidores de MEMORIA - CPU (dispatch) - FILESYSTEM ----------------------- //
-    iniciar_conexioniniciar_conexiones_kernel();
+    iniciar_conexiones_kernel();
     
     // ----------------------- levanto el servidor del kernel ----------------------- //
 
@@ -340,7 +340,7 @@ void cambiar_estado_a(t_pcb* a_pcb, estados nuevo_estado, estados estado_anterio
     log_info(kernel_logger,"Cambio de Estado: PID: [%d] - Estado Anterior: [%s] - Estado Actual: [%s]", obtenerPid(a_pcb), obtenerEstado(estado_anterior), obtenerEstado(nuevo_estado));
 }
 
-int obtenerPid(t_pcb* pcb)
+uint32_t obtenerPid(t_pcb* pcb)
 {
     return pcb->id;
 }
@@ -373,7 +373,7 @@ bool existeArchivo(char* nombreArchivo){
  
 }
 
-t_entradaTGAA* obtenerEntrada(char* nombreArchivo) {
+t_entradaTGAA* obtenerEntrada(char* nombreArchivo){
     
     bool buscarArchivo(t_entradaTGAA* entrada){
     return strcmp(entrada->nombreArchivo, nombreArchivo) == 0;
@@ -488,7 +488,7 @@ void planificar_sig_to_ready()
 void inicializar_estructuras(t_pcb* pcb)
 {
     t_paquete *paquete = crear_paquete_op_code(INICIAR_ESTRUCTURAS);
-    agregar_entero_a_paquete(paquete, pcb->id);
+    agregar_entero_32_a_paquete(paquete, pcb->id);
 
     enviar_paquete(paquete, memory_connection);
     eliminar_paquete(paquete);
