@@ -180,10 +180,10 @@ void sacar_rafaga_ejecutada(t_pcb*);
 void iniciar_nueva_espera_ready(t_pcb*);
 
 // Declaraciones manejo de recursos
-int recurso_no_existe(char*);
-int obtener_id_recurso(char*);
-int id_proceso_en_lista(t_list*);
-int obtener_instancias_recurso(int);
+uint32_t recurso_no_existe(char*);
+uint32_t obtener_id_recurso(char*);
+uint32_t id_proceso_en_lista(t_list*);
+uint32_t obtener_instancias_recurso(int);
 void restar_instancia(int);
 void sumar_instancia(int);
 void sumar_instancia_exit(int, t_pcb*);
@@ -211,7 +211,7 @@ void rutina_io(thread_args*);
 void atender_crear_segmento();
 
 // Declaraciones COMPACTACION
-void atender_compactacion(int, int, int);
+void atender_compactacion(uint32_t, uint32_t, uint32_t);
 void actualizar_ts_x_proceso();
 t_pcb* pcb_en_lista_coincide(t_list*, t_proceso*);
 

@@ -702,7 +702,7 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
         break;
         case CREATE_SEGMENT:
             pthread_mutex_lock(&mutex_memoria);
-            t_3_u32* create_data = recibir_3_u32(SOCKET_CLIENTE_KERNEL);
+            t_3_enteros* create_data = recibir_3_enteros(SOCKET_CLIENTE_KERNEL);
             uint32_t pid_create_segment = create_data->entero1;
             uint32_t id_seg = create_data->entero2;
             uint32_t tam_seg = create_data->entero3;
@@ -731,7 +731,7 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
         case DELETE_SEGMENT:
             // Debe recibir el id del segmento que desea eliminar
             pthread_mutex_lock(&mutex_memoria);
-            t_4_u32* delete_data = recibir_4_u32(SOCKET_CLIENTE_KERNEL);
+            t_4_enteros* delete_data = recibir_4_enteros(SOCKET_CLIENTE_KERNEL);
             uint32_t pid_free_segment = delete_data->entero1;
             uint32_t free_seg_id = delete_data->entero2;
             uint32_t base = delete_data->entero3;
@@ -789,7 +789,7 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU)
 
         case MOV_IN: 
             pthread_mutex_lock(&mutex_memoria);
-            t_3_u32* mov_in_data = recibir_3_u32(SOCKET_CLIENTE_CPU);
+            t_3_enteros* mov_in_data = recibir_3_enteros(SOCKET_CLIENTE_CPU);
             uint32_t pid_mov_in = mov_in_data->entero1;
             uint32_t dir_fisica_in = mov_in_data->entero2;
             uint32_t tam_a_leer = mov_in_data->entero3;
@@ -807,7 +807,7 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU)
 
         case MOV_OUT: //(Dirección Fisica, Registro): Lee el valor del Registro y lo escribe en la dirección física de memoria obtenida a partir de la Dirección Lógica.
             pthread_mutex_lock(&mutex_memoria);
-            t_3_u32* mov_out_data = recibir_3_u32(SOCKET_CLIENTE_CPU);
+            t_3_enteros* mov_out_data = recibir_3_enteros(SOCKET_CLIENTE_CPU);
             uint32_t pid_mov_out = mov_out_data->entero1;
             uint32_t dir_fisica = mov_out_data->entero2;
             uint32_t tam_escrito = mov_out_data->entero3;
@@ -857,7 +857,7 @@ void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM)
         case F_READ:
 
         pthread_mutex_lock(&mutex_memoria);
-            t_string_3_u32* fread_data = recibir_string_3_u32(SOCKET_CLIENTE_FILESYSTEM);
+            t_string_3enteros* fread_data = recibir_string_3enteros(SOCKET_CLIENTE_FILESYSTEM);
             uint32_t pid_leer_archivo = fread_data->entero1;
             uint32_t dir_fisica_leer_archivo = fread_data->entero2;
             uint32_t tam_a_leer_archivo = fread_data->entero3;
@@ -876,7 +876,7 @@ void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM)
         
         case F_WRITE:
         pthread_mutex_lock(&mutex_memoria);
-            t_3_u32* fwrite_data = recibir_3_u32(SOCKET_CLIENTE_FILESYSTEM);
+            t_3_enteros* fwrite_data = recibir_3_enteros(SOCKET_CLIENTE_FILESYSTEM);
             uint32_t pid_escribir_archivo = fwrite_data->entero1;
             uint32_t dir_fisica_escribir_archivo = fwrite_data->entero2;
             uint32_t tam_a_escribir_archivo = fwrite_data -> entero3;

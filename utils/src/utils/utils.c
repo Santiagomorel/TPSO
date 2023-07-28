@@ -235,29 +235,22 @@ t_cod* crear_codigo(op_code codigo_op)
 	return paquete;
 }
 
-void agregar_a_paquete(t_paquete *paquete, void *valor, int tamanio)
+void agregar_a_paquete(t_paquete *paquete, void *valor, uint32_t tamanio)
 {
 	paquete->buffer->stream = realloc(paquete->buffer->stream, paquete->buffer->size + tamanio + sizeof(int));
 
-	memcpy(paquete->buffer->stream + paquete->buffer->size, &tamanio, sizeof(int));
-	memcpy(paquete->buffer->stream + paquete->buffer->size + sizeof(int), valor, tamanio);
+	memcpy(paquete->buffer->stream + paquete->buffer->size, &tamanio, sizeof(uint32_t));
+	memcpy(paquete->buffer->stream + paquete->buffer->size + sizeof(uint32_t), valor, tamanio);
 
-	paquete->buffer->size += tamanio + sizeof(int);
+	paquete->buffer->size += tamanio + sizeof(uint32_t);
 }
 
-void agregar_entero_a_paquete(t_paquete *paquete, int x)
+void agregar_entero_a_paquete(t_paquete *paquete, uint32_t x)
 {
 	paquete->buffer->stream = realloc(paquete->buffer->stream, paquete->buffer->size + sizeof(int));
-	memcpy(paquete->buffer->stream + paquete->buffer->size, &x, sizeof(int));
-	paquete->buffer->size += sizeof(int);
-}
-
-void agregar_entero_32_a_paquete(t_paquete *paquete, uint32_t x)
-{
-	paquete->buffer->stream = realloc(paquete->buffer->stream, paquete->buffer->size + sizeof(uint32_t));
 	memcpy(paquete->buffer->stream + paquete->buffer->size, &x, sizeof(uint32_t));
 	paquete->buffer->size += sizeof(uint32_t);
-
+}
 
 void agregar_string_a_paquete(t_paquete *paquete, char* palabra)
 {
@@ -637,7 +630,7 @@ void agregar_ce_a_paquete(t_paquete *paquete, contexto_ejecucion *ce, t_log *log
 
 void agregar_tabla_segmentos_a_paquete(t_paquete* paquete, t_list* tabla_segmentos)
 {
-    int tamanio = list_size(tabla_segmentos);
+    uint32_t tamanio = list_size(tabla_segmentos);
 	agregar_entero_a_paquete(paquete, tamanio);
     for (int i = 0; i < tamanio; i++)
     {
@@ -1018,25 +1011,6 @@ t_string_3enteros* recibir_string_3enteros(int socket){
 	free(buffer);
 	return nuevo_string_3enteros;
 }
-t_string_3_u32* recibir_string_3_u32(int socket){
-	t_string_3_u32* nuevo_string_3_u32 = malloc(sizeof(t_string_3_u32));
-	int size = 0;
-	char *buffer;
-	int desp = 0;
-
-	buffer = recibir_buffer(&size, socket);
-
-	nuevo_string_3_u32->string = leer_string(buffer, &desp);
-
-	nuevo_string_3_u32->entero1 = leer_entero_u32(buffer, &desp);
-
-	nuevo_string_3_u32->entero2 = leer_entero_u32(buffer, &desp);
-
-	nuevo_string_3_u32->entero3 = leer_entero_u32(buffer, &desp);
-
-	free(buffer);
-	return nuevo_string_3_u32;
-}
 
 t_string_4enteros* recibir_string_4enteros(int socket)
 {
@@ -1140,9 +1114,10 @@ t_3_enteros * recibir_3_enteros(int socket)
 	free(buffer);
 	return nuevo_3_enteros;
 }
-t_3_u32 * recibir_3_u32(int socket)
+
+t_3_enteros * recibir_3_u32(int socket)
 {
-	t_3_u32* nuevo_3_u32 = malloc(sizeof(t_3_u32));
+	t_3_enteros* nuevo_3_u32 = malloc(sizeof(t_3_enteros));
 	int size = 0;
 	char *buffer;
 	int desp = 0;
@@ -1158,9 +1133,9 @@ t_3_u32 * recibir_3_u32(int socket)
 	free(buffer);
 	return nuevo_3_u32;
 }
-t_4_u32 * recibir_4_u32(int socket)
+t_4_enteros * recibir_4_enteros(int socket)
 {
-	t_4_u32* nuevo_4_u32 = malloc(sizeof(t_4_u32));
+	t_4_enteros* nuevo_4_u32 = malloc(sizeof(t_4_enteros));
 	int size = 0;
 	char *buffer;
 	int desp = 0;

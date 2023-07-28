@@ -355,6 +355,14 @@ typedef struct{
 	uint32_t entero3;
 } t_3_enteros;
 
+typedef struct{
+	uint32_t entero1;
+	uint32_t entero2;
+	uint32_t entero3;
+	uint32_t entero4;
+} t_4_enteros;
+
+
 // typedef struct{
 // 	uint32_t entero1;
 // 	uint32_t entero2;
@@ -382,8 +390,8 @@ t_paquete* crear_paquete_op_code(op_code codigo_op);
 t_cod* crear_codigo(op_code codigo_op);
 void enviar_codigo(t_cod*, int);
 t_paquete* crear_super_paquete(void);
-void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio);
-void agregar_entero_a_paquete(t_paquete* , int );
+void agregar_a_paquete(t_paquete* paquete, void* valor, uint32_t tamanio);
+void agregar_entero_a_paquete(t_paquete* , uint32_t );
 void agregar_string_a_paquete(t_paquete *paquete, char* palabra);
 void agregar_array_string_a_paquete(t_paquete* paquete, char** arr);
 void agregar_registros_a_paquete(t_paquete* , t_registro*);
@@ -462,10 +470,8 @@ t_ce_string_3enteros * recibir_ce_string_3enteros(int socket);
 void enviar_3_enteros(int client_socket, int x, int y, int z, int codOP);
 t_ce_string_2enteros* recibir_ce_string_2enteros(int);
 t_3_enteros * recibir_3_enteros(int);
-t_3_u32 * recibir_3_u32(int);
-t_4_u32 * recibir_4_u32(int);
+t_4_enteros* recibir_4_enteros(int);
 t_string_3enteros* recibir_string_3enteros(int);
-t_string_3_u32* recibir_string_3_u32(int);
 t_string_4enteros* recibir_string_4enteros(int);
 recive_mov_out * recibir_mov_out(int);
 void liberar_ce_2enteros(t_ce_2enteros*);

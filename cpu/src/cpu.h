@@ -105,21 +105,21 @@ void execute_process(contexto_ejecucion* ce);
 
 
 
-int traducir_direccion_logica(int logical_address, contexto_ejecucion* ce, int valor_a_sumar);
-char* fetch_value_in_memory(int physical_adress, contexto_ejecucion* ce, int size);
+uint32_t traducir_direccion_logica(uint32_t logical_address, contexto_ejecucion* ce, uint32_t valor_a_sumar);
+char* fetch_value_in_memory(uint32_t physical_adress, contexto_ejecucion* ce, uint32_t size);
 void store_value_in_register(char* register_mov_in, char* value);
 char* encontrarValorDeRegistro(char* register_to_find_value);
-void escribir_valor(int physical_address, char* register_value_mov_out, int pid, int size);
+void escribir_valor(uint32_t physical_address, char* register_value_mov_out, uint32_t pid, uint32_t size);
 
 /* ------------- ENVIO DE PAQUETES -----------*/
 
 void enviar_paquete_con_string_entero(int client_socket, char* parameter, char* x, int codOP);
-void enviar_paquete_con_string_2_enteros(int client_socket, char* parameter, int x, char* y, int codOP);
+void enviar_paquete_con_string_2_enteros(int client_socket, char* parameter, uint32_t x, char* y, int codOP);
 void enviar_paquete_con_dos_enteros(int client_socket, char* x, char* y, int codOP);
-void enviar_ce_con_string_3_enteros(int client_socket, contexto_ejecucion* ce, char* parameter, int x, char* y, int z ,int codOP);
+void enviar_ce_con_string_3_enteros(int client_socket, contexto_ejecucion* ce, char* parameter, uint32_t x, char* y, uint32_t z ,int codOP);
 
-int read_int(char* buffer, int* desp);
+uint32_t read_int(char* buffer, int* desp);
 
-tamanio_registro(char* registro);
+uint32_t tamanio_registro(char* registro);
 
 #endif

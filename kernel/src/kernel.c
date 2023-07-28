@@ -488,7 +488,7 @@ void planificar_sig_to_ready()
 void inicializar_estructuras(t_pcb* pcb)
 {
     t_paquete *paquete = crear_paquete_op_code(INICIAR_ESTRUCTURAS);
-    agregar_entero_32_a_paquete(paquete, pcb->id);
+    agregar_entero_a_paquete(paquete, pcb->id);
 
     enviar_paquete(paquete, memory_connection);
     eliminar_paquete(paquete);
@@ -496,7 +496,7 @@ void inicializar_estructuras(t_pcb* pcb)
 
 t_list* pedir_tabla_segmentos()
 {
-    int codigoOperacion = recibir_operacion(memory_connection);
+    uint32_t codigoOperacion = recibir_operacion(memory_connection);
     if (codigoOperacion != TABLA_SEGMENTOS)
     {
         log_error(kernel_logger, "Perdir tabla de segmentos no recibio una Tabla");
@@ -520,7 +520,7 @@ void planificar_sig_to_running()
             funcion_agregar_running(pcb_a_ejecutar);
         }
         else if (strcmp(kernel_config.algoritmo_planificacion, "HRRN") == 0){ // HRRN
-            int tamanioLista = list_size(listaReady);
+            uint32_t tamanioLista = list_size(listaReady);
             if(tamanioLista == 1){
                 log_trace(kernel_logger, "El tamanio de la lista de ready es 1, hago FIFO");
                 pthread_mutex_lock(&m_listaReady);
@@ -898,7 +898,7 @@ void iniciar_nueva_espera_ready(t_pcb* pcb)
 
 // ----------------------- Funciones Manejo de Recursos ----------------------- //
 
-int recurso_no_existe(char* recurso)
+uint32_t recurso_no_existe(char* recurso)
 { // verifica si no existe el recurso - retorna 0 si existe - 1 si no existe
     int cantidad = string_array_size(kernel_config.recursos);
 
@@ -910,7 +910,7 @@ int recurso_no_existe(char* recurso)
     return 1;
 }
 
-int obtener_id_recurso(char* recurso)
+uint32_t obtener_id_recurso(char* recurso)
 {
     int cantidad = string_array_size(kernel_config.recursos);
 
@@ -921,13 +921,13 @@ int obtener_id_recurso(char* recurso)
     }
 }
 
-int id_proceso_en_lista(t_list* lista)
+uint32_t id_proceso_en_lista(t_list* lista)
 {
     t_pcb * pcb = (t_pcb* ) list_get(lista, 0);
     return obtenerPid(pcb);
 }
 
-int obtener_instancias_recurso(int id_recurso)
+uint32_t obtener_instancias_recurso(int id_recurso)
 {
     return kernel_config.instancias_recursos[id_recurso];
 }
@@ -975,7 +975,7 @@ void atender_wait_recurso()
     if (recurso_no_existe(recurso_wait)) {
         finalizar_proceso(contexto_ejecuta_wait, INVALID_RESOURCE);
     } else {
-        int id_recurso = obtener_id_recurso(recurso_wait);
+        uint32_t id_recurso = obtener_id_recurso(recurso_wait);
 
         restar_instancia(id_recurso);
         
@@ -1120,7 +1120,7 @@ void atender_block_io()
 void rutina_io(thread_args* args)
 {
     t_pcb* pcb = args->pcb;
-    int bloqueo = args->bloqueo;
+    uint32_t bloqueo = args->bloqueo;
 
     log_info(kernel_logger,"PID: [%d] - Ejecuta IO: [%d]",pcb->id, bloqueo);
 
@@ -1149,17 +1149,17 @@ void atender_crear_segmento()
 
     contexto_ejecucion* contexto_crea_segmento = estructura_crear_segmento->ce;
 
-    int id_segmento = estructura_crear_segmento->entero1;
+    uint32_t id_segmento = estructura_crear_segmento->entero1;
 
-    int tamanio_segmento = estructura_crear_segmento->entero2;
+    uint32_t tamanio_segmento = estructura_crear_segmento->entero2;
     
-    int id_proceso = ((t_pcb *) list_get(listaEjecutando, 0))->id;
+    uint32_t id_proceso = ((t_pcb *) list_get(listaEjecutando, 0))->id;
 
     log_info(kernel_logger, "PID: [%d] - Crear Segmento - Id: [%d] - Tamaño: [%d]", id_proceso, id_segmento, tamanio_segmento);
 
     enviar_3_enteros(memory_connection, id_proceso, id_segmento, tamanio_segmento, CREATE_SEGMENT); // mando a memoria idP, idS, tamanio
 
-    int compactacion = 1;
+    uint32_t compactacion = 1;
     while(compactacion){
         int cod_op_creacion = recibir_operacion(memory_connection);
 
@@ -1186,7 +1186,7 @@ void atender_crear_segmento()
 
         case OK:
         
-            int base_segmento = recibir_entero(memory_connection, kernel_logger);
+            uint32_t base_segmento = recibir_entero_u32(memory_connection, kernel_logger);
             
             t_segmento *nuevoElemento = crear_segmento(id_segmento, base_segmento, tamanio_segmento);
             
@@ -1211,13 +1211,13 @@ void atender_crear_segmento()
     liberar_ce_2enteros(estructura_crear_segmento); // VER SI FUNCIONA
 }
 
-void atender_compactacion(int id_proceso, int id_segmento, int tamanio_segmento)
+void atender_compactacion(uint32_t id_proceso, uint32_t id_segmento, uint32_t tamanio_segmento)
 {
     log_info(kernel_logger, "Compactacion: [Se Solicito Compactacion]");
 
     enviar_CodOp(memory_connection, COMPACTAR);
 
-    int cod_op_compactacion = recibir_operacion(memory_connection);
+    uint32_t cod_op_compactacion = recibir_operacion(memory_connection);
     log_error(kernel_logger,"el codop es %d",cod_op_compactacion);
     
     switch (cod_op_compactacion){
@@ -1252,7 +1252,7 @@ void actualizar_ts_x_proceso() // PROBAR
         list_add_all(lista_de_pcbs, lista_recurso[i]);
     }
 
-    int cantidad_procesos = list_size(lista_ts_x_procesos);
+    uint32_t cantidad_procesos = list_size(lista_ts_x_procesos);
     for(int i = 0; i < cantidad_procesos; i++)
     {
         t_proceso* proceso_i = list_get(lista_ts_x_procesos, i);
@@ -1286,9 +1286,9 @@ void atender_borrar_segmento() //TODO
 
     contexto_ejecucion* contexto_borrar_segmento = estructura_borrar_segmento->ce;
 
-    int id_segmento = estructura_borrar_segmento->entero;
+    uint32_t id_segmento = estructura_borrar_segmento->entero;
 
-    int id_proceso = ((t_pcb *) list_get(listaEjecutando, 0))->id;
+    uint32_t id_proceso = ((t_pcb *) list_get(listaEjecutando, 0))->id;
 
     log_info(kernel_logger, "PID: [%d] - Eliminar Segmento - Id Segmento: [%d]", id_proceso, id_segmento);
 
@@ -1560,7 +1560,7 @@ void atender_actualizar_puntero(){
     
     estructura_actualizacion = recibir_ce_string_entero(cpu_dispatch_connection);
 
-    int posicion = estructura_actualizacion->entero;
+    uint32_t posicion = estructura_actualizacion->entero;
     char* nombreArchivo = estructura_actualizacion->string;
          
     log_error(kernel_logger,"el nombre del archivo es %s",nombreArchivo);
@@ -1609,11 +1609,11 @@ void atender_lectura_archivo(){
     char nombre_archivo[100];
     strcpy(nombre_archivo,estructura_leer_archivo->string);
 
-    int offset = estructura_leer_archivo ->entero1;
+    uint32_t offset = estructura_leer_archivo ->entero1;
 
-    int bytes_a_leer = estructura_leer_archivo->entero2;
+    uint32_t bytes_a_leer = estructura_leer_archivo->entero2;
 
-    int puntero_archivo = estructura_leer_archivo->entero3;
+    uint32_t puntero_archivo = estructura_leer_archivo->entero3;
 
     log_info(kernel_logger, "PID: [%d] - Leer Archivo: [%s] - Puntero [%d] - Dirección Memoria [%d] - Tamaño [%d]", ce_a_updatear->id, nombre_archivo, puntero_archivo, offset, bytes_a_leer); // verificar con el resto
 
@@ -1652,14 +1652,14 @@ void atender_lectura_archivo(){
     t_pcb* pcb = args->pcb;
     char nombre [100];
     strcpy(nombre,args->nombre);
-    int puntero = args->puntero;
-    int bytes = args->bytes;
-    int offset = args->offset;
+    uint32_t puntero = args->puntero;
+    uint32_t bytes = args->bytes;
+    uint32_t offset = args->offset;
 
     enviar_string_4enteros(file_system_connection, nombre, pcb->id, puntero,bytes, offset, F_READ);
     log_error(kernel_logger,"Envio fread a fs");
 
-    int cod_op = recibir_operacion(file_system_connection);
+    uint32_t cod_op = recibir_operacion(file_system_connection);
 
     pthread_mutex_lock(&m_listaBloqueados);
         list_remove_element(listaBloqueados, pcb);
@@ -1689,9 +1689,9 @@ void atender_escritura_archivo(){
     char nombre_archivo[100];
     strcpy(nombre_archivo,estructura_escribir_archivo->string);
 
-    int offset = estructura_escribir_archivo->entero1;
-    int bytes_a_leer = estructura_escribir_archivo->entero2;
-    int puntero_archivo = estructura_escribir_archivo->entero3;
+    uint32_t offset = estructura_escribir_archivo->entero1;
+    uint32_t bytes_a_leer = estructura_escribir_archivo->entero2;
+    uint32_t puntero_archivo = estructura_escribir_archivo->entero3;
 
     log_info(kernel_logger, "PID: [%d] - Escribir Archivo: [%s] - Puntero [%d] - Dirección Memoria [%d] - Tamaño [%d]", ce_a_updatear->id, nombre_archivo, puntero_archivo, offset, bytes_a_leer);
         
@@ -1731,15 +1731,15 @@ void rutina_write(thread_args_write* args)
     t_pcb* pcb = args->pcb;
     char nombre [100];
     strcpy(nombre,args->nombre);
-    int puntero = args->puntero;
-    int bytes = args->bytes;
-    int offset = args->offset;
+    uint32_t puntero = args->puntero;
+    uint32_t bytes = args->bytes;
+    uint32_t offset = args->offset;
 
       log_error(kernel_logger,"el nombre en rutina es :%s",nombre);
     
     enviar_string_4enteros(file_system_connection, nombre, pcb->id, puntero,bytes,offset, F_WRITE);
     
-    int cod_op = recibir_operacion(file_system_connection);
+    uint32_t cod_op = recibir_operacion(file_system_connection);
 
     log_warning(kernel_logger,"recibi CODOP de fwrite %d",cod_op);
 
@@ -1780,7 +1780,7 @@ void atender_modificar_tamanio_archivo(){
     strcpy(nombre_archivo,estructura_mod_tam_archivo->string);
 
     log_error(kernel_logger,"el nombre es :%s",nombre_archivo);
-    int tamanio_archivo = estructura_mod_tam_archivo->entero;
+    uint32_t tamanio_archivo = estructura_mod_tam_archivo->entero;
     log_error(kernel_logger,"el tamanio es :%d",tamanio_archivo);
     
     log_info(kernel_logger, "PID: [%d] - Archivo: [%s] - Tamaño: [%d]", contexto_mod_tam_arch->id, nombre_archivo, tamanio_archivo);
@@ -1821,13 +1821,13 @@ void rutina_truncate(thread_args_truncate* args)
     t_pcb* pcb = args->pcb;
     char nombre[100];
     strcpy(nombre,args->nombre);
-    int tamanio = args->tamanio;
+    uint32_t tamanio = args->tamanio;
 
     log_error(kernel_logger,"el nombre en rutina es :%s",nombre);
     
     enviar_string_enterov2(file_system_connection, nombre, tamanio, F_TRUNCATE);
     
-    int cod_op = recibir_operacion(file_system_connection);
+    uint32_t cod_op = recibir_operacion(file_system_connection);
 
     pthread_mutex_lock(&m_listaBloqueados);
         list_remove_element(listaBloqueados, pcb);

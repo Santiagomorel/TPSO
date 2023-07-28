@@ -487,7 +487,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s", ce->id, instruction[0], instruction[1], instruction[2]);
 
             char* register_mov_in = instruction[1];
-            int logical_address_mov_in = atoi(instruction[2]);
+            uint32_t logical_address_mov_in = atoi(instruction[2]);
 
             int size_movin = tamanio_registro(register_mov_in);    
             direccion_fisica = traducir_direccion_logica(logical_address_mov_in, ce, size_movin);//fijarse si el sizeof(register_mov_in) es correcto
@@ -513,10 +513,10 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             log_info(cpu_logger, "Ejecutando Instruccion MOV_OUT ");
             log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s", ce->id, instruction[0], instruction[1], instruction[2]);
 
-            int logical_address_mov_out = atoi(instruction[1]);
+            uint32_t logical_address_mov_out = atoi(instruction[1]);
             char* register_mov_out = instruction[2]; 
             
-            int size_movout = tamanio_registro(register_mov_out);
+            uint32_t size_movout = tamanio_registro(register_mov_out);
 
             direccion_fisica = traducir_direccion_logica(logical_address_mov_out, ce, size_movout);
 
@@ -583,7 +583,7 @@ void execute_process(contexto_ejecucion* ce){
 
 typedef struct { 
     char *key; 
-    int val; 
+    uint32_t val; 
     } t_symstruct;
 
 static t_symstruct lookuptable[] = {
@@ -689,7 +689,7 @@ void enviar_ce_con_string_2_enteros(int client_socket, contexto_ejecucion* ce, c
     eliminar_paquete(paquete);
     
 }
-void enviar_ce_con_string_3_enteros(int client_socket, contexto_ejecucion* ce, char* parameter, int x, char* y, int z, int codOP){
+void enviar_ce_con_string_3_enteros(int client_socket, contexto_ejecucion* ce, char* parameter, uint32_t x, char* y, uint32_t z, int codOP){
     t_paquete* paquete = crear_paquete_op_code(codOP);
 
     agregar_ce_a_paquete(paquete, ce, cpu_logger);
@@ -702,7 +702,7 @@ void enviar_ce_con_string_3_enteros(int client_socket, contexto_ejecucion* ce, c
     
 }
 
-void enviar_paquete_con_string_2_enteros(int client_socket, char* parameter, int x, char* y, int codOP){
+void enviar_paquete_con_string_2_enteros(int client_socket, char* parameter, uint32_t x, char* y, int codOP){
     t_paquete* paquete = crear_paquete_op_code(codOP);
 
     agregar_string_a_paquete(paquete, parameter); 
@@ -782,7 +782,7 @@ char* encontrarValorDeRegistro(char* register_to_find_value){
     }
 }
 
-void escribir_valor(int physical_address, char* register_value_mov_out, int pid, int size){
+void escribir_valor(uint32_t physical_address, char* register_value_mov_out, uint32_t pid, uint32_t size){
     t_paquete* package = crear_paquete_op_code(MOV_OUT);
     agregar_entero_a_paquete(package, physical_address);
     agregar_a_paquete(package, register_value_mov_out,strlen(register_value_mov_out)+1);
@@ -795,11 +795,11 @@ void escribir_valor(int physical_address, char* register_value_mov_out, int pid,
 /*---------------------------------- MMU ----------------------------------*/
 
 
-int traducir_direccion_logica(int logical_address, contexto_ejecucion* ce, int valor_a_sumar) {
+uint32_t traducir_direccion_logica(uint32_t logical_address, contexto_ejecucion* ce, uint32_t valor_a_sumar) {
 
 
-    int num_segmento = (int) floor(logical_address / atoi(cpu_config.tam_max_segmento));
-    int desplazamiento_segmento = logical_address % atoi(cpu_config.tam_max_segmento);
+    uint32_t num_segmento = (uint32_t) floor(logical_address / atoi(cpu_config.tam_max_segmento));
+    uint32_t desplazamiento_segmento = logical_address % atoi(cpu_config.tam_max_segmento);
 
    
     offset = desplazamiento_segmento;
@@ -836,7 +836,7 @@ int traducir_direccion_logica(int logical_address, contexto_ejecucion* ce, int v
       return (segment->direccion_base + desplazamiento_segmento);
 }
 
-char* fetch_value_in_memory(int physical_adress, contexto_ejecucion* ce, int size){
+char* fetch_value_in_memory(uint32_t physical_adress, contexto_ejecucion* ce, uint32_t size){
 
     t_paquete* package = crear_paquete_op_code(MOV_IN); 
     agregar_entero_a_paquete(package, ce->id);
@@ -890,13 +890,13 @@ void store_value_in_register(char* register_mov_in, char* value){
 
 /*---------------------------------- FUNCIONES EXTRAS ----------------------------------*/
 
-int read_int(char* buffer, int* desp) {
-	int ret;
+uint32_t read_int(char* buffer, int* desp) {
+	uint32_t ret;
 	memcpy(&ret, buffer + (*desp), sizeof(int));
 	(*desp)+=sizeof(int);
 	return ret;
 }
-int tamanio_registro(char* registro){
+uint32_t tamanio_registro(char* registro){
     if (strcmp(registro, "AX") == 0) return 4;
     else if (strcmp(registro, "BX") == 0) return 4;
     else if (strcmp(registro, "CX") == 0) return 4;
