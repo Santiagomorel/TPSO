@@ -720,7 +720,6 @@ void imprimir_registros(t_registro* registros , t_log* logger) {
 
 void imprimir_tabla_segmentos(t_list* tabla_segmentos, t_log* logger){
 	int tamanio = list_size(tabla_segmentos);
-	log_warning(logger, "el tamanio de la tabla a imprimir es: %d", tamanio);
 	for(int i=0; i<tamanio; i++){
 		log_trace(logger, "id_segmento es: %d", (((t_segmento*)list_get(tabla_segmentos, i))->id_segmento));
 		log_trace(logger, "direccion_base es: %d", (((t_segmento*)list_get(tabla_segmentos, i))->direccion_base));
@@ -818,12 +817,13 @@ t_list* leer_tabla_segmentosv2(char *buffer, int *desp)
     return nuevalista;
 }
 
-t_segmento *crear_segmento(uint32_t id_seg, uint32_t base, uint32_t tamanio)
+t_ent_ts *crear_segmento(uint32_t id_seg, uint32_t base, uint32_t tamanio)
 {
-    t_segmento *unSegmento = malloc(sizeof(t_segmento));
-    unSegmento->id_segmento = id_seg;
-    unSegmento->direccion_base = base;
-    unSegmento->tamanio_segmento = tamanio;
+    t_ent_ts *unSegmento = malloc(sizeof(t_ent_ts));
+    unSegmento->id_seg = id_seg;
+    unSegmento->base = base;
+    unSegmento->tam = tamanio;
+	unSegmento->activo = 1;
     return unSegmento;
 }
 

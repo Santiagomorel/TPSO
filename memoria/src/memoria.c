@@ -348,7 +348,7 @@ void devolver_nuevas_bases(int cliente_socket) {
 //comienza utils juanpi
 void levantar_estructuras_administrativas() {
     ESPACIO_USUARIO = malloc(memoria_config.tam_memoria);
-    ESPACIO_LIBRE_TOTAL;
+    ESPACIO_LIBRE_TOTAL = memoria_config.tam_memoria;
 
     LISTA_ESPACIOS_LIBRES = list_create();
     LISTA_GLOBAL_SEGMENTOS = list_create();
@@ -671,8 +671,6 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
         switch (codigoOperacion)
         {
         case INICIAR_ESTRUCTURAS:
-            //int id_inicio_estructura = recibir_entero(SOCKET_CLIENTE_KERNEL, log_memoria);
-            //t_proceso* nuevo_proceso = crear_proceso_en_memoria(id_inicio_estructura);
             log_trace(log_memoria, "recibi el op_cod %d INICIAR_ESTRUCTURAS", codigoOperacion);
             //- Creación de Proceso: “Creación de Proceso PID: <PID>”
             pthread_mutex_lock(&mutex_memoria);
@@ -727,7 +725,6 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
             print_lista_esp(LISTA_ESPACIOS_LIBRES); //
             pthread_mutex_unlock(&mutex_memoria);
             break;
-
 
          case COMPACTAR:
             pthread_mutex_lock(&mutex_memoria);

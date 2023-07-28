@@ -496,7 +496,7 @@ void* recibir_bufferv2(uint32_t* , int);
 
 // declaraciones de segmentos
 t_list* leer_tabla_segmentosv2(char*, int*);
-t_segmento* crear_segmento(uint32_t, uint32_t, uint32_t);
+t_ent_ts* crear_segmento(uint32_t, uint32_t, uint32_t);
 
 
 // declaraciones de lectura de datos

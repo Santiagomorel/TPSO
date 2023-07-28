@@ -471,13 +471,12 @@ void planificar_sig_to_ready()
         pthread_mutex_unlock(&m_listaNuevos);
 
         log_trace(kernel_logger, "Inicializamos estructuras del pcb en memoria");
+        
         inicializar_estructuras(pcb_a_ready);
 
         t_list* nuevo_segmento = pedir_tabla_segmentos();
 
         list_add_all(pcb_a_ready->tabla_segmentos, nuevo_segmento);
-
-        imprimir_tabla_segmentos(nuevo_segmento, kernel_logger);
 
         cambiar_estado_a(pcb_a_ready, READY, estadoActual(pcb_a_ready));
 
@@ -499,17 +498,23 @@ void inicializar_estructuras(t_pcb* pcb)
 t_list* pedir_tabla_segmentos()
 {
     int codigoOperacion = recibir_operacion(memory_connection);
-    log_trace(kernel_logger, "el codop es: %d", codigoOperacion);
     if (codigoOperacion != TABLA_SEGMENTOS)
     {
         log_error(kernel_logger, "Perdir tabla de segmentos no recibio una Tabla");
     }
+
     uint32_t size;
+
     recv(memory_connection, &size, sizeof(uint32_t), NULL);
+
     void* buffer = malloc(size * sizeof(t_ent_ts));
+
     recv(memory_connection, buffer, size * sizeof(t_ent_ts), NULL);
+
     t_list* tabla_de_segmentos = deserializar_tabla_segmentos(buffer, size);
+
     free(buffer);
+
     return tabla_de_segmentos;
 }
 
@@ -831,6 +836,10 @@ void finalizar_proceso(contexto_ejecucion* ce, int cod_op) // Saca de la lista d
 
     cambiar_estado_a(pcb_a_finalizar, EXIT, estadoActual(pcb_a_finalizar));
 
+    liberar_memoria(pcb_a_finalizar);
+
+    liberar_archivos_abiertos(pcb_a_finalizar);
+
     liberar_recursos_pedidos(pcb_a_finalizar);
     
     sem_post(&grado_multiprog);
@@ -842,6 +851,45 @@ void finalizar_proceso(contexto_ejecucion* ce, int cod_op) // Saca de la lista d
     
     enviar_Fin_consola(pcb_a_finalizar->socket_consola);
 }
+
+void liberar_memoria(t_pcb* pcb)
+{
+    t_list* segmentos_activos = list_filter(pcb->tabla_segmentos, segmento_activo);
+    for (int i = 0; i < list_size(segmentos_activos); i++)
+    {
+        t_ent_ts* seg = list_get(segmentos_activos, i);
+        printf("SEG: %d, BASE: %d, TAM: %d, ACTIVO: %d\n", seg->id_seg, seg->base, seg->tam, seg->activo);
+        solicitar_liberacion_segmento(seg->base, seg->tam, pcb->id, seg->id_seg);
+    }
+    list_destroy_and_destroy_elements(pcb->tabla_segmentos, (void*) free);
+    list_destroy(segmentos_activos);
+}
+
+bool segmento_activo(t_ent_ts *seg) {
+    return seg->activo && (seg->id_seg != 0);
+}
+
+void solicitar_liberacion_segmento(uint32_t base, uint32_t tam, uint32_t pid, uint32_t seg_id)
+{
+    t_paquete* paquete = crear_paquete_op_code(DELETE_SEGMENT);
+
+    agregar_entero_a_paquete(paquete, pid); 
+    agregar_entero_a_paquete(paquete, seg_id); 
+	agregar_entero_a_paquete(paquete, base);
+    agregar_entero_a_paquete(paquete, tam);
+
+    enviar_paquete(paquete, memory_connection);
+
+    eliminar_paquete(paquete);
+
+    log_error(kernel_logger, "PID: %d - Eliminar Segmento - Id: %d - Tamaño: %d", pid, seg_id, tam);
+}
+
+void liberar_archivos_abiertos(t_pcb*)
+{
+    log_error(kernel_logger, "Elimino los archivos abiertos del proceso que entra en EXIT");
+}
+
 
 void liberar_recursos_pedidos(t_pcb* pcb)
 {
@@ -1196,12 +1244,12 @@ void atender_crear_segmento()
         
             uint32_t base_segmento = recibir_entero_u32(memory_connection, kernel_logger);
             
-            t_segmento *nuevoElemento = crear_segmento(id_segmento, base_segmento, tamanio_segmento);
+            t_ent_ts *nuevoElemento = crear_segmento(id_segmento, base_segmento, tamanio_segmento);
             
             t_pcb* pcb_crea_segmento = actualizar_pcb_lget_devuelve_pcb(contexto_crea_segmento, listaEjecutando, m_listaEjecutando);
             
-            list_add(pcb_crea_segmento->tabla_segmentos, nuevoElemento);
-            
+            list_replace_and_destroy_element(pcb_crea_segmento->tabla_segmentos, id_segmento, nuevoElemento, (void*)free);
+
             contexto_ejecucion* nuevo_contexto_crea_segmento = obtener_ce(pcb_crea_segmento);
 
             enviar_ce(cpu_dispatch_connection, nuevo_contexto_crea_segmento, EJECUTAR_CE, kernel_logger);
@@ -1302,23 +1350,23 @@ void atender_borrar_segmento() //TODO
 
     enviar_2_enteros(memory_connection, id_proceso, id_segmento, DELETE_SEGMENT); // mando a memoria idP, idS
 
-    recibir_operacion(memory_connection);
+    // recibir_operacion(memory_connection);
     
-    t_list* nueva_tabla_segmentos = recibir_tabla_segmentos(memory_connection);
+    // t_list* nueva_tabla_segmentos = recibir_tabla_segmentos(memory_connection);
     
-    t_pcb* pcb_borrar_segmento = actualizar_pcb_lget_devuelve_pcb(contexto_borrar_segmento, listaEjecutando, m_listaEjecutando);
+    // t_pcb* pcb_borrar_segmento = actualizar_pcb_lget_devuelve_pcb(contexto_borrar_segmento, listaEjecutando, m_listaEjecutando);
 
-    limpiar_tabla_segmentos(pcb_borrar_segmento->tabla_segmentos); // 
+    // limpiar_tabla_segmentos(pcb_borrar_segmento->tabla_segmentos); // 
 
-    list_add_all(pcb_borrar_segmento->tabla_segmentos, nueva_tabla_segmentos);
+    // list_add_all(pcb_borrar_segmento->tabla_segmentos, nueva_tabla_segmentos);
 
-    imprimir_tabla_segmentos(pcb_borrar_segmento->tabla_segmentos, kernel_logger);
+    // imprimir_tabla_segmentos(pcb_borrar_segmento->tabla_segmentos, kernel_logger);
 
-    contexto_ejecucion* nuevo_contexto_borrar_segmento = obtener_ce(pcb_borrar_segmento);
+    // contexto_ejecucion* nuevo_contexto_borrar_segmento = obtener_ce(pcb_borrar_segmento);
     
-    enviar_ce(cpu_dispatch_connection, nuevo_contexto_borrar_segmento, EJECUTAR_CE, kernel_logger);
+    // enviar_ce(cpu_dispatch_connection, nuevo_contexto_borrar_segmento, EJECUTAR_CE, kernel_logger);
     
-    liberar_ce(nuevo_contexto_borrar_segmento);
+    // liberar_ce(nuevo_contexto_borrar_segmento);
 
     liberar_ce_entero(estructura_borrar_segmento); // VER SI FUNCIONA
 }

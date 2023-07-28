@@ -171,6 +171,10 @@ void actualizar_pcb(t_pcb*, contexto_ejecucion*);
 // Declaraciones de fin de proceso
 void atender_final_proceso(int);
 void finalizar_proceso(contexto_ejecucion*, int);
+void liberar_memoria(t_pcb*);
+bool segmento_activo(t_ent_ts*);
+void solicitar_liberacion_segmento(uint32_t, uint32_t, uint32_t, uint32_t);
+void liberar_archivos_abiertos(t_pcb*);
 void liberar_recursos_pedidos(t_pcb*);
 void enviar_Fin_consola(int);
 
