@@ -139,23 +139,12 @@ void devolver_tabla_inicial(int socket) {
 }
 
 void devolver_resultado_creacion(op_code resultado, int socket, uint32_t base) {
-    int tam_buffer = sizeof(uint32_t);
-    if(resultado == OK) {
-        tam_buffer += sizeof(uint32_t);
+    if(resultado == OK){
+        enviar_paquete_entero(socket, base, resultado);
     }
-    void* buffer = malloc(tam_buffer);
-
-    int despl = 0;
-
-    memcpy(buffer, &resultado, sizeof(op_code));
-    despl += sizeof(op_code);
-
-    if(resultado == MEMORIA_SEGMENTO_CREADO) {
-        memcpy(buffer + despl, &base, sizeof(uint32_t));
+    else{
+        enviar_CodOp(socket, resultado);
     }
-
-    send(socket, buffer, tam_buffer, NULL);
-    free(buffer);
 }
 
 void devolver_nuevas_bases(int cliente_socket) {

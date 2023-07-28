@@ -252,6 +252,7 @@ void agregar_entero_a_paquete(t_paquete *paquete, uint32_t x)
 	paquete->buffer->size += sizeof(uint32_t);
 }
 
+
 void agregar_string_a_paquete(t_paquete *paquete, char* palabra)
 {
 	paquete->buffer->stream = realloc(paquete->buffer->stream, paquete->buffer->size + sizeof(char*));
@@ -583,7 +584,7 @@ void enviar_paquete_string(int conexion, char* string, int codOP, int tamanio)
 	eliminar_paquete(paquete);
 }
 
-void enviar_paquete_entero(int conexion, int entero, int codOP){
+void enviar_paquete_entero(int conexion, uint32_t entero, int codOP){
 	t_paquete * paquete = crear_paquete_op_code(codOP);
 	agregar_entero_a_paquete(paquete, entero);
 	enviar_paquete(paquete, conexion);
@@ -916,6 +917,7 @@ t_ce_string_entero* recibir_ce_string_entero(int socket)
 	free(buffer);
 	return nuevo_ce_string_entero;
 }
+
 
 void enviar_2_enteros(int client_socket, int x, int y, int codOP){
     t_paquete* paquete = crear_paquete_op_code(codOP);

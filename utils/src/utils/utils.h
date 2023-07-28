@@ -427,7 +427,7 @@ int recibir_entero(int, t_log*);
 
 
 void enviar_paquete_string(int, char*, int, int);
-void enviar_paquete_entero(int , int , int );
+void enviar_paquete_entero(int , uint32_t , int );
 
 void enviar_ce(int, contexto_ejecucion *, int, t_log*);
 void enviar_CodOp(int socket, int codOP);
