@@ -368,6 +368,14 @@ int leer_entero(char *buffer, int *desplazamiento) // Lee un entero en base a un
 	//printf("allocating / copying entero %d \n", ret);
 	return ret;
 }
+uint32_t leer_entero_u32(char *buffer, int *desplazamiento) // Lee un entero en base a un buffer y un desplazamiento, ambos se pasan por referencia
+{
+	int ret;
+	memcpy(&ret, buffer + (*desplazamiento), sizeof(u_int32_t)); // copia dentro de ret lo que tiene el buffer con un size de int
+	(*desplazamiento) += sizeof(u_int32_t);
+	//printf("allocating / copying entero %d \n", ret);
+	return ret;
+}
 
 t_list *leer_segmento(char *buffer, int *desplazamiento) // Lee un entero en base a un buffer y un desplazamiento, ambos se pasan por referencia
 {
@@ -554,6 +562,17 @@ int recibir_entero(int socket, t_log* logger)
 	free(buffer);
 	return nuevoEntero;
 }
+uint32_t recibir_entero_u32(int socket, t_log* logger)
+{
+	int size = 0;
+	char *buffer;
+	int desp = 0;
+	buffer = recibir_buffer(&size, socket);
+	u_int32_t nuevoEntero = leer_entero_u32(buffer, &desp); // recibo el entero
+	free(buffer);
+	return nuevoEntero;
+}
+
 
 void enviar_paquete_string(int conexion, char* string, int codOP, int tamanio)
 {
@@ -991,6 +1010,25 @@ t_string_3enteros* recibir_string_3enteros(int socket){
 	free(buffer);
 	return nuevo_string_3enteros;
 }
+t_string_3_u32* recibir_string_3_u32(int socket){
+	t_string_3_u32* nuevo_string_3_u32 = malloc(sizeof(t_string_3_u32));
+	int size = 0;
+	char *buffer;
+	int desp = 0;
+
+	buffer = recibir_buffer(&size, socket);
+
+	nuevo_string_3_u32->string = leer_string(buffer, &desp);
+
+	nuevo_string_3_u32->entero1 = leer_entero_u32(buffer, &desp);
+
+	nuevo_string_3_u32->entero2 = leer_entero_u32(buffer, &desp);
+
+	nuevo_string_3_u32->entero3 = leer_entero_u32(buffer, &desp);
+
+	free(buffer);
+	return nuevo_string_3_u32;
+}
 
 t_string_4enteros* recibir_string_4enteros(int socket)
 {
@@ -1093,6 +1131,43 @@ t_3_enteros * recibir_3_enteros(int socket)
 
 	free(buffer);
 	return nuevo_3_enteros;
+}
+t_3_u32 * recibir_3_u32(int socket)
+{
+	t_3_u32* nuevo_3_u32 = malloc(sizeof(t_3_u32));
+	int size = 0;
+	char *buffer;
+	int desp = 0;
+
+	buffer = recibir_buffer(&size, socket);
+
+	nuevo_3_u32->entero1 = leer_entero_u32(buffer, &desp);
+
+	nuevo_3_u32->entero2 = leer_entero_u32(buffer, &desp);
+
+	nuevo_3_u32->entero3 = leer_entero_u32(buffer, &desp);
+
+	free(buffer);
+	return nuevo_3_u32;
+}
+t_4_u32 * recibir_4_u32(int socket)
+{
+	t_4_u32* nuevo_4_u32 = malloc(sizeof(t_4_u32));
+	int size = 0;
+	char *buffer;
+	int desp = 0;
+
+	buffer = recibir_buffer(&size, socket);
+
+	nuevo_4_u32->entero1 = leer_entero_u32(buffer, &desp);
+
+	nuevo_4_u32->entero2 = leer_entero_u32(buffer, &desp);
+
+	nuevo_4_u32->entero3 = leer_entero_u32(buffer, &desp);
+
+	nuevo_4_u32->entero4 = leer_entero_u32(buffer, &desp);
+	free(buffer);
+	return nuevo_4_u32;
 }
 
 recive_mov_out * recibir_mov_out(int socket)
