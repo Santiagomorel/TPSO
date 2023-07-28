@@ -1332,7 +1332,7 @@ void recibir_nuevas_bases(int socket_memoria) {
         t_pcb* pcb_encontrado = pcb_en_lista_coincide(lista_de_pcbs, pid);
         // Search PID in PROCESOS_EN_MEMORIA
         
-        t_ent_ts* segmento = list_get(proceso_en_memoria->tabla_segmentos, id);
+        t_ent_ts* segmento = list_get(pcb_encontrado->tabla_segmentos, id);
 
         segmento->base = n_base;
         

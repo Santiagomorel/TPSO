@@ -148,7 +148,9 @@ void devolver_resultado_creacion(op_code resultado, int socket, uint32_t base) {
 }
 
 void devolver_nuevas_bases(int cliente_socket) {
+    
     enviar_CodOp(cliente_socket, OK_COMPACTACION);
+
     uint32_t size = (sizeof(uint32_t) * 3) * list_size(LISTA_GLOBAL_SEGMENTOS) + sizeof(uint32_t);
     void* buffer = malloc(size);
     int desplazamiento = 0;
