@@ -12,7 +12,7 @@ typedef enum {
 
 typedef struct{
 
-    int puerto_escucha;
+    char* puerto_escucha;
     uint32_t tam_memoria;
     uint32_t tam_segmento_0;
     uint32_t cant_segmentos;
@@ -29,8 +29,17 @@ t_log* log_memoria;
 /////comienza memoria.h juanpi
 /////
 
+sem_t finModulo;
 
 int socket_servidor_memoria;
+int socket_cliente_memoria_CPU;
+int socket_cliente_memoria_FILESYSTEM;
+int socket_cliente_memoria_KERNEL;
+
+void recibir_kernel(int SOCKET_CLIENTE_KERNEL);
+void recibir_cpu(int SOCKET_CLIENTE_CPU);
+void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM);
+
 
 void* ESPACIO_USUARIO;
 uint32_t ESPACIO_LIBRE_TOTAL;
@@ -51,11 +60,13 @@ void procesar_conexion(void *void_args);
 
 void levantar_estructuras_administrativas();
 void crear_segmento_0();
+bool comparador_base(void* data1, void* data2);
+bool comparador_base_segmento(void* data1, void* data2);
 void print_lista_esp(t_list* lista);
 void print_lista_segmentos();
 void* crear_tabla_segmentos();
 int buscar_espacio_libre(uint32_t tam);
-cod_op_kernel crear_segmento(uint32_t tam, uint32_t* base_resultante);
+op_code crear_segmento_memoria(uint32_t tam, uint32_t* base_resultante);
 bool son_contiguos(t_esp* esp1, t_esp* esp2);
 int buscar_segmento_por_base(uint32_t base);
 void borrar_segmento(uint32_t base, uint32_t limite);

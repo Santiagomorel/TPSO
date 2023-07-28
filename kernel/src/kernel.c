@@ -33,7 +33,7 @@ int main(int argc, char **argv)
     iniciarSemaforos();
 
     // ----------------------- contecto el kernel con los servidores de MEMORIA - CPU (dispatch) - FILESYSTEM ----------------------- //
-    iniciar_conexiones_kernel();
+    iniciar_conexioniniciar_conexiones_kernel();
     
     // ----------------------- levanto el servidor del kernel ----------------------- //
 

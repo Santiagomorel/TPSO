@@ -145,12 +145,7 @@ typedef enum
 	MEMORIA_FREE_SEGMENT,
 	MEMORIA_MOV_IN,
 	MEMORIA_MOV_OUT,
-	ABRIR_ARCHIVO,
-	CREAR_ARCHIVO,
-	TRUNCAR_ARCHIVO,
-	COMPACTAR,
-	LEER_ARCHIVO,
-	ESCRIBIR_ARCHIVO
+	TRUNCAR_ARCHIVO
 } cod_op;
 
 typedef enum
@@ -184,20 +179,20 @@ typedef enum { // Los estados que puede tener un PCB
     EXIT,
 } estados;
 
-//typedef struct{
-//	int id_segmento;
-//	int direccion_base;		//falta definir tipo
-//	int tamanio_segmento;
-//} t_segmento;
+typedef struct{
+	int id_segmento;
+	int direccion_base;		//falta definir tipo
+	int tamanio_segmento;
+} t_segmento;
 
 //t_segmento juanpi => comento el anterior
 
 typedef struct {
     uint32_t pid;
-    uint32_t id;
-    uint32_t base;
-    uint32_t limite;
-} t_segmento; // Para marcar un segmento de la memoria
+    uint32_t id_segmento;
+    uint32_t direccion_base;
+    uint32_t tamanio_segmento;
+} t_segmento_memoria; // Para marcar un segmento de la memoria
 
 //de juanpi
 typedef struct {
@@ -337,6 +332,14 @@ typedef struct{
 	int entero2;
 	int entero3;
 } t_string_3enteros;
+
+typedef struct{
+	char* string;
+	uint32_t entero1;
+	uint32_t entero2;
+	uint32_t entero3;
+} t_string_3_u32;
+
 typedef struct{
 	char* string;
 	int entero1;
@@ -351,6 +354,19 @@ typedef struct{
 	int entero2;
 	int entero3;
 } t_3_enteros;
+
+typedef struct{
+	uint32_t entero1;
+	uint32_t entero2;
+	uint32_t entero3;
+} t_3_u32;
+
+typedef struct{
+	uint32_t entero1;
+	uint32_t entero2;
+	uint32_t entero3;
+	uint32_t entero4;
+} t_4_u32;
 
 typedef struct{
 	int DF;
@@ -386,6 +402,7 @@ t_log* init_logger(char *file, char *process_name, bool is_active_console, t_log
 /*    Definiciones de Funcionalidad para Serializacion/Deserializacion    */
 
 int leer_entero(char* , int* );
+uint32_t leer_entero_u32(char *, int *);
 t_list* leer_segmento(char* , int* );
 float leer_float(char* , int* );
 char* leer_string(char* , int* );
@@ -399,13 +416,14 @@ t_list* recibir_paquete_segmento(int );
 contexto_ejecucion * recibir_ce(int );
 char* recibir_string(int, t_log*);
 int recibir_entero(int, t_log*);
+uint32_t recibir_entero_u32(int socket, t_log* logger);
+
 
 void enviar_paquete_string(int, char*, int, int);
 void enviar_paquete_entero(int , int , int );
 
 void enviar_ce(int, contexto_ejecucion *, int, t_log*);
 void enviar_CodOp(int socket, int codOP);
-void enviar_paquete_entero(int, int, int);
 
 void agregar_ce_a_paquete(t_paquete *, contexto_ejecucion *, t_log*);
 contexto_ejecucion * obtener_ce(t_pcb * pcb);
@@ -445,7 +463,10 @@ t_ce_string_3enteros * recibir_ce_string_3enteros(int socket);
 void enviar_3_enteros(int client_socket, int x, int y, int z, int codOP);
 t_ce_string_2enteros* recibir_ce_string_2enteros(int);
 t_3_enteros * recibir_3_enteros(int);
+t_3_u32 * recibir_3_u32(int);
+t_4_u32 * recibir_4_u32(int);
 t_string_3enteros* recibir_string_3enteros(int);
+t_string_3_u32* recibir_string_3_u32(int);
 t_string_4enteros* recibir_string_4enteros(int);
 recive_mov_out * recibir_mov_out(int);
 void liberar_ce_2enteros(t_ce_2enteros*);
