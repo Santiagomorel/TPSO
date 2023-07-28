@@ -139,7 +139,7 @@ void devolver_tabla_inicial(int socket) {
 }
 
 void devolver_resultado_creacion(op_code resultado, int socket, uint32_t base) {
-    int tam_buffer = sizeof(op_code);
+    int tam_buffer = sizeof(uint32_t);
     if(resultado == OK) {
         tam_buffer += sizeof(uint32_t);
     }
@@ -708,8 +708,8 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
             uint32_t tam_seg = create_data->entero3;
 
             uint32_t n_base;
-            op_code resultado = crear_segmento_memoria(tam_seg, &n_base);
-
+            uint32_t resultado = crear_segmento_memoria(tam_seg, &n_base);
+            
             if (resultado == OK)
             {
                 t_segmento_memoria* n_seg = malloc(sizeof(t_segmento_memoria));
@@ -720,9 +720,6 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
                 list_add_sorted(LISTA_GLOBAL_SEGMENTOS, n_seg, comparador_base_segmento);
                 log_info(log_memoria, "PID: %d - Crear Segmento: %d - Base: %d - TAMAÑO: %d", pid_create_segment, id_seg, n_base, tam_seg);
             }
-            
-            // print_lista_segmentos();
-            // print_lista_esp(LISTA_ESPACIOS_LIBRES);
 
             devolver_resultado_creacion(resultado, SOCKET_CLIENTE_KERNEL, n_base);
             pthread_mutex_unlock(&mutex_memoria);
