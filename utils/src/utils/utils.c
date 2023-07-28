@@ -1302,13 +1302,13 @@ void enviar_todas_tablas_segmentos(int conexion, t_list* lista_t_procesos, int c
 t_list* recibir_todas_tablas_segmentos(int conexion)
 {
 	t_list* lista_t_procesos = list_create();
-	int size = 0;
+	uint32_t size = 0;
 	char *buffer;
 	int desp = 0;
 
-	buffer = recibir_buffer(&size, conexion);
+	buffer = recibir_bufferv2(&size, conexion);
 
-	int cant_t_procesos = leer_entero(buffer, &desp);
+	uint32_t cant_t_procesos = leer_entero_u32(buffer, &desp);
 
 	for (int i = 0; i < cant_t_procesos; i++)
 	{

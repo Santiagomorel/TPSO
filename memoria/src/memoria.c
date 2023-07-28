@@ -148,6 +148,7 @@ void devolver_resultado_creacion(op_code resultado, int socket, uint32_t base) {
 }
 
 void devolver_nuevas_bases(int cliente_socket) {
+    enviar_CodOp(cliente_socket, OK_COMPACTACION);
     uint32_t size = (sizeof(uint32_t) * 3) * list_size(LISTA_GLOBAL_SEGMENTOS) + sizeof(uint32_t);
     void* buffer = malloc(size);
     int desplazamiento = 0;
@@ -681,11 +682,6 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
             break;
         break;
         
-        case DELETE_PROCESS:
-        // juanpi borra todos los segmentos que tengan ese PID => ej: hace deletet_segment 10
-        uint32_t pid_delete = recibir_entero_u32(SOCKET_CLIENTE_KERNEL, log_memoria);
-        //borrar_proceso(pid_delete);
-        break;
         case CREATE_SEGMENT:
             pthread_mutex_lock(&mutex_memoria);
             t_3_enteros* create_data = recibir_3_enteros(SOCKET_CLIENTE_KERNEL);

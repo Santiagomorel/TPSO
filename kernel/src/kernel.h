@@ -216,8 +216,9 @@ void atender_crear_segmento();
 
 // Declaraciones COMPACTACION
 void atender_compactacion(uint32_t, uint32_t, uint32_t);
-void actualizar_ts_x_proceso();
-t_pcb* pcb_en_lista_coincide(t_list*, t_proceso*);
+// void actualizar_ts_x_proceso();
+void recibir_nuevas_bases();
+t_pcb* pcb_en_lista_coincide(t_list*, uint32_t);
 
 // Variables COMPACTACION
 int f_execute;

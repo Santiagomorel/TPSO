@@ -1278,7 +1278,8 @@ void atender_compactacion(uint32_t id_proceso, uint32_t id_segmento, uint32_t ta
     
     switch (cod_op_compactacion){
         case OK_COMPACTACION:
-            actualizar_ts_x_proceso();
+            recibir_nuevas_bases();
+            // actualizar_ts_x_proceso();
 
             log_info(kernel_logger, "Compactacion: [Finalizo el proceso de compactacion]");
 
@@ -1293,9 +1294,20 @@ void atender_compactacion(uint32_t id_proceso, uint32_t id_segmento, uint32_t ta
     }
 }
 
-void actualizar_ts_x_proceso() // PROBAR
-{
-    t_list* lista_ts_x_procesos = recibir_todas_tablas_segmentos(memory_connection);
+void recibir_nuevas_bases(int socket_memoria) {
+    uint32_t tam_buffer;
+    recv(socket_memoria, &tam_buffer, sizeof(uint32_t), NULL);
+    tam_buffer -= sizeof(uint32_t);
+
+    void *buffer = malloc(tam_buffer);
+    recv(socket_memoria, buffer, tam_buffer, NULL);
+    int desplazamiento = 0;
+
+    int cant_segmentos = tam_buffer / (sizeof(uint32_t) * 3);
+    
+    uint32_t pid;
+    uint32_t id;
+    uint32_t n_base;
 
     t_list* lista_de_pcbs = list_create();
 
@@ -1308,27 +1320,51 @@ void actualizar_ts_x_proceso() // PROBAR
         list_add_all(lista_de_pcbs, lista_recurso[i]);
     }
 
-    uint32_t cantidad_procesos = list_size(lista_ts_x_procesos);
-    for(int i = 0; i < cantidad_procesos; i++)
+    for (int i = 0; i < cant_segmentos; i++)
     {
-        t_proceso* proceso_i = list_get(lista_ts_x_procesos, i);
+        memcpy(&pid, buffer + desplazamiento, sizeof(uint32_t));
+        desplazamiento += sizeof(uint32_t);
+        memcpy(&id, buffer + desplazamiento, sizeof(uint32_t));
+        desplazamiento += sizeof(uint32_t);
+        memcpy(&n_base, buffer + desplazamiento, sizeof(uint32_t));
+        desplazamiento += sizeof(uint32_t);
 
-        t_pcb* pcb_encontrado = pcb_en_lista_coincide(lista_de_pcbs, proceso_i);
+        t_pcb* pcb_encontrado = pcb_en_lista_coincide(lista_de_pcbs, pid);
+        // Search PID in PROCESOS_EN_MEMORIA
+        
+        t_ent_ts* segmento = list_get(proceso_en_memoria->tabla_segmentos, id);
 
-        list_clean_and_destroy_elements(pcb_encontrado->tabla_segmentos, (void*)free);
-
-        list_add_all(pcb_encontrado->tabla_segmentos, proceso_i->tabla_segmentos);
-        log_warning(kernel_logger, "El id encontrado es : %d",pcb_encontrado->id);
-        imprimir_tabla_segmentos(pcb_encontrado->tabla_segmentos, kernel_logger);
+        segmento->base = n_base;
+        
     }
-    
-    list_destroy(lista_de_pcbs); 
+    free(buffer);
 }
 
-t_pcb* pcb_en_lista_coincide(t_list* lista_pcbs, t_proceso* proceso_a_matchear)
+// void actualizar_ts_x_proceso() // PROBAR
+// {
+//     t_list* lista_ts_x_procesos = recibir_todas_tablas_segmentos(memory_connection);
+
+    
+
+//     uint32_t cantidad_procesos = list_size(lista_ts_x_procesos);
+//     for(int i = 0; i < cantidad_procesos; i++)
+//     {
+//         t_proceso* proceso_i = list_get(lista_ts_x_procesos, i);
+
+//         list_clean_and_destroy_elements(pcb_encontrado->tabla_segmentos, (void*)free);
+
+//         list_add_all(pcb_encontrado->tabla_segmentos, proceso_i->tabla_segmentos);
+//         log_warning(kernel_logger, "El id encontrado es : %d",pcb_encontrado->id);
+//         imprimir_tabla_segmentos(pcb_encontrado->tabla_segmentos, kernel_logger);
+//     }
+    
+//     list_destroy(lista_de_pcbs); 
+// }
+
+t_pcb* pcb_en_lista_coincide(t_list* lista_pcbs, uint32_t idproceso)
 {
     bool encontrar_pcb(t_pcb* pcb){
-        return pcb->id == proceso_a_matchear->id;
+        return pcb->id == idproceso;
     }
 
     return list_find(lista_pcbs, (void*) encontrar_pcb);
@@ -1342,31 +1378,45 @@ void atender_borrar_segmento() //TODO
 
     contexto_ejecucion* contexto_borrar_segmento = estructura_borrar_segmento->ce;
 
+    t_pcb* pcb_a_borrar = (t_pcb *) list_get(listaEjecutando, 0);
+
+    uint32_t id_proceso = pcb_a_borrar->id;
+
     uint32_t id_segmento = estructura_borrar_segmento->entero;
+    
+    t_ent_ts* seg_a_modificar = list_get(pcb_a_borrar->tabla_segmentos, id_segmento);
 
-    uint32_t id_proceso = ((t_pcb *) list_get(listaEjecutando, 0))->id;
+    uint32_t base_segmento = seg_a_modificar->base;
 
+    uint32_t tam_segmento = seg_a_modificar->tam;
+
+    solicitar_liberacion_segmento(base_segmento, tam_segmento, id_proceso, id_segmento);
+
+    seg_a_modificar->base = 0;
+    seg_a_modificar->tam = 0;
+    seg_a_modificar->activo = 0;
+    
     log_info(kernel_logger, "PID: [%d] - Eliminar Segmento - Id Segmento: [%d]", id_proceso, id_segmento);
 
-    enviar_2_enteros(memory_connection, id_proceso, id_segmento, DELETE_SEGMENT); // mando a memoria idP, idS
+    // enviar_2_enteros(memory_connection, id_proceso, id_segmento, DELETE_SEGMENT); // mando a memoria idP, idS
 
     // recibir_operacion(memory_connection);
     
     // t_list* nueva_tabla_segmentos = recibir_tabla_segmentos(memory_connection);
     
-    // t_pcb* pcb_borrar_segmento = actualizar_pcb_lget_devuelve_pcb(contexto_borrar_segmento, listaEjecutando, m_listaEjecutando);
+    t_pcb* pcb_borrar_segmento = actualizar_pcb_lget_devuelve_pcb(contexto_borrar_segmento, listaEjecutando, m_listaEjecutando);
 
     // limpiar_tabla_segmentos(pcb_borrar_segmento->tabla_segmentos); // 
 
     // list_add_all(pcb_borrar_segmento->tabla_segmentos, nueva_tabla_segmentos);
 
-    // imprimir_tabla_segmentos(pcb_borrar_segmento->tabla_segmentos, kernel_logger);
+    imprimir_tabla_segmentos(pcb_borrar_segmento->tabla_segmentos, kernel_logger);
 
-    // contexto_ejecucion* nuevo_contexto_borrar_segmento = obtener_ce(pcb_borrar_segmento);
+    contexto_ejecucion* nuevo_contexto_borrar_segmento = obtener_ce(pcb_borrar_segmento);
     
-    // enviar_ce(cpu_dispatch_connection, nuevo_contexto_borrar_segmento, EJECUTAR_CE, kernel_logger);
+    enviar_ce(cpu_dispatch_connection, nuevo_contexto_borrar_segmento, EJECUTAR_CE, kernel_logger);
     
-    // liberar_ce(nuevo_contexto_borrar_segmento);
+    liberar_ce(nuevo_contexto_borrar_segmento);
 
     liberar_ce_entero(estructura_borrar_segmento); // VER SI FUNCIONA
 }
