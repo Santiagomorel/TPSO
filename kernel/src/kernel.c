@@ -1278,6 +1278,7 @@ void atender_compactacion(uint32_t id_proceso, uint32_t id_segmento, uint32_t ta
     
     switch (cod_op_compactacion){
         case OK_COMPACTACION:
+            
             recibir_nuevas_bases();
             // actualizar_ts_x_proceso();
 
@@ -1296,11 +1297,11 @@ void atender_compactacion(uint32_t id_proceso, uint32_t id_segmento, uint32_t ta
 
 void recibir_nuevas_bases(int socket_memoria) {
     uint32_t tam_buffer;
-    recv(socket_memoria, &tam_buffer, sizeof(uint32_t), NULL);
+    recv(memory_connection, &tam_buffer, sizeof(uint32_t), NULL);
     tam_buffer -= sizeof(uint32_t);
 
     void *buffer = malloc(tam_buffer);
-    recv(socket_memoria, buffer, tam_buffer, NULL);
+    recv(memory_connection, buffer, tam_buffer, NULL);
     int desplazamiento = 0;
 
     int cant_segmentos = tam_buffer / (sizeof(uint32_t) * 3);
@@ -1308,7 +1309,6 @@ void recibir_nuevas_bases(int socket_memoria) {
     uint32_t pid;
     uint32_t id;
     uint32_t n_base;
-
     t_list* lista_de_pcbs = list_create();
 
     list_add_all(lista_de_pcbs, listaReady);
@@ -1329,7 +1329,10 @@ void recibir_nuevas_bases(int socket_memoria) {
         memcpy(&n_base, buffer + desplazamiento, sizeof(uint32_t));
         desplazamiento += sizeof(uint32_t);
 
+
         t_pcb* pcb_encontrado = pcb_en_lista_coincide(lista_de_pcbs, pid);
+
+        imprimir_tabla_segmentos(pcb_encontrado->tabla_segmentos,kernel_logger);
         // Search PID in PROCESOS_EN_MEMORIA
         
         t_ent_ts* segmento = list_get(pcb_encontrado->tabla_segmentos, id);
