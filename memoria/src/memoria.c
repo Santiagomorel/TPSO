@@ -25,13 +25,41 @@ int main(int argc, char **argv)
 
     // ----------------------- cargo la configuracion de memoria ----------------------- //
 
-    log_trace(log_memoria, "cargo la configuracion de Memoria");
+    log_trace(log_memoria, "antes de cargar la configuracion de Memoria");
 
     load_config();
 
+    log_trace(log_memoria, "cargo la configuracion de Memoria");
 
     levantar_estructuras_administrativas();
-    ptrhead_mutex_init(&mutex_memoria, NULL);
+
+    log_trace(log_memoria, "levanto las estructuras");
+    pthread_mutex_init(&mutex_memoria, NULL);
+    sem_init(&finModulo, 0, 0);
+
+    log_trace(log_memoria, "puerto escucha %d", memoria_config.puerto_escucha);
+
+    socket_servidor_memoria = iniciar_servidor(memoria_config.puerto_escucha, log_memoria);
+    log_trace(log_memoria, "Servidor Memoria listo para recibir al cliente");
+
+    pthread_t atiende_cliente_CPU, atiende_cliente_FILESYSTEM, atiende_cliente_KERNEL;
+
+    log_trace(log_memoria, "esperando cliente CPU");
+    socket_cliente_memoria_CPU = esperar_cliente(socket_servidor_memoria, log_memoria);
+    pthread_create(&atiende_cliente_CPU, NULL, (void *)recibir_cpu, (void *)socket_cliente_memoria_CPU);
+    pthread_detach(atiende_cliente_CPU);
+
+    log_trace(log_memoria, "esperando cliente fileSystem");
+    socket_cliente_memoria_FILESYSTEM = esperar_cliente(socket_servidor_memoria, log_memoria);
+    pthread_create(&atiende_cliente_FILESYSTEM, NULL, (void *)recibir_fileSystem, (void *)socket_cliente_memoria_FILESYSTEM);
+    pthread_detach(atiende_cliente_FILESYSTEM);
+
+    log_trace(log_memoria, "esperando cliente kernel");
+    socket_cliente_memoria_KERNEL = esperar_cliente(socket_servidor_memoria, log_memoria);
+    pthread_create(&atiende_cliente_KERNEL, NULL, (void *)recibir_kernel, (void *)socket_cliente_memoria_KERNEL);
+    pthread_detach(atiende_cliente_KERNEL);
+
+
 
 
 /* INICIOS
@@ -46,21 +74,8 @@ int main(int argc, char **argv)
     socket_servidor_memoria = iniciar_servidor(memoria_config.puerto_escucha, log_memoria);
 */
     //log_trace(log_memoria, "Servidor Memoria listo para recibir al cliente");
-
-   char puerto_escucha[10];
-		sprintf(puerto_escucha, "%d", memoria_config.puerto_escucha);
-		socket_servidor_memoria = iniciar_servidor(log_memoria, puerto_escucha);
-		if (socket_servidor_memoria == -1)
-		{
-			log_error(log_memoria, "No se pudo iniciar el servidor en Memoria...");
-			return EXIT_FAILURE;
-		}
-		log_info(log_memoria, "Memoria escuchando conexiones...");
-		while (server_escuchar(log_memoria, socket_servidor_memoria, (void *)procesar_conexion));
-		return EXIT_SUCCESS;
-
-
     //sem_wait(&finModulo);
+    sem_wait(&finModulo);
     log_warning(log_memoria, "FINALIZA EL MODULO DE MEMORIA");
     end_program();
 
@@ -102,14 +117,19 @@ void end_program()
 
 //comienza comunicacion.c juanpi
 void devolver_tabla_inicial(int socket) {
-    uint32_t size = sizeof(t_ent_ts) * CANT_SEGMENTOS + sizeof(uint32_t);
+    //cod_op
+
+    op_code cod = TABLA_SEGMENTOS;
+
+    uint32_t size = sizeof(op_code) + sizeof(t_ent_ts) * memoria_config.cant_segmentos + sizeof(uint32_t);
     void* buffer = malloc(size);
 
-    memcpy(buffer, &CANT_SEGMENTOS, sizeof(uint32_t));
+    memcpy(buffer, &cod, sizeof(cod_op));
+    memcpy(buffer + sizeof(cod_op), &memoria_config.cant_segmentos, sizeof(uint32_t));
 
     void* tabla = crear_tabla_segmentos();
 
-    memcpy(buffer + sizeof(uint32_t), tabla, sizeof(t_ent_ts) * CANT_SEGMENTOS);
+    memcpy(buffer + sizeof(cod_op) + sizeof(uint32_t), tabla, sizeof(t_ent_ts) * memoria_config.cant_segmentos);
 
     send(socket, buffer, size, NULL);
 
@@ -118,17 +138,17 @@ void devolver_tabla_inicial(int socket) {
 
 }
 
-void devolver_resultado_creacion(cod_op_kernel resultado, int socket, uint32_t base) {
-    int tam_buffer = sizeof(cod_op_kernel);
-    if(resultado == MEMORIA_SEGMENTO_CREADO) {
+void devolver_resultado_creacion(op_code resultado, int socket, uint32_t base) {
+    int tam_buffer = sizeof(op_code);
+    if(resultado == OK) {
         tam_buffer += sizeof(uint32_t);
     }
     void* buffer = malloc(tam_buffer);
 
     int despl = 0;
 
-    memcpy(buffer, &resultado, sizeof(cod_op_kernel));
-    despl += sizeof(cod_op_kernel);
+    memcpy(buffer, &resultado, sizeof(op_code));
+    despl += sizeof(op_code);
 
     if(resultado == MEMORIA_SEGMENTO_CREADO) {
         memcpy(buffer + despl, &base, sizeof(uint32_t));
@@ -146,23 +166,23 @@ void devolver_nuevas_bases(int cliente_socket) {
     memcpy(buffer, &size, sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
 
-    t_segmento* segmento;
+    t_segmento_memoria* segmento;
     // for each segmento in LISTA_GLOBAL_SEGMENTOS copy its pid, id and base
     for (int i = 0; i < list_size(LISTA_GLOBAL_SEGMENTOS); i++)
     {   
         segmento = list_get(LISTA_GLOBAL_SEGMENTOS, i);
         memcpy(buffer + desplazamiento, &segmento->pid, sizeof(uint32_t));
         desplazamiento += sizeof(uint32_t);
-        memcpy(buffer + desplazamiento, &segmento->id, sizeof(uint32_t));
+        memcpy(buffer + desplazamiento, &segmento->id_segmento, sizeof(uint32_t));
         desplazamiento += sizeof(uint32_t);
-        memcpy(buffer + desplazamiento, &segmento->base, sizeof(uint32_t));
+        memcpy(buffer + desplazamiento, &segmento->direccion_base, sizeof(uint32_t));
         desplazamiento += sizeof(uint32_t);
     }
 
     send(cliente_socket, buffer, size, NULL);
     free(buffer);
 }
-
+//no lo usamos
 void procesar_conexion(void *void_args)
 {
     t_conexion *args = (t_conexion *)void_args;
@@ -182,16 +202,6 @@ void procesar_conexion(void *void_args)
 
         switch (cop)
         {
-        case HANDSHAKE_CPU:
-        case HANDSHAKE_FILESYSTEM:
-        case HANDSHAKE_KERNEL:
-            aceptar_handshake(logger, cliente_socket, cop);
-            break;
-        // Errores
-        case HANDSHAKE_CONSOLA:
-        case HANDSHAKE_MEMORIA:
-            rechazar_handshake(logger, cliente_socket);
-            break;
         case CREATE_SEGTABLE:
             pthread_mutex_lock(&mutex_memoria);
             uint32_t pid;
@@ -210,15 +220,15 @@ void procesar_conexion(void *void_args)
             recv(cliente_socket, &tam_seg, sizeof(uint32_t), NULL);
 
             uint32_t n_base;
-            cod_op_kernel resultado = crear_segmento(tam_seg, &n_base);
-
+            cod_op_kernel resultado = crear_segmento_memoria(tam_seg, &n_base);
+            // MEMORIA_SEGMENTO_CREADO | MEMORIA_NECESITA_COMPACTACION | EXIT_OUT_OF_MEMORY
             if (resultado == MEMORIA_SEGMENTO_CREADO)
             {
-                t_segmento* n_seg = malloc(sizeof(t_segmento));
+                t_segmento_memoria* n_seg = malloc(sizeof(t_segmento));
                 n_seg->pid = pid_create_segment;
-                n_seg->id = id_seg;
-                n_seg->base = n_base;
-                n_seg->limite = tam_seg;
+                n_seg->id_segmento= id_seg;
+                n_seg->direccion_base = n_base;
+                n_seg->tamanio_segmento = tam_seg;
                 list_add_sorted(LISTA_GLOBAL_SEGMENTOS, n_seg, comparador_base_segmento);
                 log_info(log_memoria, "PID: %d - Crear Segmento: %d - Base: %d - TAMAÑO: %d", pid_create_segment, id_seg, n_base, tam_seg);
             }
@@ -291,8 +301,8 @@ void procesar_conexion(void *void_args)
             compactar();
             for(int i = 0; i < list_size(LISTA_GLOBAL_SEGMENTOS); i++)
             {
-                t_segmento* segmento = list_get(LISTA_GLOBAL_SEGMENTOS, i);
-                log_info(log_memoria, "PID: %d - Segmento: %d - Base: %d - Tamaño: %d", segmento->pid, segmento->id, segmento->base, segmento->limite);
+                t_segmento_memoria* segmento = list_get(LISTA_GLOBAL_SEGMENTOS, i);
+                log_info(log_memoria, "PID: %d - Segmento: %d - Base: %d - Tamaño: %d", segmento->pid, segmento->id_segmento, segmento->direccion_base, segmento->tamanio_segmento);
             }
             devolver_nuevas_bases(cliente_socket);
             print_lista_esp(LISTA_ESPACIOS_LIBRES);
@@ -378,10 +388,10 @@ bool comparador_base(void* data1, void* data2) {
 }
 
 bool comparador_base_segmento(void* data1, void* data2) {
-    t_segmento* seg1 = (t_segmento*)data1;
-    t_segmento* seg2 = (t_segmento*)data2;
+    t_segmento_memoria* seg1 = (t_segmento_memoria*)data1;
+    t_segmento_memoria* seg2 = (t_segmento_memoria*)data2;
 
-    return seg1->base < seg2->base;
+    return seg1->direccion_base < seg2->direccion_base;
 }
 
 void print_lista_esp(t_list* lista) {
@@ -395,8 +405,8 @@ void print_lista_esp(t_list* lista) {
 void print_lista_segmentos() {
     printf("Lista de segmentos:\n");
     for (int i = 0; i < list_size(LISTA_GLOBAL_SEGMENTOS); i++) {
-        t_segmento* elemento = list_get(LISTA_GLOBAL_SEGMENTOS, i);
-        printf("PID %u: ID=%u, BASE=%u, LIMITE=%u\n", elemento->pid, elemento->id, elemento->base, elemento->limite);
+        t_segmento_memoria* elemento = list_get(LISTA_GLOBAL_SEGMENTOS, i);
+        printf("PID %u: ID=%u, BASE=%u, LIMITE=%u\n", elemento->pid, elemento->id_segmento, elemento->direccion_base, elemento->tamanio_segmento);
     }
 }
 
@@ -518,12 +528,12 @@ int buscar_espacio_libre(uint32_t tam) {
     return -1;
 }
 
-cod_op_kernel crear_segmento(uint32_t tam, uint32_t* base_resultante) {
+op_code crear_segmento_memoria(uint32_t tam, uint32_t* base_resultante) {
     //printf("%d, %d\n", ESPACIO_LIBRE_TOTAL, tam);
     if (ESPACIO_LIBRE_TOTAL < tam)
     {
         log_info(log_memoria, "NO HAY ESPACIO SUFICIENTE PARA CREAR ESE SEGMENTO");
-        return EXIT_OUT_OF_MEMORY;
+        return OUT_OF_MEMORY;
         // Retornar codop indicando que no hay espacio suficiente.
     }
     
@@ -533,7 +543,7 @@ cod_op_kernel crear_segmento(uint32_t tam, uint32_t* base_resultante) {
     if (i_espacio == -1)
     {
         // Retornar codop indicando que es necesario compactar.
-        return MEMORIA_NECESITA_COMPACTACION;
+        return NECESITO_COMPACTAR;
     }
 
     t_esp* espacio = list_get(LISTA_ESPACIOS_LIBRES, i_espacio);
@@ -549,21 +559,20 @@ cod_op_kernel crear_segmento(uint32_t tam, uint32_t* base_resultante) {
         free(espacio);
     }
 
-    return MEMORIA_SEGMENTO_CREADO;
+    return OK;
     
 }
-// MEMORIA_SEGMENTO_CREADO | MEMORIA_NECESITA_COMPACTACION | EXIT_OUT_OF_MEMORY
 
 bool son_contiguos(t_esp* esp1, t_esp* esp2) {
     return esp1 ->base + esp1->limite == esp2 ->base;
 }
 
 int buscar_segmento_por_base(uint32_t base) {
-    t_segmento* segmento;
+    t_segmento_memoria* segmento;
     for (int i = 0; i < list_size(LISTA_GLOBAL_SEGMENTOS); i++)
     {
         segmento = list_get(LISTA_GLOBAL_SEGMENTOS, i);
-        if (segmento->base == base)
+        if (segmento->direccion_base == base)
         {
             return i;
         }
@@ -612,7 +621,7 @@ void borrar_segmento(uint32_t base, uint32_t limite) {
     
     int indice_segmento = buscar_segmento_por_base(base);
 
-    t_segmento* segmento = list_remove(LISTA_GLOBAL_SEGMENTOS,indice_segmento );
+    t_segmento_memoria* segmento = list_remove(LISTA_GLOBAL_SEGMENTOS,indice_segmento );
     free(segmento);
     
 }
@@ -630,13 +639,13 @@ char* leer(uint32_t dir_fisca , uint32_t size) {
 void compactar() {
     for (int i = 0; i < list_size(LISTA_GLOBAL_SEGMENTOS); i++)
     {
-        t_segmento* segmento = list_get(LISTA_GLOBAL_SEGMENTOS, i);
+        t_segmento_memoria* segmento = list_get(LISTA_GLOBAL_SEGMENTOS, i);
         t_esp* primer_espacio_libre = list_get(LISTA_ESPACIOS_LIBRES, 0);
-        if (segmento->base > primer_espacio_libre->base )
+        if (segmento->direccion_base > primer_espacio_libre->base )
         {
-            memcpy(ESPACIO_USUARIO + primer_espacio_libre->base, ESPACIO_USUARIO + segmento->base, segmento->limite);
-            segmento->base = primer_espacio_libre->base;
-            primer_espacio_libre->base += segmento->limite;
+            memcpy(ESPACIO_USUARIO + primer_espacio_libre->base, ESPACIO_USUARIO + segmento->direccion_base, segmento->tamanio_segmento);
+            segmento->direccion_base = primer_espacio_libre->base;
+            primer_espacio_libre->base += segmento->tamanio_segmento;
             
             //consolidacion
             if (list_size(LISTA_ESPACIOS_LIBRES) > 1)
@@ -658,6 +667,241 @@ void compactar() {
 }
 
 //termina utils juanpi
+
+
+//manejo de conexiones
+
+void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
+{
+
+    enviar_mensaje("recibido kernel", SOCKET_CLIENTE_KERNEL);
+
+    int codigoOP = 0;
+    while (codigoOP != -1)
+    {
+        int codigoOperacion = recibir_operacion(SOCKET_CLIENTE_KERNEL);
+        switch (codigoOperacion)
+        {
+        case INICIAR_ESTRUCTURAS:
+            //int id_inicio_estructura = recibir_entero(SOCKET_CLIENTE_KERNEL, log_memoria);
+            //t_proceso* nuevo_proceso = crear_proceso_en_memoria(id_inicio_estructura);
+            log_trace(log_memoria, "recibi el op_cod %d INICIAR_ESTRUCTURAS", codigoOperacion);
+            //- Creación de Proceso: “Creación de Proceso PID: <PID>”
+            pthread_mutex_lock(&mutex_memoria);
+            uint32_t pid = recibir_entero_u32(SOCKET_CLIENTE_KERNEL, log_memoria);
+            log_info(log_memoria, "Creacion de Proceso PID: %d", pid);
+            devolver_tabla_inicial(SOCKET_CLIENTE_KERNEL);
+            pthread_mutex_unlock(&mutex_memoria);
+            break;
+        break;
+        
+        case DELETE_PROCESS:
+        // juanpi borra todos los segmentos que tengan ese PID => ej: hace deletet_segment 10
+        uint32_t pid_delete = recibir_entero_u32(SOCKET_CLIENTE_KERNEL, log_memoria);
+        //borrar_proceso(pid_delete);
+        break;
+        case CREATE_SEGMENT:
+            pthread_mutex_lock(&mutex_memoria);
+            t_3_u32* create_data = recibir_3_u32(SOCKET_CLIENTE_KERNEL);
+            uint32_t pid_create_segment = create_data->entero1;
+            uint32_t id_seg = create_data->entero2;
+            uint32_t tam_seg = create_data->entero3;
+
+            uint32_t n_base;
+            op_code resultado = crear_segmento_memoria(tam_seg, &n_base);
+
+            if (resultado == OK)
+            {
+                t_segmento_memoria* n_seg = malloc(sizeof(t_segmento_memoria));
+                n_seg->pid = pid_create_segment;
+                n_seg->id_segmento= id_seg;
+                n_seg->direccion_base = n_base;
+                n_seg->tamanio_segmento = tam_seg;
+                list_add_sorted(LISTA_GLOBAL_SEGMENTOS, n_seg, comparador_base_segmento);
+                log_info(log_memoria, "PID: %d - Crear Segmento: %d - Base: %d - TAMAÑO: %d", pid_create_segment, id_seg, n_base, tam_seg);
+            }
+            
+            // print_lista_segmentos();
+            // print_lista_esp(LISTA_ESPACIOS_LIBRES);
+
+            devolver_resultado_creacion(resultado, SOCKET_CLIENTE_KERNEL, n_base);
+            pthread_mutex_unlock(&mutex_memoria);
+            break;
+
+        case DELETE_SEGMENT:
+            // Debe recibir el id del segmento que desea eliminar
+            pthread_mutex_lock(&mutex_memoria);
+            t_4_u32* delete_data = recibir_4_u32(SOCKET_CLIENTE_KERNEL);
+            uint32_t pid_free_segment = delete_data->entero1;
+            uint32_t free_seg_id = delete_data->entero2;
+            uint32_t base = delete_data->entero3;
+            uint32_t tam = delete_data->entero4;
+
+            borrar_segmento(base, tam);
+            log_info(log_memoria, "PID: %d - Eliminar Segmento: %d - Base: %d - TAMAÑO: %d", pid_free_segment, free_seg_id, base, tam);
+            print_lista_esp(LISTA_ESPACIOS_LIBRES); //
+            pthread_mutex_unlock(&mutex_memoria);
+            break;
+
+
+         case COMPACTAR:
+            pthread_mutex_lock(&mutex_memoria);
+            compactar();
+            for(int i = 0; i < list_size(LISTA_GLOBAL_SEGMENTOS); i++)
+            {
+                t_segmento_memoria* segmento = list_get(LISTA_GLOBAL_SEGMENTOS, i);
+                log_info(log_memoria, "PID: %d - Segmento: %d - Base: %d - Tamaño: %d", segmento->pid, segmento->id_segmento, segmento->direccion_base, segmento->tamanio_segmento);
+            }
+            devolver_nuevas_bases(SOCKET_CLIENTE_KERNEL);
+            print_lista_esp(LISTA_ESPACIOS_LIBRES);
+            pthread_mutex_unlock(&mutex_memoria);
+            break;
+
+        case -1:
+            codigoOP = codigoOperacion;
+            break;
+        // se desconecta kernel
+        default:
+            log_trace(log_memoria, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
+            break;
+        }
+    }
+    log_warning(log_memoria, "se desconecto kernel");
+    sem_post(&finModulo);
+}
+
+void recibir_cpu(int SOCKET_CLIENTE_CPU)
+{
+
+    enviar_mensaje("recibido cpu", SOCKET_CLIENTE_CPU);
+    log_trace(log_memoria, "recibido cpu");
+    int codigoOP = 0;
+    while (codigoOP != -1)
+    {
+        log_warning(log_memoria,"me quedo esperando");
+        int codigoOperacion = recibir_operacion(SOCKET_CLIENTE_CPU);
+        //sleep(memoria_config.retardo_memoria);
+        switch (codigoOperacion)
+        {
+        case MENSAJE:
+            log_trace(log_memoria, "recibi el op_cod %d MENSAJE , codigoOperacion", codigoOperacion);
+            break;
+
+        case MOV_IN: 
+            pthread_mutex_lock(&mutex_memoria);
+            t_3_u32* mov_in_data = recibir_3_u32(SOCKET_CLIENTE_CPU);
+            uint32_t pid_mov_in = mov_in_data->entero1;
+            uint32_t dir_fisica_in = mov_in_data->entero2;
+            uint32_t tam_a_leer = mov_in_data->entero3;
+            char* valor_in = leer(dir_fisica_in, tam_a_leer);
+            
+            //send(cliente_socket, valor_in, tam_a_leer, NULL);
+            
+            sleep(memoria_config.retardo_memoria/1000);
+            enviar_paquete_string(SOCKET_CLIENTE_CPU, valor_in, MOV_IN_OK, tam_a_leer);
+            free(valor_in);
+            log_info(log_memoria, "PID: %d - Acción: LEER - Dirección física: %d - Tamaño: %d - Origen: CPU", pid_mov_in, dir_fisica_in, tam_a_leer);
+            pthread_mutex_unlock(&mutex_memoria);
+            break;
+
+
+        case MOV_OUT: //(Dirección Fisica, Registro): Lee el valor del Registro y lo escribe en la dirección física de memoria obtenida a partir de la Dirección Lógica.
+            pthread_mutex_lock(&mutex_memoria);
+            t_3_u32* mov_out_data = recibir_3_u32(SOCKET_CLIENTE_CPU);
+            uint32_t pid_mov_out = mov_out_data->entero1;
+            uint32_t dir_fisica = mov_out_data->entero2;
+            uint32_t tam_escrito = mov_out_data->entero3;
+            char* valor = malloc(tam_escrito);
+            recv(SOCKET_CLIENTE_CPU, valor, tam_escrito, NULL);
+            // Para probar
+            // char* cadena = imprimir_cadena(valor, tam_escrito);
+            // printf("Valor recibido: %s\n", cadena);
+
+            escribir(dir_fisica, valor, tam_escrito);
+            log_info(log_memoria, "PID: %d - Acción: ESCRIBIR - Dirección física: %d - Tamaño: %d - Origen: CPU", pid_mov_out, dir_fisica, tam_escrito);
+            free(valor);
+            enviar_CodOp(SOCKET_CLIENTE_CPU, MOV_OUT_OK);
+            sleep(memoria_config.retardo_memoria/1000);
+            pthread_mutex_unlock(&mutex_memoria);
+            break;
+
+        case -1:
+            codigoOP = codigoOperacion;
+        break;
+        
+        default:
+             log_trace(log_memoria, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
+            break;
+        }
+    }
+    log_warning(log_memoria, "se desconecto CPU");
+}
+
+void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM)
+{
+
+    enviar_mensaje("recibido fileSystem", SOCKET_CLIENTE_FILESYSTEM);
+    int codigoOP = 0;
+    while (codigoOP != -1)
+    {
+        int codigoOperacion = recibir_operacion(SOCKET_CLIENTE_FILESYSTEM);
+        log_warning(log_memoria, "llegue a fs");
+        switch (codigoOperacion)
+        {
+        case MENSAJE:
+            
+            log_trace(log_memoria, "recibi el op_cod %d MENSAJE , codigoOperacion", codigoOperacion);
+
+            break;
+
+        case F_READ:
+
+        pthread_mutex_lock(&mutex_memoria);
+            t_string_3_u32* fread_data = recibir_string_3_u32(SOCKET_CLIENTE_FILESYSTEM);
+            uint32_t pid_leer_archivo = fread_data->entero1;
+            uint32_t dir_fisica_leer_archivo = fread_data->entero2;
+            uint32_t tam_a_leer_archivo = fread_data->entero3;
+            char* valor_leer_archivo = fread_data->string;
+            //recv(cliente_socket, &pid_leer_archivo, sizeof(uint32_t), NULL);
+            //recv(cliente_socket, &dir_fisica_leer_archivo, sizeof(uint32_t), NULL);
+            //recv(cliente_socket, &tam_a_leer_archivo, sizeof(uint32_t), NULL);
+            //recv(cliente_socket, valor_leer_archivo, tam_a_leer_archivo, NULL);
+            escribir(dir_fisica_leer_archivo, valor_leer_archivo, tam_a_leer_archivo);
+            free(valor_leer_archivo);
+            log_info(log_memoria, "PID: %d - Accion: ESCRIBIR - Dirección física: %d - Tamaño: %d - Origen: FS", pid_leer_archivo, dir_fisica_leer_archivo, tam_a_leer_archivo);
+            sleep(memoria_config.retardo_memoria/1000);
+            enviar_CodOp(SOCKET_CLIENTE_FILESYSTEM,F_READ_OK);
+        pthread_mutex_unlock(&mutex_memoria);
+            break;
+        
+        case F_WRITE:
+        pthread_mutex_lock(&mutex_memoria);
+            t_3_u32* fwrite_data = recibir_3_u32(SOCKET_CLIENTE_FILESYSTEM);
+            uint32_t pid_escribir_archivo = fwrite_data->entero1;
+            uint32_t dir_fisica_escribir_archivo = fwrite_data->entero2;
+            uint32_t tam_a_escribir_archivo = fwrite_data -> entero3;
+
+            char* valor_escribir_archivo = leer(dir_fisica_escribir_archivo, tam_a_escribir_archivo);
+            log_info(log_memoria, "PID: %d - Accion: LEER - Dirección física: %d - Tamaño: %d - Origen: FS", pid_escribir_archivo, dir_fisica_escribir_archivo, tam_a_escribir_archivo);
+            sleep(memoria_config.retardo_memoria/1000);
+            enviar_paquete_string(SOCKET_CLIENTE_FILESYSTEM, valor_escribir_archivo, sizeof(valor_escribir_archivo), F_WRITE_OK);
+            free(valor_escribir_archivo);
+        pthread_mutex_unlock(&mutex_memoria);
+            break;
+
+        case -1:
+        codigoOP = codigoOperacion;
+        
+        break;
+
+        default:
+            log_trace(log_memoria, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
+            break;
+        }
+    }
+    log_warning(log_memoria, "se desconecto FILESYSTEM");
+}
+
 
 /*memoriaViejo
 //KERNEL
@@ -703,7 +947,7 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
                 log_warning(log_memoria, "segmentos disponibles = %d", list_size(segmentosDisponibles));
                 
 
-                bool menorTamanio(t_segmento* unSegmento){
+                bool menorTamanio(t_segmento_memoria* unSegmento){
                     return (unSegmento->tamanio_segmento < tamanio);
                 }
                 t_list* segmentosDisponibles2 = list_filter(segmentosDisponibles, menorTamanio);
@@ -895,14 +1139,7 @@ void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM)
     }
     log_warning(log_memoria, "se desconecto FILESYSTEM");
 }
-char* leer(uint32_t dir_fisca , uint32_t size) {
-    void* data = malloc(size);
-    memcpy(data, MEMORIA_PRINCIPAL + dir_fisca, size);
-    return data;
-}
-void escribir(uint32_t dir_fisca, void* data, uint32_t size) {
-    memcpy(MEMORIA_PRINCIPAL + dir_fisca, data, size);
-}
+
 /* LOGS NECESAIROS Y OBLIGATORIOS
 //- Acceso a espacio de usuario: “PID: <PID> - Acción: <LEER / ESCRIBIR> - Dirección física: <DIRECCIÓN_FÍSICA> - Tamaño: <TAMAÑO> - Origen: <CPU / FS>”
 
