@@ -446,6 +446,7 @@ void borrar_segmento(uint32_t base, uint32_t limite) {
 }
 
 void escribir(uint32_t dir_fisca, void* data, uint32_t size) {
+    log_warning(log_memoria,"el size en escribir es :%d", size);
     memcpy(ESPACIO_USUARIO + dir_fisca, data, size);
 }
 
@@ -602,6 +603,8 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU)
             uint32_t dir_fisica_in = mov_in_data->entero2;
             uint32_t tam_a_leer = mov_in_data->entero3;
             char* valor_in = leer(dir_fisica_in, tam_a_leer);
+
+            log_warning(log_memoria,"El valor en memoria es: %s",valor_in);
             
             //send(cliente_socket, valor_in, tam_a_leer, NULL);
             
@@ -667,8 +670,6 @@ void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM)
             break;
 
         case F_READ:
-
-        pthread_mutex_lock(&mutex_memoria);
             t_string_3enteros* fread_data = recibir_string_3enteros(SOCKET_CLIENTE_FILESYSTEM);
             uint32_t pid_leer_archivo = fread_data->entero1;
             uint32_t dir_fisica_leer_archivo = fread_data->entero2;
@@ -687,7 +688,6 @@ void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM)
             break;
         
         case F_WRITE:
-        pthread_mutex_lock(&mutex_memoria);
             t_3_enteros* fwrite_data = recibir_3_enteros(SOCKET_CLIENTE_FILESYSTEM);
             uint32_t pid_escribir_archivo = fwrite_data->entero1;
             uint32_t dir_fisica_escribir_archivo = fwrite_data->entero2;

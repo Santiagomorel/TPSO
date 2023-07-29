@@ -364,7 +364,7 @@ bool existeArchivo(char* nombreArchivo){
     log_error(kernel_logger, "La lista de nombres es de tamanio: %d", list_size(archivoEnLista));
     if(list_size(archivoEnLista)){
         t_entradaTGAA* entradaGlobal = list_get(archivoEnLista,0);
-        log_error(kernel_logger, "La lista de nombres es de tamanio: %d",entradaGlobal->nombreArchivo);
+        log_error(kernel_logger, "el nombre del archivo es: %s",entradaGlobal->nombreArchivo);
         return strcmp(entradaGlobal->nombreArchivo, nombreArchivo) == 0;
     }else{
         return 0;
