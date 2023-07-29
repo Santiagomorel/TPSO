@@ -696,7 +696,8 @@ void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM)
             char* valor_escribir_archivo = leer(dir_fisica_escribir_archivo, tam_a_escribir_archivo);
             log_info(log_memoria, "PID: %d - Accion: LEER - Dirección física: %d - Tamaño: %d - Origen: FS", pid_escribir_archivo, dir_fisica_escribir_archivo, tam_a_escribir_archivo);
             sleep(memoria_config.retardo_memoria/1000);
-            enviar_paquete_string(SOCKET_CLIENTE_FILESYSTEM, valor_escribir_archivo, sizeof(valor_escribir_archivo), F_WRITE_OK);
+            //enviar_paquete_string(SOCKET_CLIENTE_FILESYSTEM, valor_escribir_archivo, sizeof(valor_escribir_archivo), F_WRITE_OK);
+            send(SOCKET_CLIENTE_FILESYSTEM, valor_escribir_archivo, tam_a_escribir_archivo, NULL);
             free(valor_escribir_archivo);
         pthread_mutex_unlock(&mutex_memoria);
             break;

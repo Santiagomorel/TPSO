@@ -462,8 +462,8 @@ void procesar_conexion()
             char* f_name2= estructura_string_4enteros_e->string;
             uint32_t pid2 = estructura_string_4enteros_e->entero4;
             uint32_t offset2 = estructura_string_4enteros_e->entero1;
-            uint32_t dir_fisica2 = estructura_string_4enteros_e->entero3;
-            uint32_t cant2 = estructura_string_4enteros_e->entero2;
+            uint32_t dir_fisica2 = estructura_string_4enteros_e->entero2;
+            uint32_t cant2 = estructura_string_4enteros_e->entero3;
 
             log_info(logger, "Escribir archivo: %s - Puntero: %d - Memoria: %d - Tamaño: %d" ,f_name2, offset2, dir_fisica2, cant2);
             // Pedir datos a memoria
@@ -486,9 +486,14 @@ void procesar_conexion()
             //send(socket_memoria, buffer_memoria, sizeof(int) + sizeof(uint32_t)*3, NULL);
             //free(buffer_memoria);
 
-            void* buffer_escritura = malloc(cant2);
             
-            log_trace(logger_filesystem, "recibimos operacion de memoria");
+            //char* valor_a_escribir = malloc(cant2);
+            //int codop = recibir_operacion(socket_memoria);
+            //log_trace(logger_filesystem, "recibimos operacion de memoria");
+            //valor_a_escribir = recibir_string(socket_memoria, logger_filesystem);
+            //log_trace(logger_filesystem, "recibimos el string: %s de memoria para escribir", valor_a_escribir);
+            char* buffer_escritura = malloc(cant2);
+            recv(socket_memoria, buffer_escritura, cant2, NULL);
             eferrait(f_name2, offset2, cant2, buffer_escritura);
             log_trace(logger_filesystem, "aplicamos el F_WRITE");
             mem_hexdump(blocks_buffer, BLOCK_COUNT);
