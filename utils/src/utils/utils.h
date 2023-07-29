@@ -486,7 +486,7 @@ void enviar_todas_tablas_segmentos(int, t_list*, int, t_log*);
 t_list* recibir_todas_tablas_segmentos(int);
 t_proceso* recibir_t_proceso(char*, int*);
 
-
+t_3_enteros * recibir_3_u32(int);
 // declaraciones de agregar_a_paquete
 void agregar_entero_32_a_paquete(t_paquete*, uint32_t);
 

@@ -471,21 +471,21 @@ t_pcb* actualizar_pcb_lremove_devuelve_pcb(contexto_ejecucion* contexto_actualiz
 {
     pthread_mutex_lock(&sem);
         t_pcb * pcb_a_actualizar = pcb_en_lista_coincide(lista_del_pcb, contexto_actualiza->id);
-        t_pcb* pcb_a_actualizar_fuera_de_lista = list_remove_element(lista_del_pcb, pcb_a_actualizar);
-        actualizar_pcb(pcb_a_actualizar_fuera_de_lista, contexto_actualiza);
+        list_remove_element(lista_del_pcb, pcb_a_actualizar);
+        actualizar_pcb(pcb_a_actualizar, contexto_actualiza);
     pthread_mutex_unlock(&sem);
 
-    return pcb_a_actualizar_fuera_de_lista;
+    return pcb_a_actualizar;
 }
 
 t_pcb* pcb_lremove(contexto_ejecucion* contexto_actualiza, t_list* lista_del_pcb, pthread_mutex_t sem) // remueve un pcb en base a su id de una lista y lo devuelve
 {
     pthread_mutex_lock(&sem);
         t_pcb * pcb_coincide_con_id = pcb_en_lista_coincide(lista_del_pcb, contexto_actualiza->id);
-        t_pcb* pcb_fuera_de_lista = list_remove_element(lista_del_pcb, pcb_a_actualizar);
+        list_remove_element(lista_del_pcb, pcb_coincide_con_id);
     pthread_mutex_unlock(&sem);
 
-    return pcb_fuera_de_lista;
+    return pcb_coincide_con_id;
 }
 // ----------------------- Funciones planificador to - ready ----------------------- //
 
@@ -1240,7 +1240,7 @@ void atender_crear_segmento()
 
     uint32_t tamanio_segmento = estructura_crear_segmento->entero2;
     
-    uint32_t id_proceso = ((t_pcb *) list_get(listaEjecutando, 0))->id;
+    uint32_t id_proceso = contexto_crea_segmento->id;
 
     log_info(kernel_logger, "PID: [%d] - Crear Segmento - Id: [%d] - Tamaño: [%d]", id_proceso, id_segmento, tamanio_segmento);
 
@@ -1391,7 +1391,7 @@ void atender_borrar_segmento() //TODO
 
     contexto_ejecucion* contexto_borrar_segmento = estructura_borrar_segmento->ce;
 
-    t_pcb* pcb_a_borrar = (t_pcb *) list_get(listaEjecutando, 0);
+    t_pcb* pcb_a_borrar = pcb_en_lista_coincide(listaEjecutando, contexto_borrar_segmento->id);
 
     uint32_t id_proceso = pcb_a_borrar->id;
 
@@ -1737,10 +1737,8 @@ void atender_lectura_archivo(){
     //     t_pcb * pcb_lectura = (t_pcb *) list_get(listaEjecutando, 0);
     //     actualizar_pcb(pcb_lectura, ce_a_updatear);
     // pthread_mutex_unlock(&m_listaEjecutando);
-
-    sacar_rafaga_ejecutada(pcb_lectura); // hacer cada vez que sale de running
     
-    sem_post(&fin_ejecucion);
+    sacar_rafaga_ejecutada(pcb_lectura); // hacer cada vez que sale de running
     
     cambiar_estado_a(pcb_lectura, BLOCKED, estadoActual(pcb_lectura));
 
@@ -1757,6 +1755,8 @@ void atender_lectura_archivo(){
 
     pthread_create(&hiloRead, NULL, (void*) rutina_read, (void*) (thread_args_read*) argumentos);
     pthread_detach(hiloRead);
+
+    sem_post(&fin_ejecucion);
 
     liberar_ce_string_2enteros(estructura_leer_archivo);
 
@@ -1819,8 +1819,6 @@ void atender_escritura_archivo(){
 
     sacar_rafaga_ejecutada(pcb_escritura); // hacer cada vez que sale de running
     
-    sem_post(&fin_ejecucion);
-    
     cambiar_estado_a(pcb_escritura, BLOCKED, estadoActual(pcb_escritura));
 
     log_info(kernel_logger, "PID: [%d] - Bloqueado por: [%s]",pcb_escritura->id, nombre_archivo);
@@ -1837,10 +1835,9 @@ void atender_escritura_archivo(){
     pthread_create(&hiloWrite, NULL, (void*) rutina_write, (void*) (thread_args_write*) argumentos);
     pthread_detach(hiloWrite);
 
-    liberar_ce_string_2enteros(estructura_escribir_archivo);
-
+    sem_post(&fin_ejecucion);
     
-
+    liberar_ce_string_2enteros(estructura_escribir_archivo);
 }
 
 void rutina_write(thread_args_write* args)
@@ -1911,8 +1908,6 @@ void atender_modificar_tamanio_archivo(){
 
     sacar_rafaga_ejecutada(pcb_mod_tam_arch); // hacer cada vez que sale de running
     
-    sem_post(&fin_ejecucion);
-    
     cambiar_estado_a(pcb_mod_tam_arch, BLOCKED, estadoActual(pcb_mod_tam_arch));
 
     log_info(kernel_logger, "PID: [%d] - Bloqueado por: [%s]",pcb_mod_tam_arch->id, nombre_archivo);
@@ -1930,9 +1925,9 @@ void atender_modificar_tamanio_archivo(){
     pthread_create(&hiloTruncate, NULL, (void*) rutina_truncate, (void*) (thread_args*) argumentos);
     pthread_detach(hiloTruncate);
 
+    sem_post(&fin_ejecucion);
+    
     liberar_ce_string_entero(estructura_mod_tam_archivo);
-    
-    
 }
 
 void rutina_truncate(thread_args_truncate* args)
@@ -1947,6 +1942,8 @@ void rutina_truncate(thread_args_truncate* args)
     enviar_string_enterov2(file_system_connection, nombre, tamanio, F_TRUNCATE);
     
     uint32_t cod_op = recibir_operacion(file_system_connection);
+
+    log_debug(kernel_logger, "El codigo de operacion que llega dentro de la rutina truncate es: %d", cod_op);
 
     pthread_mutex_lock(&m_listaBloqueados);
         list_remove_element(listaBloqueados, pcb);

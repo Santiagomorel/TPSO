@@ -351,6 +351,7 @@ op_code crear_segmento_memoria(uint32_t tam, uint32_t* base_resultante) {
     //printf("%d, %d\n", ESPACIO_LIBRE_TOTAL, tam);
     if (ESPACIO_LIBRE_TOTAL < tam)
     {
+        log_warning(log_memoria, "El espacio libre total de la memoria es: %d, mietras que el tamanio del parametro es: %d", ESPACIO_LIBRE_TOTAL, tam);
         log_info(log_memoria, "NO HAY ESPACIO SUFICIENTE PARA CREAR ESE SEGMENTO");
         return OUT_OF_MEMORY;
         // Retornar codop indicando que no hay espacio suficiente.
@@ -402,6 +403,7 @@ int buscar_segmento_por_base(uint32_t base) {
 void borrar_segmento(uint32_t base, uint32_t limite) {
     ESPACIO_LIBRE_TOTAL += limite;
 
+    log_debug(log_memoria, "El espacio libre total despues de borar el segmento con tam, %d, es %d", limite, ESPACIO_LIBRE_TOTAL);
     t_esp* nuevo_esp = malloc(sizeof(t_esp));
     nuevo_esp->base = base;
     nuevo_esp->limite = limite;
@@ -516,7 +518,7 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
         
         case CREATE_SEGMENT:
             
-            t_3_enteros* create_data = recibir_3_enteros(SOCKET_CLIENTE_KERNEL);
+            t_3_enteros* create_data = recibir_3_u32(SOCKET_CLIENTE_KERNEL);
             uint32_t pid_create_segment = create_data->entero1;
             uint32_t id_seg = create_data->entero2;
             uint32_t tam_seg = create_data->entero3;
