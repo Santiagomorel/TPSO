@@ -837,17 +837,17 @@ t_ce_2enteros * recibir_ce_2enteros(int socket)
 
 	buffer = recibir_buffer(&size, socket);
 
-	nuevoCe->id = leer_entero(buffer, &desp);
+	nuevoCe->id = leer_entero_u32(buffer, &desp);
 	nuevoCe->instrucciones = leer_string_array(buffer, &desp); // hay que liberar antes de perder la referencia
-	nuevoCe->program_counter = leer_entero(buffer, &desp);
+	nuevoCe->program_counter = leer_entero_u32(buffer, &desp);
 	nuevoCe->registros_cpu = leer_registros(buffer, &desp); // hay que liberar antes de perder la referencia
 	nuevoCe->tabla_segmentos = leer_tabla_segmentos(buffer, &desp);
 
 	nuevo_ce_2enteros->ce = nuevoCe;
 
-	nuevo_ce_2enteros->entero1 = leer_entero(buffer, &desp);
+	nuevo_ce_2enteros->entero1 = leer_entero_u32(buffer, &desp);
 
-	nuevo_ce_2enteros->entero2 = leer_entero(buffer, &desp);
+	nuevo_ce_2enteros->entero2 = leer_entero_u32(buffer, &desp);
 
 	free(buffer);
 	return nuevo_ce_2enteros;
@@ -864,17 +864,17 @@ t_ce_string_2enteros * recibir_ce_string_2enteros(int socket)
 
 	buffer = recibir_buffer(&size, socket);
 
-	nuevoCe->id = leer_entero(buffer, &desp);
+	nuevoCe->id = leer_entero_u32(buffer, &desp);
 	nuevoCe->instrucciones = leer_string_array(buffer, &desp); // hay que liberar antes de perder la referencia
-	nuevoCe->program_counter = leer_entero(buffer, &desp);
+	nuevoCe->program_counter = leer_entero_u32(buffer, &desp);
 	nuevoCe->registros_cpu = leer_registros(buffer, &desp); // hay que liberar antes de perder la referencia
 	nuevoCe->tabla_segmentos = leer_tabla_segmentos(buffer, &desp);
 
 	nuevo_ce_string_2enteros->ce = nuevoCe;
 
-	nuevo_ce_string_2enteros->entero1 = leer_entero(buffer, &desp);
+	nuevo_ce_string_2enteros->entero1 = leer_entero_u32(buffer, &desp);
 
-	nuevo_ce_string_2enteros->entero2 = leer_entero(buffer, &desp);
+	nuevo_ce_string_2enteros->entero2 = leer_entero_u32(buffer, &desp);
 
 	nuevo_ce_string_2enteros->string = leer_string(buffer,&desp);
 
@@ -892,19 +892,19 @@ t_ce_string_3enteros * recibir_ce_string_3enteros(int socket)
 
 	buffer = recibir_buffer(&size, socket);
 
-	nuevoCe->id = leer_entero(buffer, &desp);
+	nuevoCe->id = leer_entero_u32(buffer, &desp);
 	nuevoCe->instrucciones = leer_string_array(buffer, &desp); // hay que liberar antes de perder la referencia
-	nuevoCe->program_counter = leer_entero(buffer, &desp);
+	nuevoCe->program_counter = leer_entero_u32(buffer, &desp);
 	nuevoCe->registros_cpu = leer_registros(buffer, &desp); // hay que liberar antes de perder la referencia
 	nuevoCe->tabla_segmentos = leer_tabla_segmentos(buffer, &desp);
 
 	nuevo_ce_string_3enteros->ce = nuevoCe;
 
-	nuevo_ce_string_3enteros->entero1 = leer_entero(buffer, &desp);
+	nuevo_ce_string_3enteros->entero1 = leer_entero_u32(buffer, &desp);
 
-	nuevo_ce_string_3enteros->entero2 = leer_entero(buffer, &desp);
+	nuevo_ce_string_3enteros->entero2 = leer_entero_u32(buffer, &desp);
 
-	nuevo_ce_string_3enteros->entero3 = leer_entero(buffer, &desp);
+	nuevo_ce_string_3enteros->entero3 = leer_entero_u32(buffer, &desp);
 
 	nuevo_ce_string_3enteros->string = leer_string(buffer,&desp);
 
@@ -921,15 +921,15 @@ t_ce_entero* recibir_ce_entero(int socket){
 
 	buffer = recibir_buffer(&size, socket);
 
-	nuevoCe->id = leer_entero(buffer, &desp);
+	nuevoCe->id = leer_entero_u32(buffer, &desp);
 	nuevoCe->instrucciones = leer_string_array(buffer, &desp); // hay que liberar antes de perder la referencia
-	nuevoCe->program_counter = leer_entero(buffer, &desp);
+	nuevoCe->program_counter = leer_entero_u32(buffer, &desp);
 	nuevoCe->registros_cpu = leer_registros(buffer, &desp); // hay que liberar antes de perder la referencia
 	nuevoCe->tabla_segmentos = leer_tabla_segmentos(buffer, &desp);
 
 	nuevo_ce_entero->ce = nuevoCe;
 
-	nuevo_ce_entero->entero = leer_entero(buffer, &desp);
+	nuevo_ce_entero->entero = leer_entero_u32(buffer, &desp);
 
 	free(buffer);
 	return nuevo_ce_entero;
@@ -945,9 +945,9 @@ t_ce_string* recibir_ce_string(int socket)
 
 	buffer = recibir_buffer(&size, socket);
 
-	nuevoCe->id = leer_entero(buffer, &desp);
+	nuevoCe->id = leer_entero_u32(buffer, &desp);
 	nuevoCe->instrucciones = leer_string_array(buffer, &desp); // hay que liberar antes de perder la referencia
-	nuevoCe->program_counter = leer_entero(buffer, &desp);
+	nuevoCe->program_counter = leer_entero_u32(buffer, &desp);
 	nuevoCe->registros_cpu = leer_registros(buffer, &desp); // hay que liberar antes de perder la referencia
 	nuevoCe->tabla_segmentos = leer_tabla_segmentos(buffer, &desp);
 
@@ -969,15 +969,15 @@ t_ce_string_entero* recibir_ce_string_entero(int socket)
 
 	buffer = recibir_buffer(&size, socket);
 
-	nuevoCe->id = leer_entero(buffer, &desp);
+	nuevoCe->id = leer_entero_u32(buffer, &desp);
 	nuevoCe->instrucciones = leer_string_array(buffer, &desp); // hay que liberar antes de perder la referencia
-	nuevoCe->program_counter = leer_entero(buffer, &desp);
+	nuevoCe->program_counter = leer_entero_u32(buffer, &desp);
 	nuevoCe->registros_cpu = leer_registros(buffer, &desp); // hay que liberar antes de perder la referencia
 	nuevoCe->tabla_segmentos = leer_tabla_segmentos(buffer, &desp);
 
 	nuevo_ce_string_entero->ce = nuevoCe;
 
-	nuevo_ce_string_entero->entero = leer_entero(buffer, &desp);
+	nuevo_ce_string_entero->entero = leer_entero_u32(buffer, &desp);
 	nuevo_ce_string_entero->string = leer_string(buffer, &desp);
 	
 
@@ -1056,9 +1056,9 @@ t_string_2enteros* recibir_string_2enteros(int)
 
 	nuevo_string_2enteros->string = leer_string(buffer, &desp);
 
-	nuevo_string_2enteros->entero1 = leer_entero(buffer, &desp);
+	nuevo_string_2enteros->entero1 = leer_entero_u32(buffer, &desp);
 
-	nuevo_string_2enteros->entero2 = leer_entero(buffer, &desp);
+	nuevo_string_2enteros->entero2 = leer_entero_u32(buffer, &desp);
 
 	free(buffer);
 	return nuevo_string_2enteros;
@@ -1073,11 +1073,11 @@ t_string_3enteros* recibir_string_3enteros(int socket){
 
 	nuevo_string_3enteros->string = leer_string(buffer, &desp);
 
-	nuevo_string_3enteros->entero1 = leer_entero(buffer, &desp);
+	nuevo_string_3enteros->entero1 = leer_entero_u32(buffer, &desp);
 
-	nuevo_string_3enteros->entero2 = leer_entero(buffer, &desp);
+	nuevo_string_3enteros->entero2 = leer_entero_u32(buffer, &desp);
 
-	nuevo_string_3enteros->entero3 = leer_entero(buffer, &desp);
+	nuevo_string_3enteros->entero3 = leer_entero_u32(buffer, &desp);
 
 	free(buffer);
 	return nuevo_string_3enteros;
@@ -1093,13 +1093,13 @@ t_string_4enteros* recibir_string_4enteros(int socket)
 	buffer = recibir_buffer(&size, socket);
 
 
-	nuevo_string_4enteros->entero1 = leer_entero(buffer, &desp);
+	nuevo_string_4enteros->entero1 = leer_entero_u32(buffer, &desp);
 
-	nuevo_string_4enteros->entero2 = leer_entero(buffer, &desp);
+	nuevo_string_4enteros->entero2 = leer_entero_u32(buffer, &desp);
 
-	nuevo_string_4enteros->entero3 = leer_entero(buffer, &desp);
+	nuevo_string_4enteros->entero3 = leer_entero_u32(buffer, &desp);
 
-	nuevo_string_4enteros->entero4 = leer_entero(buffer, &desp);
+	nuevo_string_4enteros->entero4 = leer_entero_u32(buffer, &desp);
 
 	nuevo_string_4enteros->string = leer_string(buffer, &desp);
 
@@ -1118,7 +1118,7 @@ t_string_entero* recibir_string_entero(int socket)
 
 	nuevo_string_2enteros->string = leer_string(buffer, &desp);
 
-	nuevo_string_2enteros->entero1 = leer_entero(buffer, &desp);
+	nuevo_string_2enteros->entero1 = leer_entero_u32(buffer, &desp);
 
 	free(buffer);
 	return nuevo_string_2enteros;
@@ -1133,7 +1133,7 @@ t_string_entero* recibir_string_enterov2(int socket)
 
 	buffer = recibir_buffer(&size, socket);
 	nuevo_string_2enteros->string = leer_string(buffer, &desp);
-	nuevo_string_2enteros->entero1 = leer_entero(buffer, &desp);
+	nuevo_string_2enteros->entero1 = leer_entero_u32(buffer, &desp);
 
 
 
@@ -1160,9 +1160,9 @@ t_2_enteros * recibir_2_enteros(int socket)
 
 	buffer = recibir_buffer(&size, socket);
 
-	nuevo_2_enteros->entero1 = leer_entero(buffer, &desp);
+	nuevo_2_enteros->entero1 = leer_entero_u32(buffer, &desp);
 
-	nuevo_2_enteros->entero2 = leer_entero(buffer, &desp);
+	nuevo_2_enteros->entero2 = leer_entero_u32(buffer, &desp);
 
 	free(buffer);
 	return nuevo_2_enteros;
@@ -1176,11 +1176,11 @@ t_3_enteros * recibir_3_enteros(int socket)
 
 	buffer = recibir_buffer(&size, socket);
 
-	nuevo_3_enteros->entero1 = leer_entero(buffer, &desp);
+	nuevo_3_enteros->entero1 = leer_entero_u32(buffer, &desp);
 
-	nuevo_3_enteros->entero2 = leer_entero(buffer, &desp);
+	nuevo_3_enteros->entero2 = leer_entero_u32(buffer, &desp);
 
-	nuevo_3_enteros->entero3 = leer_entero(buffer, &desp);
+	nuevo_3_enteros->entero3 = leer_entero_u32(buffer, &desp);
 
 	free(buffer);
 	return nuevo_3_enteros;

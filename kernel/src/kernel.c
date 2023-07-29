@@ -1804,9 +1804,10 @@ void atender_escritura_archivo(){
     char nombre_archivo[100];
     strcpy(nombre_archivo,estructura_escribir_archivo->string);
 
-    uint32_t offset = estructura_escribir_archivo->entero1;
+    uint32_t direccion_fisica = estructura_escribir_archivo->entero1;
     uint32_t bytes_a_leer = estructura_escribir_archivo->entero2;
-    uint32_t puntero_archivo = estructura_escribir_archivo->entero3;
+    uint32_t offset = estructura_escribir_archivo->entero3;
+    uint32_t puntero_archivo;
 
     log_info(kernel_logger, "PID: [%d] - Escribir Archivo: [%s] - Puntero [%d] - Dirección Memoria [%d] - Tamaño [%d]", ce_a_updatear->id, nombre_archivo, puntero_archivo, offset, bytes_a_leer);
     
@@ -1849,7 +1850,7 @@ void rutina_write(thread_args_write* args)
     uint32_t bytes = args->bytes;
     uint32_t offset = args->offset;
 
-      log_error(kernel_logger,"el nombre en rutina es :%s",nombre);
+      log_error(kernel_logger,"el nombre en rutina es :%s, el puntero es: %d",nombre, puntero);
     
     enviar_string_4enteros(file_system_connection, nombre, pcb->id, puntero,bytes,offset, F_WRITE);
     

@@ -251,9 +251,9 @@ void atender_lectura_archivo();
 typedef struct{
     t_pcb* pcb;
     char nombre [100];
-    int puntero;
-    int bytes;
-    int offset;
+    uint32_t puntero;
+    uint32_t bytes;
+    uint32_t offset;
 }thread_args_read;
 
 void rutina_read(thread_args_read*);
@@ -263,9 +263,9 @@ void atender_escritura_archivo();
 typedef struct{
     t_pcb* pcb;
     char nombre [100]; 
-    int puntero;
-    int bytes;
-    int offset;
+    uint32_t puntero;
+    uint32_t bytes;
+    uint32_t offset;
 }thread_args_write;
 
 void rutina_write(thread_args_write*);
@@ -278,7 +278,7 @@ void desbloquear_FS();
 typedef struct{
     t_pcb* pcb;
     char nombre [100];
-    int tamanio;
+    uint32_t tamanio;
 }thread_args_truncate;
 
 void atender_modificar_tamanio_archivo();

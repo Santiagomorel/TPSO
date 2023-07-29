@@ -443,7 +443,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
                 enviar_ce(socket_kernel, ce, SEG_FAULT, cpu_logger);
                 sigsegv = 0;
             }else{
-            enviar_ce_con_string_3_enteros(socket_kernel, ce, instruction[1], direccion_fisica, instruction[3],offset, ESCRIBIR_ARCHIVO); 
+            enviar_ce_con_string_3_enteros(socket_kernel, ce, instruction[1], direccion_fisica, instruction[3], offset, ESCRIBIR_ARCHIVO); 
             }
             //desalojo_por_archivo = 1;
             sale_proceso = 1;
@@ -694,7 +694,7 @@ void enviar_ce_con_string_3_enteros(int client_socket, contexto_ejecucion* ce, c
 
     agregar_ce_a_paquete(paquete, ce, cpu_logger);
     agregar_entero_a_paquete(paquete, x);
-    agregar_entero_a_paquete(paquete, atoi(y));
+    agregar_entero_a_paquete(paquete, (uint32_t) atoi(y));
     agregar_entero_a_paquete(paquete, z);
     agregar_a_paquete(paquete, parameter,sizeof(parameter)+1); 
     enviar_paquete(paquete, client_socket);

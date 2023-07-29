@@ -460,8 +460,8 @@ void procesar_conexion()
           
             log_trace(logger_filesystem, "archivo recibido con sus parametros");
             char* f_name2= estructura_string_4enteros_e->string;
-            uint32_t pid2 = estructura_string_4enteros_e->entero4;
-            uint32_t offset2 = estructura_string_4enteros_e->entero1;
+            uint32_t pid2 = estructura_string_4enteros_e->entero1;
+            uint32_t offset2 = estructura_string_4enteros_e->entero4;
             uint32_t dir_fisica2 = estructura_string_4enteros_e->entero2;
             uint32_t cant2 = estructura_string_4enteros_e->entero3;
 
