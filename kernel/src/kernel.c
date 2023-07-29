@@ -1810,7 +1810,7 @@ void atender_escritura_archivo(){
 
     log_info(kernel_logger, "PID: [%d] - Escribir Archivo: [%s] - Puntero [%d] - Dirección Memoria [%d] - Tamaño [%d]", ce_a_updatear->id, nombre_archivo, puntero_archivo, offset, bytes_a_leer);
     
-    t_pcb * pcb_esc = actualizar_pcb_lget_devuelve_pcb(ce_a_updatear, listaEjecutando, m_listaEjecutando);
+    t_pcb * pcb_escritura = actualizar_pcb_lget_devuelve_pcb(ce_a_updatear, listaEjecutando, m_listaEjecutando);
 
     // pthread_mutex_lock(&m_listaEjecutando);
     //     t_pcb * pcb_escritura = (t_pcb *) list_get(listaEjecutando, 0);
@@ -1902,10 +1902,12 @@ void atender_modificar_tamanio_archivo(){
     
     log_info(kernel_logger, "PID: [%d] - Truncar Archivo: [%s] - Tamaño: [%d]", contexto_mod_tam_arch->id, nombre_archivo, tamanio_archivo);
 
-    pthread_mutex_lock(&m_listaEjecutando);
-        t_pcb * pcb_mod_tam_arch = (t_pcb *) list_get(listaEjecutando, 0);
-        actualizar_pcb(pcb_mod_tam_arch, contexto_mod_tam_arch);
-    pthread_mutex_unlock(&m_listaEjecutando);
+    t_pcb * pcb_mod_tam_arch = actualizar_pcb_lget_devuelve_pcb(contexto_mod_tam_arch, listaEjecutando, m_listaEjecutando);
+    
+    // pthread_mutex_lock(&m_listaEjecutando);
+    //     t_pcb * pcb_mod_tam_arch = (t_pcb *) list_get(listaEjecutando, 0);
+    //     actualizar_pcb(pcb_mod_tam_arch, contexto_mod_tam_arch);
+    // pthread_mutex_unlock(&m_listaEjecutando);
 
     sacar_rafaga_ejecutada(pcb_mod_tam_arch); // hacer cada vez que sale de running
     
