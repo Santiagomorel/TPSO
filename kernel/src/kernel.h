@@ -118,7 +118,7 @@ char** parsearPorSaltosDeLinea(char*);
 t_registro* crear_registros();
 
 // Variables de parte consola
-uint32_t contador_id = 0;
+uint32_t contador_id = 1;
 
 // Declaraciones de parte planificadores
 void cambiar_estado_a(t_pcb*, estados, estados);
@@ -131,7 +131,9 @@ int estadoActual(t_pcb*);
 void agregar_a_lista_con_sems(t_pcb*, t_list*, pthread_mutex_t);
 void agregar_lista_ready_con_log(t_list*, t_pcb*, char*);
 t_pcb* actualizar_pcb_lget_devuelve_pcb(contexto_ejecucion*, t_list*, pthread_mutex_t);
-
+t_pcb* pcb_lget_devuelve_pcb(contexto_ejecucion*, t_list*, pthread_mutex_t);
+t_pcb* actualizar_pcb_lremove_devuelve_pcb(contexto_ejecucion*, t_list*, pthread_mutex_t);
+t_pcb* pcb_lremove(contexto_ejecucion*, t_list*, pthread_mutex_t);
 
 // Declaraciones de planificador to - ready
 void planificar_sig_to_ready();
@@ -186,10 +188,9 @@ void iniciar_nueva_espera_ready(t_pcb*);
 // Declaraciones manejo de recursos
 uint32_t recurso_no_existe(char*);
 int obtener_id_recurso(char*);
-uint32_t id_proceso_en_lista(t_list*);
 uint32_t obtener_instancias_recurso(int);
-void restar_instancia(int);
-void sumar_instancia(int);
+void restar_instancia(int, contexto_ejecucion*);
+void sumar_instancia(int, contexto_ejecucion*);
 void sumar_instancia_exit(int, t_pcb*);
 
 // Declaraciones WAIT_RECURSO

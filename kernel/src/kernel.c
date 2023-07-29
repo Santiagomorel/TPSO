@@ -221,7 +221,7 @@ void recibir_consola(int SOCKET_CLIENTE)
         t_pcb *pcb_a_iniciar = iniciar_pcb(SOCKET_CLIENTE);
         log_trace(kernel_logger, "pcb iniciado PID : %d", pcb_a_iniciar->id);
         pthread_mutex_lock(&m_listaNuevos);
-        list_add(listaNuevos, pcb_a_iniciar);
+            list_add(listaNuevos, pcb_a_iniciar);
         pthread_mutex_unlock(&m_listaNuevos);
         log_info(kernel_logger, "Se crea el proceso [%d] en [NEW]", pcb_a_iniciar->id);
 
@@ -285,8 +285,8 @@ t_pcb* pcb_create(char* instrucciones, int socket_consola)
 void generar_id(t_pcb* pcb)
 { // Con esta funcion le asignamos a un pcb su id, cuidando de no repetir el numero
     pthread_mutex_lock(&m_contador_id);
-    pcb->id = contador_id;
-    contador_id++;
+        pcb->id = contador_id;
+        contador_id++;
     pthread_mutex_unlock(&m_contador_id);
 }
 
@@ -414,7 +414,7 @@ int estadoActual(t_pcb* pcb)
 void agregar_a_lista_con_sems(t_pcb* pcb_a_agregar, t_list* lista, pthread_mutex_t m_sem)
 {
     pthread_mutex_lock(&m_sem);
-    agregar_lista_ready_con_log(lista, pcb_a_agregar, kernel_config.algoritmo_planificacion);
+        agregar_lista_ready_con_log(lista, pcb_a_agregar, kernel_config.algoritmo_planificacion);
     pthread_mutex_unlock(&m_sem);
 }
 
@@ -448,16 +448,45 @@ void agregar_lista_ready_con_log(t_list* listaready,t_pcb* pcb_a_encolar,char* a
     }
 }
 
-t_pcb* actualizar_pcb_lget_devuelve_pcb(contexto_ejecucion* contexto_actualiza, t_list* lista_del_pcb, pthread_mutex_t sem)
+t_pcb* actualizar_pcb_lget_devuelve_pcb(contexto_ejecucion* contexto_actualiza, t_list* lista_del_pcb, pthread_mutex_t sem) // actualiza un pcb en base a su id de una lista y lo devuelve
 {
     pthread_mutex_lock(&sem);
-        t_pcb * pcb_a_actualizar = (t_pcb *) list_get(lista_del_pcb, 0);
+        t_pcb * pcb_a_actualizar = pcb_en_lista_coincide(lista_del_pcb, contexto_actualiza->id);
         actualizar_pcb(pcb_a_actualizar, contexto_actualiza);
     pthread_mutex_unlock(&sem);
 
     return pcb_a_actualizar;
 } // probar que funcione
 
+t_pcb* pcb_lget_devuelve_pcb(contexto_ejecucion* contexto_actualiza, t_list* lista_del_pcb, pthread_mutex_t sem) // devuelve un pcb en base a su id de una lista
+{
+    pthread_mutex_lock(&sem);
+        t_pcb * pcb_a_devolver = pcb_en_lista_coincide(lista_del_pcb, contexto_actualiza->id);
+    pthread_mutex_unlock(&sem);
+
+    return pcb_a_devolver;
+}
+
+t_pcb* actualizar_pcb_lremove_devuelve_pcb(contexto_ejecucion* contexto_actualiza, t_list* lista_del_pcb, pthread_mutex_t sem) // actualiza y remueve un pcb en base a su id de una lista y lo devuelve
+{
+    pthread_mutex_lock(&sem);
+        t_pcb * pcb_a_actualizar = pcb_en_lista_coincide(lista_del_pcb, contexto_actualiza->id);
+        t_pcb* pcb_a_actualizar_fuera_de_lista = list_remove_element(lista_del_pcb, pcb_a_actualizar);
+        actualizar_pcb(pcb_a_actualizar_fuera_de_lista, contexto_actualiza);
+    pthread_mutex_unlock(&sem);
+
+    return pcb_a_actualizar_fuera_de_lista;
+}
+
+t_pcb* pcb_lremove(contexto_ejecucion* contexto_actualiza, t_list* lista_del_pcb, pthread_mutex_t sem) // remueve un pcb en base a su id de una lista y lo devuelve
+{
+    pthread_mutex_lock(&sem);
+        t_pcb * pcb_coincide_con_id = pcb_en_lista_coincide(lista_del_pcb, contexto_actualiza->id);
+        t_pcb* pcb_fuera_de_lista = list_remove_element(lista_del_pcb, pcb_a_actualizar);
+    pthread_mutex_unlock(&sem);
+
+    return pcb_fuera_de_lista;
+}
 // ----------------------- Funciones planificador to - ready ----------------------- //
 
 void planificar_sig_to_ready()
@@ -829,10 +858,7 @@ void atender_final_proceso(int cod_op)
 
 void finalizar_proceso(contexto_ejecucion* ce, int cod_op) // Saca de la lista de ejecucion, actualiza el pcb, y finaliza el proceso
 {
-    pthread_mutex_lock(&m_listaEjecutando);
-        t_pcb * pcb_a_finalizar = (t_pcb *) list_remove(listaEjecutando, 0);
-        actualizar_pcb(pcb_a_finalizar, ce);
-    pthread_mutex_unlock(&m_listaEjecutando);
+    t_pcb* pcb_a_finalizar = actualizar_pcb_lremove_devuelve_pcb(ce, listaEjecutando, m_listaEjecutando);
 
     cambiar_estado_a(pcb_a_finalizar, EXIT, estadoActual(pcb_a_finalizar));
 
@@ -923,10 +949,12 @@ void atender_desalojo_yield()
 {
     contexto_ejecucion* contexto_a_reencolar = recibir_ce(cpu_dispatch_connection);
 
-    pthread_mutex_lock(&m_listaEjecutando);
-        t_pcb * pcb_a_reencolar = (t_pcb *) list_remove(listaEjecutando, 0); // inicializar pcb y despues liberarlo
-        actualizar_pcb(pcb_a_reencolar, contexto_a_reencolar);
-    pthread_mutex_unlock(&m_listaEjecutando);
+    t_pcb* pcb_a_reencolar = actualizar_pcb_lremove_devuelve_pcb(contexto_a_reencolar, listaEjecutando, m_listaEjecutando);
+
+    // pthread_mutex_lock(&m_listaEjecutando);
+    //     t_pcb * pcb_a_reencolar = (t_pcb *) list_remove(listaEjecutando, 0); // inicializar pcb y despues liberarlo
+    //     actualizar_pcb(pcb_a_reencolar, contexto_a_reencolar);
+    // pthread_mutex_unlock(&m_listaEjecutando);
 
     cambiar_estado_a(pcb_a_reencolar, READY, estadoActual(pcb_a_reencolar));
 
@@ -978,34 +1006,31 @@ int obtener_id_recurso(char* recurso)
     }
 }
 
-uint32_t id_proceso_en_lista(t_list* lista)
-{
-    t_pcb * pcb = (t_pcb* ) list_get(lista, 0);
-    return obtenerPid(pcb);
-}
-
 uint32_t obtener_instancias_recurso(int id_recurso)
 {
     return kernel_config.instancias_recursos[id_recurso];
 }
 
-void restar_instancia(int id_recurso)
+void restar_instancia(int id_recurso, contexto_ejecucion* contexto)
 { // resta 1 a la instancia y se la asigno a recursos_pedidos del proceso en ejecucion
     kernel_config.instancias_recursos[id_recurso] -= 1;
+
+    t_pcb * pcb_pide_recurso = pcb_lget_devuelve_pcb(contexto, listaEjecutando, m_listaEjecutando);
+
     pthread_mutex_lock(&m_listaEjecutando);
-        t_pcb * pcb_pide_recurso = (t_pcb *) list_get(listaEjecutando, 0); 
         list_add(pcb_pide_recurso->recursos_pedidos, id_recurso);
     pthread_mutex_unlock(&m_listaEjecutando);
 }
 
-void sumar_instancia(int id_recurso) // tednria que haber un sumar_instancia por exit que saque los elementos de el pcb q esta de salida
+void sumar_instancia(int id_recurso, contexto_ejecucion* contexto) // tednria que haber un sumar_instancia por exit que saque los elementos de el pcb q esta de salida
 { // suma 1 a la instancia y se la saco a recursos_pedidos del proceso en ejecucion
     kernel_config.instancias_recursos[id_recurso] += 1;
 
     sem_post(sem_recurso[id_recurso]);
 
+    t_pcb * pcb_quita_recurso = pcb_lget_devuelve_pcb(contexto, listaEjecutando, m_listaEjecutando);
+    
     pthread_mutex_lock(&m_listaEjecutando);
-        t_pcb * pcb_quita_recurso = (t_pcb *) list_get(listaEjecutando, 0); 
         list_remove_element(pcb_quita_recurso->recursos_pedidos, id_recurso);
     pthread_mutex_unlock(&m_listaEjecutando);
 }
@@ -1034,9 +1059,9 @@ void atender_wait_recurso()
     } else {
         int id_recurso = obtener_id_recurso(recurso_wait);
 
-        restar_instancia(id_recurso);
+        restar_instancia(id_recurso, contexto_ejecuta_wait);
         
-        log_info(kernel_logger, "PID: [%d] - Wait: [%s] - Instancias: [%d]", id_proceso_en_lista(listaEjecutando), recurso_wait, obtener_instancias_recurso(id_recurso));
+        log_info(kernel_logger, "PID: [%d] - Wait: [%s] - Instancias: [%d]", contexto_ejecuta_wait->id, recurso_wait, obtener_instancias_recurso(id_recurso));
         
         if (tiene_instancia_wait(id_recurso)) {
             t_pcb* pcb_ejecuta_wait = actualizar_pcb_lget_devuelve_pcb(contexto_ejecuta_wait, listaEjecutando, m_listaEjecutando);
@@ -1049,10 +1074,13 @@ void atender_wait_recurso()
 
             sem_wait(sem_recurso[id_recurso]);
         } else {
-            pthread_mutex_lock(&m_listaEjecutando);
-                t_pcb * pcb_bloqueado_en_recurso = (t_pcb *) list_remove(listaEjecutando, 0); // inicializar pcb y despues liberarlo
-                actualizar_pcb(pcb_bloqueado_en_recurso, contexto_ejecuta_wait);
-            pthread_mutex_unlock(&m_listaEjecutando);
+
+            t_pcb * pcb_bloqueado_en_recurso = actualizar_pcb_lremove_devuelve_pcb(contexto_ejecuta_wait, listaEjecutando, m_listaEjecutando);
+            
+            // pthread_mutex_lock(&m_listaEjecutando);
+            //     t_pcb * pcb_bloqueado_en_recurso = (t_pcb *) list_remove(listaEjecutando, 0); // inicializar pcb y despues liberarlo
+            //     actualizar_pcb(pcb_bloqueado_en_recurso, contexto_ejecuta_wait);
+            // pthread_mutex_unlock(&m_listaEjecutando);
             
             cambiar_estado_a(pcb_bloqueado_en_recurso, BLOCKED, estadoActual(pcb_bloqueado_en_recurso));
             
@@ -1103,9 +1131,9 @@ void atender_signal_recurso()
 
         int id_recurso = obtener_id_recurso(recurso_signal);
 
-        sumar_instancia(id_recurso);
+        sumar_instancia(id_recurso, nuevo_contexto_ejecuta_signal);
         
-        log_info(kernel_logger, "PID: [%d] - Signal: [%s] - Instancias: [%d]", id_proceso_en_lista(listaEjecutando), recurso_signal, obtener_instancias_recurso(id_recurso));
+        log_info(kernel_logger, "PID: [%d] - Signal: [%s] - Instancias: [%d]", nuevo_contexto_ejecuta_signal->id, recurso_signal, obtener_instancias_recurso(id_recurso));
                             
         if (tiene_que_reencolar_bloq_recurso(id_recurso)) {
             reencolar_bloqueo_por_recurso(id_recurso);
@@ -1148,10 +1176,12 @@ void atender_block_io()
     
     int bloqueo = atoi(tiempo_bloqueo);
     
-    pthread_mutex_lock(&m_listaEjecutando);
-        t_pcb * pcb_IO = (t_pcb *) list_remove(listaEjecutando, 0);
-        actualizar_pcb(pcb_IO, contexto_IO);
-    pthread_mutex_unlock(&m_listaEjecutando);
+    t_pcb * pcb_IO = actualizar_pcb_lremove_devuelve_pcb(contexto_IO, listaEjecutando, m_listaEjecutando);
+    
+    // pthread_mutex_lock(&m_listaEjecutando);
+    //     t_pcb * pcb_IO = (t_pcb *) list_remove(listaEjecutando, 0);
+    //     actualizar_pcb(pcb_IO, contexto_IO);
+    // pthread_mutex_unlock(&m_listaEjecutando);
     
     sacar_rafaga_ejecutada(pcb_IO); // hacer cada vez que sale de running
     
@@ -1410,12 +1440,15 @@ void atender_apertura_archivo()
 
     t_list* nombreArchivosAbiertos = list_map(tablaGlobalArchivosAbiertos,(void*) obtener_nombre_archivo);
 
-    pthread_mutex_lock(&m_listaEjecutando);
-        t_pcb * pcb_en_ejecucion = (t_pcb *) list_get(listaEjecutando, 0);
-        actualizar_pcb(pcb_en_ejecucion, contextoDeEjecucion);
-    pthread_mutex_unlock(&m_listaEjecutando);
+    t_pcb * pcb_en_ejecucion = actualizar_pcb_lget_devuelve_pcb(contextoDeEjecucion, listaEjecutando, m_listaEjecutando);
+    
+    // pthread_mutex_lock(&m_listaEjecutando);
+    //     t_pcb * pcb_en_ejecucion = (t_pcb *) list_get(listaEjecutando, 0);
+    //     actualizar_pcb(pcb_en_ejecucion, contextoDeEjecucion);
+    // pthread_mutex_unlock(&m_listaEjecutando);
     
     if(existeArchivo(nombreArchivo)){ // si existe en la tabla global de kernel
+        log_warning(kernel_logger, "Kernel dice que existe el archivo en la tabla global, does kernel miente?");
         t_entradaTAAP* entradaTAAP3= malloc(sizeof(t_entradaTAAP));
         crear_entrada_TAAP(nombreArchivo,entradaTAAP3);
         list_add(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso,entradaTAAP3);
@@ -1540,10 +1573,12 @@ void atender_cierre_archivo(){
     contexto_ejecucion* contextoDeEjecucion = estructuraCierre->ce;
     char* nombreArchivo = estructuraCierre->string;
 
-    pthread_mutex_lock(&m_listaEjecutando);
-        t_pcb * pcb_en_ejecucion = (t_pcb *) list_get(listaEjecutando, 0);
-        actualizar_pcb(pcb_en_ejecucion, contextoDeEjecucion);
-    pthread_mutex_unlock(&m_listaEjecutando);
+    t_pcb * pcb_en_ejecucion = actualizar_pcb_lget_devuelve_pcb(contextoDeEjecucion, listaEjecutando, m_listaEjecutando);
+
+    // pthread_mutex_lock(&m_listaEjecutando);
+    //     t_pcb * pcb_en_ejecucion = (t_pcb *) list_get(listaEjecutando, 0);
+    //     actualizar_pcb(pcb_en_ejecucion, contextoDeEjecucion);
+    // pthread_mutex_unlock(&m_listaEjecutando);
 
     log_info(kernel_logger, "PID: [%d] - Cerrar Archivo: [%s]",pcb_en_ejecucion->id,nombreArchivo);
     
@@ -1592,8 +1627,6 @@ void reencolar_bloq_por_archivo(char* nombreArchivo,t_entradaTGAA* entrada){
     agregar_a_lista_con_sems(pcb_a_reencolar, listaReady, m_listaReady);
     
     sem_post(&proceso_en_ready);
-
-
 }
 /*
 void reencolar_bloqueo_por_recurso(int id_recurso)
@@ -1647,10 +1680,12 @@ void atender_actualizar_puntero(){
     imprimir_ce(estructura_actualizacion->ce, kernel_logger);
     contexto_ejecucion* contextoDeEjecucion=estructura_actualizacion->ce;
 
-    pthread_mutex_lock(&m_listaEjecutando);
-    t_pcb * pcb_en_ejecucion = (t_pcb *) list_get(listaEjecutando, 0);
-    actualizar_pcb(pcb_en_ejecucion, contextoDeEjecucion);
-    pthread_mutex_unlock(&m_listaEjecutando);
+    t_pcb * pcb_en_ejecucion = actualizar_pcb_lget_devuelve_pcb(contextoDeEjecucion, listaEjecutando, m_listaEjecutando);
+
+    // pthread_mutex_lock(&m_listaEjecutando);
+    // t_pcb * pcb_en_ejecucion = (t_pcb *) list_get(listaEjecutando, 0);
+    // actualizar_pcb(pcb_en_ejecucion, contextoDeEjecucion);
+    // pthread_mutex_unlock(&m_listaEjecutando);
 
     log_error(kernel_logger,"estoy por filtrar lista");
     
@@ -1696,11 +1731,12 @@ void atender_lectura_archivo(){
 
     log_info(kernel_logger, "PID: [%d] - Leer Archivo: [%s] - Puntero [%d] - Dirección Memoria [%d] - Tamaño [%d]", ce_a_updatear->id, nombre_archivo, puntero_archivo, offset, bytes_a_leer); // verificar con el resto
 
-        
-    pthread_mutex_lock(&m_listaEjecutando);
-        t_pcb * pcb_lectura = (t_pcb *) list_get(listaEjecutando, 0);
-        actualizar_pcb(pcb_lectura, ce_a_updatear);
-    pthread_mutex_unlock(&m_listaEjecutando);
+    t_pcb * pcb_lectura = actualizar_pcb_lget_devuelve_pcb(ce_a_updatear, listaEjecutando, m_listaEjecutando);
+    
+    // pthread_mutex_lock(&m_listaEjecutando);
+    //     t_pcb * pcb_lectura = (t_pcb *) list_get(listaEjecutando, 0);
+    //     actualizar_pcb(pcb_lectura, ce_a_updatear);
+    // pthread_mutex_unlock(&m_listaEjecutando);
 
     sacar_rafaga_ejecutada(pcb_lectura); // hacer cada vez que sale de running
     
@@ -1773,11 +1809,13 @@ void atender_escritura_archivo(){
     uint32_t puntero_archivo = estructura_escribir_archivo->entero3;
 
     log_info(kernel_logger, "PID: [%d] - Escribir Archivo: [%s] - Puntero [%d] - Dirección Memoria [%d] - Tamaño [%d]", ce_a_updatear->id, nombre_archivo, puntero_archivo, offset, bytes_a_leer);
-        
-    pthread_mutex_lock(&m_listaEjecutando);
-        t_pcb * pcb_escritura = (t_pcb *) list_get(listaEjecutando, 0);
-        actualizar_pcb(pcb_escritura, ce_a_updatear);
-    pthread_mutex_unlock(&m_listaEjecutando);
+    
+    t_pcb * pcb_esc = actualizar_pcb_lget_devuelve_pcb(ce_a_updatear, listaEjecutando, m_listaEjecutando);
+
+    // pthread_mutex_lock(&m_listaEjecutando);
+    //     t_pcb * pcb_escritura = (t_pcb *) list_get(listaEjecutando, 0);
+    //     actualizar_pcb(pcb_escritura, ce_a_updatear);
+    // pthread_mutex_unlock(&m_listaEjecutando);
 
     sacar_rafaga_ejecutada(pcb_escritura); // hacer cada vez que sale de running
     
@@ -1862,7 +1900,7 @@ void atender_modificar_tamanio_archivo(){
     uint32_t tamanio_archivo = estructura_mod_tam_archivo->entero;
     log_error(kernel_logger,"el tamanio es :%d",tamanio_archivo);
     
-    log_info(kernel_logger, "PID: [%d] - Archivo: [%s] - Tamaño: [%d]", contexto_mod_tam_arch->id, nombre_archivo, tamanio_archivo);
+    log_info(kernel_logger, "PID: [%d] - Truncar Archivo: [%s] - Tamaño: [%d]", contexto_mod_tam_arch->id, nombre_archivo, tamanio_archivo);
 
     pthread_mutex_lock(&m_listaEjecutando);
         t_pcb * pcb_mod_tam_arch = (t_pcb *) list_get(listaEjecutando, 0);
