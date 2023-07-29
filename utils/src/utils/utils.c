@@ -666,19 +666,19 @@ void enviar_CodOp(int conexion, int codOP)
 void agregar_ce_a_paquete(t_paquete *paquete, contexto_ejecucion *ce, t_log *logger)
 {
 	agregar_entero_a_paquete(paquete, ce->id);
-	log_trace(logger, "agrego id");
+	// log_trace(logger, "agrego id");
 
 	agregar_array_string_a_paquete(paquete, ce->instrucciones);
-	log_trace(logger, "agrego instrucciones");
+	// log_trace(logger, "agrego instrucciones");
 
 	agregar_entero_a_paquete(paquete, ce->program_counter);
-	log_trace(logger, "agrego program counter");
+	// log_trace(logger, "agrego program counter");
 
 	agregar_registros_a_paquete(paquete, ce->registros_cpu);
-	log_trace(logger, "agrego registros"); // crear la funcion para mandar los registros.
+	// log_trace(logger, "agrego registros"); // crear la funcion para mandar los registros.
 
 	agregar_tabla_segmentos_a_paquete(paquete, ce->tabla_segmentos);
-	log_trace(logger, "agrego tabla de segmentos");
+	// log_trace(logger, "agrego tabla de segmentos");
 }
 
 void agregar_tabla_segmentos_a_paquete(t_paquete* paquete, t_list* tabla_segmentos)

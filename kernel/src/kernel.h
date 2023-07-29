@@ -118,7 +118,7 @@ char** parsearPorSaltosDeLinea(char*);
 t_registro* crear_registros();
 
 // Variables de parte consola
-uint32_t contador_id = 60;
+uint32_t contador_id = 0;
 
 // Declaraciones de parte planificadores
 void cambiar_estado_a(t_pcb*, estados, estados);
@@ -185,7 +185,7 @@ void iniciar_nueva_espera_ready(t_pcb*);
 
 // Declaraciones manejo de recursos
 uint32_t recurso_no_existe(char*);
-uint32_t obtener_id_recurso(char*);
+int obtener_id_recurso(char*);
 uint32_t id_proceso_en_lista(t_list*);
 uint32_t obtener_instancias_recurso(int);
 void restar_instancia(int);
@@ -216,7 +216,6 @@ void atender_crear_segmento();
 
 // Declaraciones COMPACTACION
 void atender_compactacion(uint32_t, uint32_t, uint32_t);
-// void actualizar_ts_x_proceso();
 void recibir_nuevas_bases();
 t_pcb* pcb_en_lista_coincide(t_list*, uint32_t);
 
