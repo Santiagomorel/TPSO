@@ -1557,6 +1557,17 @@ t_list* nombre_en_lista_coincide(t_list* tabla, char* nombre)
     return list_filter(tabla, (void*)encontrar_nombre);
 }
 
+t_list* nombre_en_lista_coincide_TAAP(t_list* tabla, char* nombre)
+{
+    bool encontrar_nombre(t_entradaTAAP* entrada){
+    
+        log_trace(kernel_logger, "Busco en lista de entradas, %s", entrada->nombreArchivo);
+        return strcmp(entrada->nombreArchivo, nombre) == 0;
+    }
+
+    return list_filter(tabla, (void*)encontrar_nombre);
+}
+
 t_list* nombre_en_lista_nombres_coincide(t_list* tabla, char* nombre)
 {
     bool encontrar_nombre(char* entrada){
@@ -1719,19 +1730,23 @@ void atender_lectura_archivo(){
     t_ce_string_3enteros* estructura_leer_archivo= recibir_ce_string_3enteros(cpu_dispatch_connection);
     log_error(kernel_logger,"el nombre es :%s",estructura_leer_archivo->string);
     contexto_ejecucion* ce_a_updatear = estructura_leer_archivo->ce;
+    t_pcb * pcb_lectura = actualizar_pcb_lget_devuelve_pcb(ce_a_updatear, listaEjecutando, m_listaEjecutando);
 
     char nombre_archivo[100];
     strcpy(nombre_archivo,estructura_leer_archivo->string);
 
-    uint32_t offset = estructura_leer_archivo ->entero1;
+    uint32_t dir_fisica = estructura_leer_archivo ->entero1;
 
     uint32_t bytes_a_leer = estructura_leer_archivo->entero2;
 
-    uint32_t puntero_archivo = estructura_leer_archivo->entero3;
+    uint32_t estavariablenosirve = estructura_leer_archivo->entero3;
 
-    log_info(kernel_logger, "PID: [%d] - Leer Archivo: [%s] - Puntero [%d] - Dirección Memoria [%d] - Tamaño [%d]", ce_a_updatear->id, nombre_archivo, puntero_archivo, offset, bytes_a_leer); // verificar con el resto
+    t_list* lista_filtrada = nombre_en_lista_coincide_TAAP(pcb_lectura->tabla_archivos_abiertos_por_proceso, estructura_leer_archivo->string);;
+    t_entradaTAAP* entradaProceso = list_get(lista_filtrada,0);
+    uint32_t puntero_archivo = entradaProceso->puntero;
 
-    t_pcb * pcb_lectura = actualizar_pcb_lget_devuelve_pcb(ce_a_updatear, listaEjecutando, m_listaEjecutando);
+    log_info(kernel_logger, "PID: [%d] - Leer Archivo: [%s] - Puntero [%d] - Dirección Memoria [%d] - Tamaño [%d]", ce_a_updatear->id, nombre_archivo, puntero_archivo, dir_fisica, bytes_a_leer); // verificar con el resto
+
     
     // pthread_mutex_lock(&m_listaEjecutando);
     //     t_pcb * pcb_lectura = (t_pcb *) list_get(listaEjecutando, 0);
@@ -1751,7 +1766,7 @@ void atender_lectura_archivo(){
     strcpy(argumentos->nombre,nombre_archivo);
     argumentos->puntero = puntero_archivo;
     argumentos->bytes = bytes_a_leer;
-    argumentos->offset = offset;
+    argumentos->dir_fisica = dir_fisica;
 
     pthread_create(&hiloRead, NULL, (void*) rutina_read, (void*) (thread_args_read*) argumentos);
     pthread_detach(hiloRead);
@@ -1769,9 +1784,9 @@ void atender_lectura_archivo(){
     strcpy(nombre,args->nombre);
     uint32_t puntero = args->puntero;
     uint32_t bytes = args->bytes;
-    uint32_t offset = args->offset;
+    uint32_t dir_fisica = args->dir_fisica;
 
-    enviar_string_4enteros(file_system_connection, nombre, pcb->id, puntero,bytes, offset, F_READ);
+    enviar_string_4enteros(file_system_connection, nombre, pcb->id, puntero,bytes, dir_fisica, F_READ);
     log_error(kernel_logger,"Envio fread a fs");
 
     uint32_t cod_op = recibir_operacion(file_system_connection);
@@ -1801,17 +1816,20 @@ void atender_escritura_archivo(){
 
     contexto_ejecucion* ce_a_updatear = estructura_escribir_archivo->ce;
 
+    t_pcb * pcb_escritura = actualizar_pcb_lget_devuelve_pcb(ce_a_updatear, listaEjecutando, m_listaEjecutando);
+    
     char nombre_archivo[100];
     strcpy(nombre_archivo,estructura_escribir_archivo->string);
 
     uint32_t direccion_fisica = estructura_escribir_archivo->entero1;
     uint32_t bytes_a_leer = estructura_escribir_archivo->entero2;
     uint32_t offset = estructura_escribir_archivo->entero3;
-    uint32_t puntero_archivo;
+    t_list* lista_filtrada = nombre_en_lista_coincide_TAAP(pcb_escritura->tabla_archivos_abiertos_por_proceso, estructura_escribir_archivo->string);;
+    t_entradaTAAP* entradaProceso = list_get(lista_filtrada,0);
+    uint32_t puntero_archivo = entradaProceso->puntero;
 
     log_info(kernel_logger, "PID: [%d] - Escribir Archivo: [%s] - Puntero [%d] - Dirección Memoria [%d] - Tamaño [%d]", ce_a_updatear->id, nombre_archivo, puntero_archivo, offset, bytes_a_leer);
     
-    t_pcb * pcb_escritura = actualizar_pcb_lget_devuelve_pcb(ce_a_updatear, listaEjecutando, m_listaEjecutando);
 
     // pthread_mutex_lock(&m_listaEjecutando);
     //     t_pcb * pcb_escritura = (t_pcb *) list_get(listaEjecutando, 0);
@@ -1832,6 +1850,7 @@ void atender_escritura_archivo(){
     argumentos->puntero = puntero_archivo;
     argumentos->bytes = bytes_a_leer;
     argumentos->offset = offset;
+    argumentos->dir_fisica = direccion_fisica;
 
     pthread_create(&hiloWrite, NULL, (void*) rutina_write, (void*) (thread_args_write*) argumentos);
     pthread_detach(hiloWrite);
@@ -1849,10 +1868,11 @@ void rutina_write(thread_args_write* args)
     uint32_t puntero = args->puntero;
     uint32_t bytes = args->bytes;
     uint32_t offset = args->offset;
+    uint32_t dir_fisica = args->dir_fisica;
 
       log_error(kernel_logger,"el nombre en rutina es :%s, el puntero es: %d",nombre, puntero);
     
-    enviar_string_4enteros(file_system_connection, nombre, pcb->id, puntero,bytes,offset, F_WRITE);
+    enviar_string_5enteros(file_system_connection, nombre, pcb->id, puntero,bytes,offset, dir_fisica, F_WRITE);
     
     uint32_t cod_op = recibir_operacion(file_system_connection);
 

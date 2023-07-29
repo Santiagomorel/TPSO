@@ -231,6 +231,7 @@ void limpiar_tabla_segmentos(t_list*);
 void atender_apertura_archivo();
 t_list* nombre_en_lista_coincide(t_list*, char* );
 t_list* nombre_en_lista_nombres_coincide(t_list* , char* );
+t_list* nombre_en_lista_coincide_TAAP(t_list* tabla, char* nombre);
 void crear_entrada_TAAP(char*,t_entradaTAAP*);
 void crear_entrada_TGAA(char*,t_entradaTAAP*);
 bool encontrar_nombre(char*);
@@ -253,7 +254,7 @@ typedef struct{
     char nombre [100];
     uint32_t puntero;
     uint32_t bytes;
-    uint32_t offset;
+    uint32_t dir_fisica;
 }thread_args_read;
 
 void rutina_read(thread_args_read*);
@@ -266,6 +267,7 @@ typedef struct{
     uint32_t puntero;
     uint32_t bytes;
     uint32_t offset;
+    uint32_t dir_fisica;
 }thread_args_write;
 
 void rutina_write(thread_args_write*);

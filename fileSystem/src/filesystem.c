@@ -456,16 +456,20 @@ void procesar_conexion()
             break;
             
         case F_WRITE:
-            t_string_4enteros* estructura_string_4enteros_e = recibir_string_4enteros(cliente_socket);
+            t_string_5enteros* estructura_string_5enteros_e = recibir_string_5enteros(cliente_socket);
           
             log_trace(logger_filesystem, "archivo recibido con sus parametros");
-            char* f_name2= estructura_string_4enteros_e->string;
-            uint32_t pid2 = estructura_string_4enteros_e->entero1;
-            uint32_t offset2 = estructura_string_4enteros_e->entero4;
-            uint32_t dir_fisica2 = estructura_string_4enteros_e->entero2;
-            uint32_t cant2 = estructura_string_4enteros_e->entero3;
+            char* f_name2= estructura_string_5enteros_e->string;
+            uint32_t pid2 = estructura_string_5enteros_e->entero1;
+            uint32_t puntero = estructura_string_5enteros_e->entero2;
+            log_trace(logger_filesystem, "El puntero es: %d", puntero);
+            uint32_t cant2 = estructura_string_5enteros_e->entero3;
+            uint32_t offset2 = estructura_string_5enteros_e->entero4;
+            log_trace(logger_filesystem, "El offset es: %d", offset2);
+            uint32_t dir_fisica2 = estructura_string_5enteros_e->entero5;
 
-            log_info(logger, "Escribir archivo: %s - Puntero: %d - Memoria: %d - Tamaño: %d" ,f_name2, offset2, dir_fisica2, cant2);
+
+            log_info(logger, "Escribir archivo: %s - Puntero: %d - Memoria: %d - Tamaño: %d" ,f_name2, puntero, dir_fisica2, cant2);
             // Pedir datos a memoria
             /*
             void* buffer_memoria = malloc(sizeof(int) + sizeof(uint32_t)*3);
@@ -494,7 +498,7 @@ void procesar_conexion()
             //log_trace(logger_filesystem, "recibimos el string: %s de memoria para escribir", valor_a_escribir);
             char* buffer_escritura = malloc(cant2);
             recv(socket_memoria, buffer_escritura, cant2, NULL);
-            eferrait(f_name2, offset2, cant2, buffer_escritura);
+            eferrait(f_name2, puntero, cant2, buffer_escritura);
             log_trace(logger_filesystem, "aplicamos el F_WRITE");
             mem_hexdump(blocks_buffer, BLOCK_COUNT);
             free(buffer_escritura);

@@ -1044,6 +1044,19 @@ void enviar_string_4enteros(int client, char* string, int x, int y, int z, int j
     enviar_paquete(paquete, client);
     eliminar_paquete(paquete);
 }
+void enviar_string_5enteros(int client, char* string, int x, int y, int z, int j, int h, int codOP)
+{
+	t_paquete* paquete = crear_paquete_op_code(codOP);
+    agregar_entero_a_paquete(paquete, x); 
+    agregar_entero_a_paquete(paquete, y); 
+	agregar_entero_a_paquete(paquete, z); 
+	agregar_entero_a_paquete(paquete, j);
+	agregar_entero_a_paquete(paquete, h);
+
+	agregar_a_paquete(paquete, string, sizeof(string) +1); 
+    enviar_paquete(paquete, client);
+    eliminar_paquete(paquete);
+}
 
 t_string_2enteros* recibir_string_2enteros(int)
 {
@@ -1105,6 +1118,31 @@ t_string_4enteros* recibir_string_4enteros(int socket)
 
 	free(buffer);
 	return nuevo_string_4enteros;
+}
+t_string_5enteros* recibir_string_5enteros(int socket)
+{
+	t_string_5enteros* nuevo_string_5enteros = malloc(sizeof(t_string_4enteros));
+	int size = 0;
+	char *buffer;
+	int desp = 0;
+
+	buffer = recibir_buffer(&size, socket);
+
+
+	nuevo_string_5enteros->entero1 = leer_entero_u32(buffer, &desp);
+
+	nuevo_string_5enteros->entero2 = leer_entero_u32(buffer, &desp);
+
+	nuevo_string_5enteros->entero3 = leer_entero_u32(buffer, &desp);
+
+	nuevo_string_5enteros->entero4 = leer_entero_u32(buffer, &desp);
+
+	nuevo_string_5enteros->entero5 = leer_entero_u32(buffer, &desp);
+
+	nuevo_string_5enteros->string = leer_string(buffer, &desp);
+
+	free(buffer);
+	return nuevo_string_5enteros;
 }
 
 t_string_entero* recibir_string_entero(int socket)
