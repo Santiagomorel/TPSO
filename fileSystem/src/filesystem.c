@@ -406,17 +406,16 @@ void procesar_conexion()
             t_string_4enteros* estructura_string_4enteros_l = recibir_string_4enteros(cliente_socket);
             log_trace(logger_filesystem, "archivo recibido con sus parametros");
             char* f_name = estructura_string_4enteros_l->string;
-            uint32_t pid = estructura_string_4enteros_l->entero4;
-            uint32_t offset = estructura_string_4enteros_l->entero1;
-            uint32_t dir_fisica = estructura_string_4enteros_l->entero3;
-            uint32_t cant = estructura_string_4enteros_l->entero2;
+            uint32_t pid = estructura_string_4enteros_l->entero1;
+            uint32_t offset = estructura_string_4enteros_l->entero2;
+            uint32_t cant = estructura_string_4enteros_l->entero3;
+            uint32_t dir_fisica = estructura_string_4enteros_l->entero4;
 
 
             log_trace(logger, "Leer archivo: %s - Puntero: %d - Memoria: %d - Tamaño: %d" ,f_name, offset, dir_fisica, cant);
-            char* stream_leido = eferrid(f_name, offset, cant);
+            char* stream = eferrid(f_name, offset, cant);
 
-            char stream [100];
-            strcpy(stream,stream_leido);
+            
             log_warning(logger,"el stream es :%s",stream);
 
             //char* cadena_parseada = imprimir_cadena(stream_leido, cant);
@@ -438,7 +437,7 @@ void procesar_conexion()
             despl += cant;
 */
 
-            enviar_string_3enteros(socket_memoria, stream_leido, pid, dir_fisica, cant, F_READ);
+            enviar_string_3enteros(socket_memoria, stream, pid, dir_fisica, cant, F_READ);
             log_trace(logger_filesystem, "enviamos el empaquetado de datos");
             /*
             if(send(socket_memoria, buffer_leido, sizeof(uint32_t)*3 + cant + sizeof(int), NULL) == -1 ) {
@@ -452,7 +451,7 @@ void procesar_conexion()
             enviar_CodOp(cliente_socket, cod_op); //CORREGIR CODOP PARA QUE KERNEL SIGA EJECUTANDO
             log_trace(logger_filesystem, "enviamos codigo ");
             //free(buffer_leido);
-            free(stream_leido);
+            free(stream);
             break;
             
         case F_WRITE:
@@ -753,10 +752,9 @@ void eferrait(char *f_name, uint32_t offset, uint32_t cantidad, char *data)
   free(fcb);
 }
 
-char *eferrid(char *f_name, uint32_t offset, uint32_t cantidad)
+void *eferrid(char *f_name, uint32_t offset, uint32_t cantidad)
 {
-  char data_final [50]; //= malloc(cantidad);
-  char * puntero = data_final;
+  void *data_final = malloc(cantidad);
   t_fcb *fcb = levantar_fcb(f_name);
   int desplazamiento = 0;
   int bloque_inicial = offset / BLOCK_SIZE;
@@ -765,10 +763,7 @@ char *eferrid(char *f_name, uint32_t offset, uint32_t cantidad)
   if (bloque_inicial == 0 && bloque_final == 0)
   {
     memcpy(data_final, blocks_buffer + fcb->f_dp + offset, cantidad);
-    log_warning(logger_filesystem,"los datos son  :%s",blocks_buffer + fcb->f_dp+offset);
     log_info(logger_filesystem, "Acceso Bloque - Archivo: %s - Bloque Archivo: %d - Bloque File System %d", f_name, 0, fcb->f_dp / BLOCK_SIZE);
-    log_warning(logger_filesystem,"el data final es :%s",data_final);
-    log_warning(logger_filesystem,"entre en el 1er if");
     sleep(RETARDO_ACCESO_BLOQUE / 1000);
   }
   else if (bloque_inicial == bloque_final)
@@ -780,33 +775,24 @@ char *eferrid(char *f_name, uint32_t offset, uint32_t cantidad)
 
     memcpy(data_final, blocks_buffer + puntero_a_leer + (offset - BLOCK_SIZE * bloque_inicial), cantidad);
     log_info(logger_filesystem, "Acceso Bloque - Archivo: %s - Bloque Archivo: %d - Bloque File System %d", f_name, bloque_inicial + 1, puntero_a_leer / BLOCK_SIZE);
-     log_warning(logger_filesystem,"los datos son  :%s", blocks_buffer + puntero_a_leer + (offset - BLOCK_SIZE * bloque_inicial));
-       log_warning(logger_filesystem,"el data final es :%s",data_final);
-       log_warning(logger_filesystem,"entre en el 1er else if");
     sleep(RETARDO_ACCESO_BLOQUE / 1000);
   }
   else
   {
-    log_warning(logger_filesystem,"entre en el else");
     int bloques_a_leer = (bloque_final - bloque_inicial) + 1;
     int cantidad_restante = cantidad;
     int desplazamiento = 0;
 
     if (bloque_inicial == 0)
     {
-      log_warning(logger_filesystem,"entre en el 1er if del else ");
       memcpy(data_final, blocks_buffer + fcb->f_dp + offset, BLOCK_SIZE - offset);
       desplazamiento += BLOCK_SIZE - offset;
-      log_warning(logger_filesystem,"block buffer : %s, f_dp: %u,offset: %u, operacion: %d",blocks_buffer,fcb->f_dp, offset,BLOCK_SIZE - offset );
       cantidad_restante -= desplazamiento;
       log_info(logger_filesystem, "Acceso Bloque - Archivo: %s - Bloque Archivo: %d - Bloque File System %d", f_name, 0, fcb->f_dp / BLOCK_SIZE);
-      log_warning(logger_filesystem,"los datos son  :%s", blocks_buffer + fcb->f_dp + offset);
-      log_warning(logger_filesystem,"el data final es :%s",data_final);
       sleep(RETARDO_ACCESO_BLOQUE / 1000);
     }
     else
     {
-      log_warning(logger_filesystem,"entre en el else del else");
       uint32_t puntero_primer_bloque_a_leer;
       memcpy(&puntero_primer_bloque_a_leer, blocks_buffer + fcb->f_ip + sizeof(uint32_t) * (bloque_inicial - 1), sizeof(uint32_t));
       log_info(logger_filesystem, "Acceso Bloque - Archivo: %s - Bloque Archivo: %d (indirecto) - Bloque File System %d", f_name, 1, fcb->f_ip / BLOCK_SIZE);
@@ -816,8 +802,6 @@ char *eferrid(char *f_name, uint32_t offset, uint32_t cantidad)
       desplazamiento += BLOCK_SIZE * (bloque_inicial + 1) - offset;
       cantidad_restante -= BLOCK_SIZE * (bloque_inicial + 1) - offset;
       log_info(logger_filesystem, "Acceso Bloque - Archivo: %s - Bloque Archivo: %d - Bloque File System %d", f_name, bloque_inicial + 1, puntero_primer_bloque_a_leer / BLOCK_SIZE);
-      log_info(logger_filesystem, "los datos son %s", blocks_buffer + puntero_primer_bloque_a_leer + (offset - BLOCK_SIZE * bloque_inicial));
-         log_warning(logger_filesystem,"el data final es :%s",data_final);
       sleep(RETARDO_ACCESO_BLOQUE / 1000);
     }
     bloques_a_leer--;
@@ -831,11 +815,10 @@ char *eferrid(char *f_name, uint32_t offset, uint32_t cantidad)
       desplazamiento += cant_a_leer;
       cantidad_restante -= cant_a_leer;
       log_info(logger_filesystem, "Acceso Bloque - Archivo: %s - Bloque Archivo: %d - Bloque File System %d", f_name, i + 1, puntero / BLOCK_SIZE);
-         log_warning(logger_filesystem,"el data final es :%s",data_final);
       sleep(RETARDO_ACCESO_BLOQUE / 1000);
     }
   }
   free(fcb);
 
-  return puntero;
+  return data_final;
 }
