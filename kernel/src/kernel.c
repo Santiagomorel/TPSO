@@ -1515,8 +1515,6 @@ void crear_entrada_TGAA(char* nombre, t_entradaTAAP* entrada)
 
     strcpy(nuevaEntradaTGAA->nombreArchivo,nombre);
 
-    nuevaEntradaTGAA->puntero = entrada;
-
     nuevaEntradaTGAA->tamanioArchivo = 0;
     
     nuevaEntradaTGAA->lista_block_archivo = list_create();
