@@ -440,7 +440,6 @@ void agregar_lista_ready_con_log(t_list* listaready,t_pcb* pcb_a_encolar,char* a
 
         list_destroy(lista_pids);
     }
-    
     else {
         log_info(kernel_logger,"Cola Ready [%s] : [%s]", algoritmo, string_pids);
 
@@ -1456,9 +1455,9 @@ void atender_apertura_archivo()
 
         sacar_rafaga_ejecutada(pcb_en_ejecucion);
         cambiar_estado_a(pcb_en_ejecucion, BLOCKED, estadoActual(pcb_en_ejecucion));
-        log_info(kernel_logger, "PID: [%d] - Bloqueado por: [%s]",pcb_en_ejecucion->id, nombreArchivo);
         sem_post(&fin_ejecucion);
-        agregar_a_lista_con_sems(pcb_en_ejecucion,entradaEncontrada->lista_block_archivo,entradaEncontrada->m_lista_block_archivo);
+        agregar_a_lista_con_sems(pcb_en_ejecucion, entradaEncontrada->lista_block_archivo, entradaEncontrada->m_lista_block_archivo);
+        log_info(kernel_logger, "PID: [%d] - Bloqueado por: [%s]", pcb_en_ejecucion->id, nombreArchivo);
 
     }
     else{
@@ -1502,10 +1501,10 @@ void atender_apertura_archivo()
             default:
                 log_error(kernel_logger,"CodOp invalido");
                 break;
-        }   
+            
+        }
+        log_info(kernel_logger, "PID: [%d] - Abrir Archivo: [%s]",pcb_en_ejecucion->id, nombreArchivo);
     }
-
-    log_info(kernel_logger, "PID: [%d] - Abrir Archivo: [%s]",pcb_en_ejecucion->id, nombreArchivo);
     liberar_ce_string_entero(estructuraApertura);
 }
 
@@ -1608,6 +1607,7 @@ void atender_cierre_archivo(){
     free(entradaProceso);
     
     if(otrosUsanArchivo(nombreArchivo)){
+        log_debug(kernel_logger, "Entro al log que dice que hay otros usuarios abriendo el archivo");
         t_entradaTGAA* entrada = conseguirEntradaTablaGlobal(nombreArchivo);
         t_pcb* pcb_a_ejectuar = hallarPrimerPcb(nombreArchivo);
         enviar_ce(cpu_dispatch_connection, contextoDeEjecucion, EJECUTAR_CE, kernel_logger);
@@ -1615,6 +1615,7 @@ void atender_cierre_archivo(){
     }
     
     else{
+        log_debug(kernel_logger, "no hay mas usuarios abriendo el archivo, mamawebo");
     t_list* listaFiltrada =  nombre_en_lista_coincide(tablaGlobalArchivosAbiertos,(char*) nombreArchivo);
     t_entradaTGAA* entradaGlobal = list_get(listaFiltrada,0);
     list_remove_element(tablaGlobalArchivosAbiertos,entradaGlobal);
@@ -1688,7 +1689,7 @@ void atender_actualizar_puntero(){
          
     log_error(kernel_logger,"el nombre del archivo es %s",nombreArchivo);
     log_error(kernel_logger,"el entero del paquete es %d",posicion);
-    imprimir_ce(estructura_actualizacion->ce, kernel_logger);
+    // imprimir_ce(estructura_actualizacion->ce, kernel_logger);
     contexto_ejecucion* contextoDeEjecucion=estructura_actualizacion->ce;
 
     t_pcb * pcb_en_ejecucion = actualizar_pcb_lget_devuelve_pcb(contextoDeEjecucion, listaEjecutando, m_listaEjecutando);
