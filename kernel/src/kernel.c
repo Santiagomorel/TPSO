@@ -470,7 +470,8 @@ t_pcb* actualizar_pcb_lremove_devuelve_pcb(contexto_ejecucion* contexto_actualiz
 {
     pthread_mutex_lock(&sem);
         t_pcb * pcb_a_actualizar = pcb_en_lista_coincide(lista_del_pcb, contexto_actualiza->id);
-        list_remove_element(lista_del_pcb, pcb_a_actualizar);
+        bool valor_retorno_de_eliminacion_elemento = list_remove_element(lista_del_pcb, pcb_a_actualizar);
+        log_debug(kernel_logger, "el valor que me da cuando intento eliminar el elemento con id %d es %d", pcb_a_actualizar->id, valor_retorno_de_eliminacion_elemento);
         actualizar_pcb(pcb_a_actualizar, contexto_actualiza);
     pthread_mutex_unlock(&sem);
 
@@ -1549,7 +1550,7 @@ t_list* nombre_en_lista_coincide(t_list* tabla, char* nombre)
 {
     bool encontrar_nombre(t_entradaTGAA* entrada){
     
-        log_trace(kernel_logger, "Busco en lista de entradas, %s", entrada->nombreArchivo);
+        log_trace(kernel_logger, "Busco en lista de entradas, nombre en lista coincide, %s", entrada->nombreArchivo);
         return strcmp(entrada->nombreArchivo, nombre) == 0;
     }
 
@@ -1560,7 +1561,7 @@ t_list* nombre_en_lista_coincide_TAAP(t_list* tabla, char* nombre)
 {
     bool encontrar_nombre(t_entradaTAAP* entrada){
     
-        log_trace(kernel_logger, "Busco en lista de entradas, %s", entrada->nombreArchivo);
+        log_trace(kernel_logger, "Busco en lista de entradas, TAAP, %s", entrada->nombreArchivo);
         return strcmp(entrada->nombreArchivo, nombre) == 0;
     }
 
@@ -1598,9 +1599,13 @@ void atender_cierre_archivo(){
 
     t_entradaTAAP* entradaProceso = list_get(listaFiltrada,0);
     
+    t_entradaTGAA* entradaGlobalAA = conseguirEntradaTablaGlobal(nombreArchivo);
+
+    list_remove_element(entradaGlobalAA->lista_block_archivo, pcb_en_ejecucion);
+
     log_error(kernel_logger,"la TAAP tiene :%d elementos", list_size(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso));
 
-    list_remove_element(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso,entradaProceso);
+    list_remove_element(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso, entradaProceso);
 
     log_error(kernel_logger,"la TAAP tiene :%d elementos", list_size(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso));
     
@@ -1608,20 +1613,19 @@ void atender_cierre_archivo(){
     
     if(otrosUsanArchivo(nombreArchivo)){
         log_debug(kernel_logger, "Entro al log que dice que hay otros usuarios abriendo el archivo");
-        t_entradaTGAA* entrada = conseguirEntradaTablaGlobal(nombreArchivo);
         t_pcb* pcb_a_ejectuar = hallarPrimerPcb(nombreArchivo);
         enviar_ce(cpu_dispatch_connection, contextoDeEjecucion, EJECUTAR_CE, kernel_logger);
-        reencolar_bloq_por_archivo(nombreArchivo,entrada);
+        reencolar_bloq_por_archivo(nombreArchivo,entradaGlobalAA);
     }
     
     else{
         log_debug(kernel_logger, "no hay mas usuarios abriendo el archivo, mamawebo");
-    t_list* listaFiltrada =  nombre_en_lista_coincide(tablaGlobalArchivosAbiertos,(char*) nombreArchivo);
-    t_entradaTGAA* entradaGlobal = list_get(listaFiltrada,0);
-    list_remove_element(tablaGlobalArchivosAbiertos,entradaGlobal);
-    log_warning(kernel_logger,"la TAAG tiene :%d",list_size(tablaGlobalArchivosAbiertos));
-    enviar_ce(cpu_dispatch_connection, contextoDeEjecucion, EJECUTAR_CE, kernel_logger);
-    free(entradaGlobal);
+        t_list* listaFiltrada =  nombre_en_lista_coincide(tablaGlobalArchivosAbiertos,(char*) nombreArchivo);
+        t_entradaTGAA* entradaGlobal = list_get(listaFiltrada,0);
+        list_remove_element(tablaGlobalArchivosAbiertos,entradaGlobal);
+        log_warning(kernel_logger,"la TAAG tiene :%d",list_size(tablaGlobalArchivosAbiertos));
+        enviar_ce(cpu_dispatch_connection, contextoDeEjecucion, EJECUTAR_CE, kernel_logger);
+        free(entradaGlobal);
     }
 
 liberar_ce_string_entero(estructuraCierre);
@@ -1731,6 +1735,7 @@ void atender_lectura_archivo(){
     t_ce_string_3enteros* estructura_leer_archivo= recibir_ce_string_3enteros(cpu_dispatch_connection);
     log_error(kernel_logger,"el nombre es :%s",estructura_leer_archivo->string);
     contexto_ejecucion* ce_a_updatear = estructura_leer_archivo->ce;
+
     t_pcb * pcb_lectura = actualizar_pcb_lget_devuelve_pcb(ce_a_updatear, listaEjecutando, m_listaEjecutando);
 
     char nombre_archivo[100];
@@ -1742,7 +1747,8 @@ void atender_lectura_archivo(){
 
     uint32_t estavariablenosirve = estructura_leer_archivo->entero3;
 
-    t_list* lista_filtrada = nombre_en_lista_coincide_TAAP(pcb_lectura->tabla_archivos_abiertos_por_proceso, estructura_leer_archivo->string);;
+    t_list* lista_filtrada = nombre_en_lista_coincide_TAAP(pcb_lectura->tabla_archivos_abiertos_por_proceso, estructura_leer_archivo->string);
+    log_debug(kernel_logger, "La lista filtrada tiene %d cantidad de elementos", list_size(lista_filtrada));
     t_entradaTAAP* entradaProceso = list_get(lista_filtrada,0);
     uint32_t puntero_archivo = entradaProceso->puntero;
 
@@ -1772,14 +1778,13 @@ void atender_lectura_archivo(){
     pthread_create(&hiloRead, NULL, (void*) rutina_read, (void*) (thread_args_read*) argumentos);
     pthread_detach(hiloRead);
 
-    sem_post(&fin_ejecucion);
-
     liberar_ce_string_2enteros(estructura_leer_archivo);
 
 }
    
-   void rutina_read(thread_args_read* args)
+void rutina_read(thread_args_read* args)
 {
+    sem_post(&fin_ejecucion);
     t_pcb* pcb = args->pcb;
     char nombre [100];
     strcpy(nombre,args->nombre);
@@ -1792,20 +1797,18 @@ void atender_lectura_archivo(){
 
     uint32_t cod_op = recibir_operacion(file_system_connection);
 
-    pthread_mutex_lock(&m_listaBloqueados);
-        list_remove_element(listaBloqueados, pcb);
-    pthread_mutex_unlock(&m_listaBloqueados);
+    log_warning(kernel_logger, "El codigo de operacion que recibo en la rutina read es: %d", cod_op);
 
-    cambiar_estado_a(pcb, READY, estadoActual(pcb));
+    t_pcb* pcb_activo = pcb_lremove(obtener_ce(pcb), listaBloqueados, m_listaBloqueados);
+
+    cambiar_estado_a(pcb_activo, READY, estadoActual(pcb_activo));
     
-    iniciar_nueva_espera_ready(pcb); // hacer cada vez que se mete en la lista de ready
+    iniciar_nueva_espera_ready(pcb_activo); // hacer cada vez que se mete en la lista de ready
     
-    agregar_a_lista_con_sems(pcb, listaReady, m_listaReady);
+    agregar_a_lista_con_sems(pcb_activo, listaReady, m_listaReady);
     
     sem_post(&proceso_en_ready);
     desbloquear_FS();
-
-
 }
 
 // ----------------------- Funciones ESCRIBIR_ARCHIVO ----------------------- //
@@ -1825,7 +1828,7 @@ void atender_escritura_archivo(){
     uint32_t direccion_fisica = estructura_escribir_archivo->entero1;
     uint32_t bytes_a_leer = estructura_escribir_archivo->entero2;
     uint32_t offset = estructura_escribir_archivo->entero3;
-    t_list* lista_filtrada = nombre_en_lista_coincide_TAAP(pcb_escritura->tabla_archivos_abiertos_por_proceso, estructura_escribir_archivo->string);;
+    t_list* lista_filtrada = nombre_en_lista_coincide_TAAP(pcb_escritura->tabla_archivos_abiertos_por_proceso, estructura_escribir_archivo->string);
     t_entradaTAAP* entradaProceso = list_get(lista_filtrada,0);
     uint32_t puntero_archivo = entradaProceso->puntero;
 
@@ -1855,14 +1858,13 @@ void atender_escritura_archivo(){
 
     pthread_create(&hiloWrite, NULL, (void*) rutina_write, (void*) (thread_args_write*) argumentos);
     pthread_detach(hiloWrite);
-
-    sem_post(&fin_ejecucion);
     
     liberar_ce_string_2enteros(estructura_escribir_archivo);
 }
 
 void rutina_write(thread_args_write* args)
 {
+    sem_post(&fin_ejecucion);
     t_pcb* pcb = args->pcb;
     char nombre [100];
     strcpy(nombre,args->nombre);
@@ -1891,8 +1893,6 @@ void rutina_write(thread_args_write* args)
     
     sem_post(&proceso_en_ready);
     desbloquear_FS();
-    log_warning(kernel_logger, "termino rutina write");
-
 }
 
 void bloquear_FS(){

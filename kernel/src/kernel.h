@@ -7,6 +7,8 @@
 #define PUERTO_KERNEL ""
 #define MAX_RECURSOS 20
 // Variables y structs globales
+
+int okthread = 1;
 typedef struct{
 
     char* ip_memoria;
