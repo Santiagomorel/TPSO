@@ -25,21 +25,20 @@ int main(int argc, char **argv)
 
     // ----------------------- cargo la configuracion de memoria ----------------------- //
 
-    log_trace(log_memoria, "antes de cargar la configuracion de Memoria");
-
     load_config();
 
-    log_trace(log_memoria, "cargo la configuracion de Memoria");
+    //log_trace(log_memoria, "cargo la configuracion de Memoria");
 
     levantar_estructuras_administrativas();
 
-    log_trace(log_memoria, "levanto las estructuras");
+    //log_trace(log_memoria, "levanto las estructuras");
+    
     pthread_mutex_init(&mutex_memoria, NULL);
     sem_init(&finModulo, 0, 0);
 
-    log_trace(log_memoria, "puerto escucha %d", memoria_config.puerto_escucha);
 
     socket_servidor_memoria = iniciar_servidor(memoria_config.puerto_escucha, log_memoria);
+    
     log_trace(log_memoria, "Servidor Memoria listo para recibir al cliente");
 
     pthread_t atiende_cliente_CPU, atiende_cliente_FILESYSTEM, atiende_cliente_KERNEL;
@@ -59,22 +58,6 @@ int main(int argc, char **argv)
     pthread_create(&atiende_cliente_KERNEL, NULL, (void *)recibir_kernel, (void *)socket_cliente_memoria_KERNEL);
     pthread_detach(atiende_cliente_KERNEL);
 
-
-
-
-/* INICIOS
-    iniciar_semaforos();
-
-    iniciarSegmentacion();
-
-    //Fin Estructuras Admin
-    
-    // ----------------------- levanto el servidor de memoria ----------------------- //
-
-    socket_servidor_memoria = iniciar_servidor(memoria_config.puerto_escucha, log_memoria);
-*/
-    //log_trace(log_memoria, "Servidor Memoria listo para recibir al cliente");
-    //sem_wait(&finModulo);
     sem_wait(&finModulo);
     log_warning(log_memoria, "FINALIZA EL MODULO DE MEMORIA");
     end_program();
@@ -340,7 +323,7 @@ int buscar_espacio_libre(uint32_t tam) {
         break;
     
     default:
-        log_error(log_memoria,"ALGO BUSQUEDA ESPACIO DESCONOCIDO");
+        log_error(log_memoria,"ALGORITMO DE ASIGNACION DESCONOCIDO");
     }
     
     return -1;
@@ -350,7 +333,7 @@ op_code crear_segmento_memoria(uint32_t tam, uint32_t* base_resultante) {
     //printf("%d, %d\n", ESPACIO_LIBRE_TOTAL, tam);
     if (ESPACIO_LIBRE_TOTAL < tam)
     {
-        log_warning(log_memoria, "El espacio libre total de la memoria es: %d, mietras que el tamanio del parametro es: %d", ESPACIO_LIBRE_TOTAL, tam);
+        //log_warning(log_memoria, "El espacio libre total de la memoria es: %d, mietras que el tamanio del parametro es: %d", ESPACIO_LIBRE_TOTAL, tam);
         log_info(log_memoria, "NO HAY ESPACIO SUFICIENTE PARA CREAR ESE SEGMENTO");
         return OUT_OF_MEMORY;
         // Retornar codop indicando que no hay espacio suficiente.
@@ -402,7 +385,7 @@ int buscar_segmento_por_base(uint32_t base) {
 void borrar_segmento(uint32_t base, uint32_t limite) {
     ESPACIO_LIBRE_TOTAL += limite;
 
-    log_debug(log_memoria, "El espacio libre total despues de borar el segmento con tam, %d, es %d", limite, ESPACIO_LIBRE_TOTAL);
+    //log_debug(log_memoria, "El espacio libre total despues de borar el segmento con tam, %d, es %d", limite, ESPACIO_LIBRE_TOTAL);
     t_esp* nuevo_esp = malloc(sizeof(t_esp));
     nuevo_esp->base = base;
     nuevo_esp->limite = limite;
@@ -447,7 +430,6 @@ void borrar_segmento(uint32_t base, uint32_t limite) {
 }
 
 void escribir(uint32_t dir_fisca, void* data, uint32_t size) {
-    log_warning(log_memoria,"el size en escribir es :%d", size);
     memcpy(ESPACIO_USUARIO + dir_fisca, data, size);
 }
 
@@ -500,16 +482,16 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
     int codigoOP = 0;
     while (codigoOP != -1)
     {
-        log_warning(log_memoria,"me quedo esperando");
+        log_warning(log_memoria,"me quedo esperando en kernel"); //borrar despues de las pruebas finales
         int codigoOperacion = recibir_operacion(SOCKET_CLIENTE_KERNEL);
         switch (codigoOperacion)
         {
         case INICIAR_ESTRUCTURAS:
-            log_trace(log_memoria, "recibi el op_cod %d INICIAR_ESTRUCTURAS", codigoOperacion);
+            //log_trace(log_memoria, "recibi el op_cod %d INICIAR_ESTRUCTURAS", codigoOperacion);
             //- Creación de Proceso: “Creación de Proceso PID: <PID>”
             
             uint32_t pid = recibir_entero_u32(SOCKET_CLIENTE_KERNEL, log_memoria);
-            log_info(log_memoria, "Creacion de Proceso PID: %d", pid);
+            log_trace(log_memoria, "Creacion de Proceso PID: %d", pid);
             devolver_tabla_inicial(SOCKET_CLIENTE_KERNEL);
             
             break;
@@ -533,7 +515,7 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
                 n_seg->direccion_base = n_base;
                 n_seg->tamanio_segmento = tam_seg;
                 list_add_sorted(LISTA_GLOBAL_SEGMENTOS, n_seg, comparador_base_segmento);
-                log_info(log_memoria, "PID: %d - Crear Segmento: %d - Base: %d - TAMAÑO: %d", pid_create_segment, id_seg, n_base, tam_seg);
+                log_trace(log_memoria, "PID: %d - Crear Segmento: %d - Base: %d - TAMAÑO: %d", pid_create_segment, id_seg, n_base, tam_seg);
             }
 
             devolver_resultado_creacion(resultado, SOCKET_CLIENTE_KERNEL, n_base);
@@ -550,7 +532,7 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
             uint32_t tam = delete_data->entero4;
 
             borrar_segmento(base, tam);
-            log_info(log_memoria, "PID: %d - Eliminar Segmento: %d - Base: %d - TAMAÑO: %d", pid_free_segment, free_seg_id, base, tam);
+            log_trace(log_memoria, "PID: %d - Eliminar Segmento: %d - Base: %d - TAMAÑO: %d", pid_free_segment, free_seg_id, base, tam);
             print_lista_esp(LISTA_ESPACIOS_LIBRES); //
             
             break;
@@ -561,7 +543,7 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
             for(int i = 0; i < list_size(LISTA_GLOBAL_SEGMENTOS); i++)
             {
                 t_segmento_memoria* segmento = list_get(LISTA_GLOBAL_SEGMENTOS, i);
-                log_info(log_memoria, "PID: %d - Segmento: %d - Base: %d - Tamaño: %d", segmento->pid, segmento->id_segmento, segmento->direccion_base, segmento->tamanio_segmento);
+                log_trace(log_memoria, "PID: %d - Segmento: %d - Base: %d - Tamaño: %d", segmento->pid, segmento->id_segmento, segmento->direccion_base, segmento->tamanio_segmento);
             }
             devolver_nuevas_bases(SOCKET_CLIENTE_KERNEL);
             print_lista_esp(LISTA_ESPACIOS_LIBRES);
@@ -573,7 +555,7 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
             break;
         // se desconecta kernel
         default:
-            log_trace(log_memoria, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
+            log_error(log_memoria, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
             break;
         }
     }
@@ -585,16 +567,14 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU)
 {
 
     enviar_mensaje("recibido cpu", SOCKET_CLIENTE_CPU);
-    log_trace(log_memoria, "recibido cpu");
     int codigoOP = 0;
     while (codigoOP != -1)
     {
         int codigoOperacion = recibir_operacion(SOCKET_CLIENTE_CPU);
-        //sleep(memoria_config.retardo_memoria);
         switch (codigoOperacion)
         {
         case MENSAJE:
-            log_trace(log_memoria, "recibi el op_cod %d MENSAJE , codigoOperacion", codigoOperacion);
+            log_info(log_memoria, "recibi el op_cod %d MENSAJE , codigoOperacion", codigoOperacion);
             break;
 
         case MOV_IN: 
@@ -604,22 +584,18 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU)
             uint32_t dir_fisica_in = mov_in_data->entero2;
             uint32_t tam_a_leer = mov_in_data->entero3;
             char* valor_in = leer(dir_fisica_in, tam_a_leer);
-
-            log_warning(log_memoria,"El valor en memoria es: %s",valor_in);
             
-            //send(cliente_socket, valor_in, tam_a_leer, NULL);
             
             sleep(memoria_config.retardo_memoria/1000);
             enviar_paquete_string(SOCKET_CLIENTE_CPU, valor_in, MOV_IN_OK, tam_a_leer);
             free(valor_in);
-            log_info(log_memoria, "PID: %d - Acción: LEER - Dirección física: %d - Tamaño: %d - Origen: CPU", pid_mov_in, dir_fisica_in, tam_a_leer);
+            log_trace(log_memoria, "PID: %d - Acción: LEER - Dirección física: %d - Tamaño: %d - Origen: CPU", pid_mov_in, dir_fisica_in, tam_a_leer);
             pthread_mutex_unlock(&mutex_memoria);
             break;
 
 
         case MOV_OUT: //(Dirección Fisica, Registro): Lee el valor del Registro y lo escribe en la dirección física de memoria obtenida a partir de la Dirección Lógica.
             pthread_mutex_lock(&mutex_memoria);
-            log_warning(log_memoria,"estoy en mov_out");
             t_string_3enteros* mov_out_data = recibir_string_3enteros(SOCKET_CLIENTE_CPU);
             uint32_t dir_fisica = mov_out_data->entero1;
             uint32_t pid_mov_out = mov_out_data->entero2;
@@ -629,12 +605,8 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU)
             char* valor = malloc(tam_escrito);
             strcpy(valor,escritura);
 
-            // Para probar
-            // char* cadena = imprimir_cadena(valor, tam_escrito);
-            // printf("Valor recibido: %s\n", cadena);
-
             escribir(dir_fisica, valor, tam_escrito);
-            log_info(log_memoria, "PID: %d - Acción: ESCRIBIR - Dirección física: %d - Tamaño: %d - Origen: CPU", pid_mov_out, dir_fisica, tam_escrito);
+            log_trace(log_memoria, "PID: %d - Acción: ESCRIBIR - Dirección física: %d - Tamaño: %d - Origen: CPU", pid_mov_out, dir_fisica, tam_escrito);
             free(valor);
             enviar_CodOp(SOCKET_CLIENTE_CPU, MOV_OUT_OK);
             sleep(memoria_config.retardo_memoria/1000);
@@ -646,7 +618,7 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU)
         break;
         
         default:
-             log_trace(log_memoria, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
+             log_error(log_memoria, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
             break;
         }
     }
@@ -661,12 +633,11 @@ void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM)
     while (codigoOP != -1)
     {
         int codigoOperacion = recibir_operacion(SOCKET_CLIENTE_FILESYSTEM);
-        log_warning(log_memoria, "llegue a fs");
         switch (codigoOperacion)
         {
         case MENSAJE:
             
-            log_trace(log_memoria, "recibi el op_cod %d MENSAJE , codigoOperacion", codigoOperacion);
+            log_info(log_memoria, "recibi el op_cod %d MENSAJE , codigoOperacion", codigoOperacion);
 
             break;
 
@@ -682,7 +653,7 @@ void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM)
             //recv(cliente_socket, valor_leer_archivo, tam_a_leer_archivo, NULL);
             escribir(dir_fisica_leer_archivo, valor_leer_archivo, tam_a_leer_archivo);
             free(valor_leer_archivo);
-            log_info(log_memoria, "PID: %d - Accion: ESCRIBIR - Dirección física: %d - Tamaño: %d - Origen: FS", pid_leer_archivo, dir_fisica_leer_archivo, tam_a_leer_archivo);
+            log_trace(log_memoria, "PID: %d - Accion: ESCRIBIR - Dirección física: %d - Tamaño: %d - Origen: FS", pid_leer_archivo, dir_fisica_leer_archivo, tam_a_leer_archivo);
             sleep(memoria_config.retardo_memoria/1000);
             enviar_CodOp(SOCKET_CLIENTE_FILESYSTEM,F_READ_OK);
         pthread_mutex_unlock(&mutex_memoria);
@@ -695,7 +666,7 @@ void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM)
             uint32_t tam_a_escribir_archivo = fwrite_data -> entero3;
 
             char* valor_escribir_archivo = leer(dir_fisica_escribir_archivo, tam_a_escribir_archivo);
-            log_info(log_memoria, "PID: %d - Accion: LEER - Dirección física: %d - Tamaño: %d - Origen: FS", pid_escribir_archivo, dir_fisica_escribir_archivo, tam_a_escribir_archivo);
+            log_trace(log_memoria, "PID: %d - Accion: LEER - Dirección física: %d - Tamaño: %d - Origen: FS", pid_escribir_archivo, dir_fisica_escribir_archivo, tam_a_escribir_archivo);
             sleep(memoria_config.retardo_memoria/1000);
             //enviar_paquete_string(SOCKET_CLIENTE_FILESYSTEM, valor_escribir_archivo, sizeof(valor_escribir_archivo), F_WRITE_OK);
             send(SOCKET_CLIENTE_FILESYSTEM, valor_escribir_archivo, tam_a_escribir_archivo, NULL);
@@ -709,7 +680,7 @@ void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM)
         break;
 
         default:
-            log_trace(log_memoria, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
+            log_error(log_memoria, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
             break;
         }
     }
