@@ -1001,7 +1001,7 @@ void enviar_string_2enteros(int client, char* string, int x, int y, int codOP)
 {
 	t_paquete* paquete = crear_paquete_op_code(codOP);
 
-	agregar_a_paquete(paquete, string, sizeof(string)+1); 
+	agregar_a_paquete(paquete, string, strlen(string)+1); 
     agregar_entero_a_paquete(paquete, x); 
     agregar_entero_a_paquete(paquete, y); 
     enviar_paquete(paquete, client);
@@ -1023,7 +1023,7 @@ void enviar_string_3enteros(int client, char* string, int x, int y, int z, int c
 {
 	t_paquete* paquete = crear_paquete_op_code(codOP);
 
-	agregar_a_paquete(paquete, string, sizeof(string)+1); 
+	agregar_a_paquete(paquete, string, strlen(string)+1); 
     agregar_entero_a_paquete(paquete, x); 
     agregar_entero_a_paquete(paquete, y); 
 	agregar_entero_a_paquete(paquete, z); 
@@ -1040,7 +1040,7 @@ void enviar_string_4enteros(int client, char* string, int x, int y, int z, int j
 	agregar_entero_a_paquete(paquete, z); 
 	agregar_entero_a_paquete(paquete, j);
 
-	agregar_a_paquete(paquete, string, sizeof(string) +1); 
+	agregar_a_paquete(paquete, string, strlen(string) +1); 
     enviar_paquete(paquete, client);
     eliminar_paquete(paquete);
 }
@@ -1053,7 +1053,7 @@ void enviar_string_5enteros(int client, char* string, int x, int y, int z, int j
 	agregar_entero_a_paquete(paquete, j);
 	agregar_entero_a_paquete(paquete, h);
 
-	agregar_a_paquete(paquete, string, sizeof(string) +1); 
+	agregar_a_paquete(paquete, string, strlen(string) +1); 
     enviar_paquete(paquete, client);
     eliminar_paquete(paquete);
 }
@@ -1121,7 +1121,7 @@ t_string_4enteros* recibir_string_4enteros(int socket)
 }
 t_string_5enteros* recibir_string_5enteros(int socket)
 {
-	t_string_5enteros* nuevo_string_5enteros = malloc(sizeof(t_string_4enteros));
+	t_string_5enteros* nuevo_string_5enteros = malloc(sizeof(t_string_5enteros));
 	int size = 0;
 	char *buffer;
 	int desp = 0;
@@ -1379,7 +1379,7 @@ void enviar_string_entero(int client_socket, char* parameter, int x, int codOP){
 
 void enviar_string_enterov2(int client_socket, char* parameter, int x, int codOP){
     t_paquete* paquete = crear_paquete_op_code(codOP); 
-		agregar_a_paquete(paquete, parameter,sizeof(parameter)+1); 
+		agregar_a_paquete(paquete, parameter,strlen(parameter)+1); 
     agregar_entero_a_paquete(paquete,x);
     enviar_paquete(paquete, client_socket);
     eliminar_paquete(paquete);

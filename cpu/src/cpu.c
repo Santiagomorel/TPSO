@@ -328,7 +328,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             //Se deberá devolver el ce actualizado al Kernel para su finalización.
             log_trace(cpu_logger, "Instruccion EXIT ejecutada");
             log_info(cpu_logger, "PID: %d - Ejecutando: %s", ce->id, instruction[0]);
-
+            imprimir_registros(ce->registros_cpu, cpu_logger);
             enviar_ce(socket_kernel, ce, SUCCESS, cpu_logger);
 
             //end_process = 1; // saca del while de ejecucion
@@ -626,7 +626,7 @@ void enviar_ce_con_string(int client_socket, contexto_ejecucion* ce, char* param
     t_paquete* paquete = crear_paquete_op_code(codOP);
 
     agregar_ce_a_paquete(paquete, ce, cpu_logger);
-    agregar_a_paquete(paquete, parameter, sizeof(parameter)+1);
+    agregar_a_paquete(paquete, parameter, strlen(parameter)+1);
     // agregar_string_a_paquete(paquete, parameter); 
     enviar_paquete(paquete, client_socket);
     eliminar_paquete(paquete);
@@ -661,7 +661,7 @@ void enviar_ce_con_string_entero(int client_socket, contexto_ejecucion* ce, char
         log_error(cpu_logger,"el entero del archivo es %s", parameter);
     agregar_entero_a_paquete(paquete, atoi(x));
 
-    agregar_a_paquete(paquete, parameter,sizeof(parameter)+1); 
+    agregar_a_paquete(paquete, parameter,strlen(parameter)+1); 
     enviar_paquete(paquete, client_socket);
     eliminar_paquete(paquete);
     
@@ -684,7 +684,7 @@ void enviar_ce_con_string_2_enteros(int client_socket, contexto_ejecucion* ce, c
     agregar_ce_a_paquete(paquete, ce, cpu_logger);
     agregar_entero_a_paquete(paquete, x);
     agregar_entero_a_paquete(paquete, atoi(y));
-    agregar_a_paquete(paquete, parameter,sizeof(parameter) +1 ); 
+    agregar_a_paquete(paquete, parameter,strlen(parameter) +1 ); 
     enviar_paquete(paquete, client_socket);
     eliminar_paquete(paquete);
     
@@ -696,7 +696,7 @@ void enviar_ce_con_string_3_enteros(int client_socket, contexto_ejecucion* ce, c
     agregar_entero_a_paquete(paquete, x);
     agregar_entero_a_paquete(paquete, (uint32_t) atoi(y));
     agregar_entero_a_paquete(paquete, z);
-    agregar_a_paquete(paquete, parameter,sizeof(parameter)+1); 
+    agregar_a_paquete(paquete, parameter,strlen(parameter)+1); 
     enviar_paquete(paquete, client_socket);
     eliminar_paquete(paquete);
     

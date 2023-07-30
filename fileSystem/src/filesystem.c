@@ -225,15 +225,18 @@ t_fcb *levantar_fcb(char *f_name)
   strcat(path, ".config");
   log_warning(logger_filesystem, "levanto fcb con path: %s", path);
   t_config *FCB = config_create(path);
-  t_fcb *fcb = malloc(sizeof(t_fcb));
-  strcpy(fcb->f_name, f_name); // Si la cadena de origen tiene menos de 29 caracteres, los faltantes se llenan con caracteres nulos
+  log_warning(logger_filesystem, "cree la config");
+  t_fcb *fcb2 = malloc(sizeof(t_fcb));
+  log_debug(logger_filesystem, "por hacer el strcpy");
+  strcpy(fcb2->f_name, f_name); // Si la cadena de origen tiene menos de 29 caracteres, los faltantes se llenan con caracteres nulos
   // fcb->f_name = '\0';           // Agrega el carácter nulo al final
-  fcb->f_size = config_get_int_value(FCB, "TAMANIO_ARCHIVO");
-  fcb->f_dp = config_get_int_value(FCB, "PUNTERO_DIRECTO");
-  fcb->f_ip = config_get_int_value(FCB, "PUNTERO_INDIRECTO");
+  fcb2->f_size = config_get_int_value(FCB, "TAMANIO_ARCHIVO");
+  fcb2->f_dp = config_get_int_value(FCB, "PUNTERO_DIRECTO");
+  fcb2->f_ip = config_get_int_value(FCB, "PUNTERO_INDIRECTO");
+  log_debug(logger_filesystem, "por destruir la config");
   config_destroy(FCB);
 
-  return fcb;
+  return fcb2;
 }
 
 int calcular_bloques_por_size(uint32_t size)
@@ -372,7 +375,7 @@ void procesar_conexion()
         {
         case F_OPEN:
             char* nombre_archivo = recibir_string(cliente_socket, logger);
-            log_trace(logger_filesystem, "recibi el nombre de archivo");
+            log_trace(logger_filesystem, "recibi el nombre de archivo: %s", nombre_archivo);
 
             archivo_ok = abrir_archivo(nombre_archivo);
             log_trace(logger_filesystem, "abrimos el archivo");
@@ -418,34 +421,11 @@ void procesar_conexion()
             
             log_warning(logger,"el stream es :%s",stream);
 
-            //char* cadena_parseada = imprimir_cadena(stream_leido, cant);
-            //printf("Cadena parseada: %s\n", cadena_parseada);
             
-            /*
-            void* buffer_leido = malloc(sizeof(uint32_t)*3 + cant + sizeof(int));
-            despl = 0;
-            cod_op_fs = F_READ;
-            memcpy(buffer_leido + despl, &cod_op_fs, sizeof(int));
-            despl += sizeof(int);
-            memcpy(buffer_leido + despl, &pid, sizeof(uint32_t));
-            despl += sizeof(uint32_t);
-            memcpy(buffer_leido + despl, &dir_fisica, sizeof(uint32_t));
-            despl += sizeof(uint32_t);
-            memcpy(buffer_leido + despl, &cant, sizeof(uint32_t));
-            despl += sizeof(uint32_t);
-            memcpy(buffer_leido + despl, stream_leido, cant);
-            despl += cant;
-*/
-
+    
             enviar_string_3enteros(socket_memoria, stream, pid, dir_fisica, cant, F_READ);
             log_trace(logger_filesystem, "enviamos el empaquetado de datos");
-            /*
-            if(send(socket_memoria, buffer_leido, sizeof(uint32_t)*3 + cant + sizeof(int), NULL) == -1 ) {
-            printf("Hubo un problema\n");
-            }*/
-            
-            //recv(socket_memoria, &archivo_ok, sizeof(uint32_t), NULL);
-
+   
             int cod_op = recibir_operacion(socket_memoria);
             log_trace(logger_filesystem, "recibimos operacion de memoria");
             enviar_CodOp(cliente_socket, cod_op); //CORREGIR CODOP PARA QUE KERNEL SIGA EJECUTANDO
@@ -469,32 +449,11 @@ void procesar_conexion()
 
 
             log_info(logger, "Escribir archivo: %s - Puntero: %d - Memoria: %d - Tamaño: %d" ,f_name2, puntero, dir_fisica2, cant2);
-            // Pedir datos a memoria
-            /*
-            void* buffer_memoria = malloc(sizeof(int) + sizeof(uint32_t)*3);
-            cod_op_fs = F_WRITE;
-            despl = 0;
-            memcpy(buffer_memoria, &cod_op_fs, sizeof(int));
-            despl += sizeof(int);
-            memcpy(buffer_memoria + despl, &pid2, sizeof(uint32_t));
-            despl += sizeof(uint32_t);
-            memcpy(buffer_memoria + despl, &dir_fisica2, sizeof(uint32_t));
-            despl += sizeof(uint32_t);
-            memcpy(buffer_memoria + despl, &cant2, sizeof(uint32_t));
-            despl += sizeof(uint32_t);
-*/
+
 
             enviar_3enteros(socket_memoria, pid2, dir_fisica2, cant2, F_WRITE);
             log_trace(logger_filesystem, "enviamos el empaquetado de datos");
-            //send(socket_memoria, buffer_memoria, sizeof(int) + sizeof(uint32_t)*3, NULL);
-            //free(buffer_memoria);
 
-            
-            //char* valor_a_escribir = malloc(cant2);
-            //int codop = recibir_operacion(socket_memoria);
-            //log_trace(logger_filesystem, "recibimos operacion de memoria");
-            //valor_a_escribir = recibir_string(socket_memoria, logger_filesystem);
-            //log_trace(logger_filesystem, "recibimos el string: %s de memoria para escribir", valor_a_escribir);
             char* buffer_escritura = malloc(cant2);
             recv(socket_memoria, buffer_escritura, cant2, NULL);
             eferrait(f_name2, puntero, cant2, buffer_escritura);
@@ -682,9 +641,11 @@ void truncar_archivo(char *f_name, uint32_t new_size)
 void eferrait(char *f_name, uint32_t offset, uint32_t cantidad, char *data)
 {
   t_fcb *fcb = levantar_fcb(f_name);
+  log_debug(logger_filesystem, "Ya levanté fcb");
   int desplazamiento = 0;
   int bloque_inicial = offset / BLOCK_SIZE;
   int bloque_final = (offset + cantidad) / BLOCK_SIZE;
+  log_debug(logger_filesystem, "por entrar al if");
 
   if (bloque_inicial == 0 && bloque_final == 0)
   {
