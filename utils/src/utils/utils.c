@@ -729,10 +729,11 @@ void imprimir_tabla_segmentos(t_list* tabla_segmentos, t_log* logger){
 
 void liberar_ce(contexto_ejecucion* ce){
 	//free(ce->id); // seg fault por tratar de hacer un free a un int
-	free(ce->instrucciones); // probablemente tengamos tambien que liberar las instrucciones 1 a 1 (me da paja)
+	string_array_destroy(ce->instrucciones); // probablemente tengamos tambien que liberar las instrucciones 1 a 1 (me da paja)
 	//free(ce->program_counter); // seg fault por tratar de hacer un free a un int
 	free(ce->registros_cpu);
-	//liberar_tabla(ce->tabla_segmentos); falta hacer
+	list_destroy(ce->tabla_segmentos, (void*)free);
+	free(ce);
 }
 
 char* obtenerCodOP(int cop){
