@@ -48,7 +48,7 @@ int main(int argc, char **argv)
     // for(int i = 0; i < 3; i++) // tirar 2 consolas, esperar a que terminen, luego tirar la 3ra para cortar el programa
     while (1)
     {
-        log_trace(kernel_logger, "esperando cliente consola");
+        //log_trace(kernel_logger, "esperando cliente consola");
         socket_cliente = esperar_cliente(socket_servidor_kernel, kernel_logger);
         log_trace(kernel_logger, "entro una consola con el socket: %d", socket_cliente);
 
@@ -723,34 +723,34 @@ void copiar_PC_ce_a_pcb(contexto_ejecucion* ce, t_pcb* pcb)
 
 void copiar_registros_pcb_a_ce(t_pcb* pcb, contexto_ejecucion* ce)
 {
-    strcpy(ce->registros_cpu->AX , pcb->registros_cpu->AX);
-    strcpy(ce->registros_cpu->BX , pcb->registros_cpu->BX);
-    strcpy(ce->registros_cpu->CX , pcb->registros_cpu->CX);
-    strcpy(ce->registros_cpu->DX , pcb->registros_cpu->DX);
-	strcpy(ce->registros_cpu->EAX , pcb->registros_cpu->EAX);
-	strcpy(ce->registros_cpu->EBX , pcb->registros_cpu->EBX);
-	strcpy(ce->registros_cpu->ECX , pcb->registros_cpu->ECX);
-	strcpy(ce->registros_cpu->EDX , pcb->registros_cpu->EDX);
-	strcpy(ce->registros_cpu->RAX , pcb->registros_cpu->RAX);
-	strcpy(ce->registros_cpu->RBX , pcb->registros_cpu->RBX);
-	strcpy(ce->registros_cpu->RCX , pcb->registros_cpu->RCX);
-	strcpy(ce->registros_cpu->RDX , pcb->registros_cpu->RDX);
+    strncpy(ce->registros_cpu->AX , pcb->registros_cpu->AX, 4);
+    strncpy(ce->registros_cpu->BX , pcb->registros_cpu->BX, 4);
+    strncpy(ce->registros_cpu->CX , pcb->registros_cpu->CX, 4);
+    strncpy(ce->registros_cpu->DX , pcb->registros_cpu->DX, 4);
+	strncpy(ce->registros_cpu->EAX , pcb->registros_cpu->EAX, 8);
+	strncpy(ce->registros_cpu->EBX , pcb->registros_cpu->EBX, 8);
+	strncpy(ce->registros_cpu->ECX , pcb->registros_cpu->ECX, 8);
+	strncpy(ce->registros_cpu->EDX , pcb->registros_cpu->EDX, 8);
+	strncpy(ce->registros_cpu->RAX , pcb->registros_cpu->RAX, 16);
+	strncpy(ce->registros_cpu->RBX , pcb->registros_cpu->RBX, 16);
+	strncpy(ce->registros_cpu->RCX , pcb->registros_cpu->RCX, 16);
+	strncpy(ce->registros_cpu->RDX , pcb->registros_cpu->RDX, 16);
 }
 
 void copiar_registros_ce_a_pcb(contexto_ejecucion* ce, t_pcb* pcb)
 {
-    strcpy(pcb->registros_cpu->AX , ce->registros_cpu->AX);
-    strcpy(pcb->registros_cpu->BX , ce->registros_cpu->BX);
-    strcpy(pcb->registros_cpu->CX , ce->registros_cpu->CX);
-    strcpy(pcb->registros_cpu->DX , ce->registros_cpu->DX);
-	strcpy(pcb->registros_cpu->EAX , ce->registros_cpu->EAX);
-	strcpy(pcb->registros_cpu->EBX , ce->registros_cpu->EBX);
-	strcpy(pcb->registros_cpu->ECX , ce->registros_cpu->ECX);
-	strcpy(pcb->registros_cpu->EDX , ce->registros_cpu->EDX);
-	strcpy(pcb->registros_cpu->RAX , ce->registros_cpu->RAX);
-	strcpy(pcb->registros_cpu->RBX , ce->registros_cpu->RBX);
-	strcpy(pcb->registros_cpu->RCX , ce->registros_cpu->RCX);
-	strcpy(pcb->registros_cpu->RDX , ce->registros_cpu->RDX);
+    strncpy(pcb->registros_cpu->AX , ce->registros_cpu->AX, 4);
+    strncpy(pcb->registros_cpu->BX , ce->registros_cpu->BX, 4);
+    strncpy(pcb->registros_cpu->CX , ce->registros_cpu->CX, 4);
+    strncpy(pcb->registros_cpu->DX , ce->registros_cpu->DX, 4);
+	strncpy(pcb->registros_cpu->EAX , ce->registros_cpu->EAX, 8);
+	strncpy(pcb->registros_cpu->EBX , ce->registros_cpu->EBX, 8);
+	strncpy(pcb->registros_cpu->ECX , ce->registros_cpu->ECX, 8);
+	strncpy(pcb->registros_cpu->EDX , ce->registros_cpu->EDX, 8);
+	strncpy(pcb->registros_cpu->RAX , ce->registros_cpu->RAX, 16);
+	strncpy(pcb->registros_cpu->RBX , ce->registros_cpu->RBX, 16);
+	strncpy(pcb->registros_cpu->RCX , ce->registros_cpu->RCX, 16);
+	strncpy(pcb->registros_cpu->RDX , ce->registros_cpu->RDX, 16);
 }
 
 void copiar_tabla_segmentos_pcb_a_ce(t_pcb* pcb, contexto_ejecucion* ce)
@@ -761,7 +761,7 @@ void copiar_tabla_segmentos_pcb_a_ce(t_pcb* pcb, contexto_ejecucion* ce)
 // ----------------------- Funciones Dispatch Manager ----------------------- //
 void manejar_dispatch()
 {
-    log_trace(kernel_logger, "Entre por manejar dispatch");
+    //log_trace(kernel_logger, "Entre por manejar dispatch");
     while(1){
         int cod_op = recibir_operacion(cpu_dispatch_connection);
         switch(cod_op){
@@ -1200,6 +1200,7 @@ void atender_block_io()
     pthread_create(&hiloIO, NULL, (void*) rutina_io, (void*) (thread_args*) argumentos);
     pthread_detach(hiloIO);
 
+    
     liberar_ce_string(estructura_block_io);
 }
 
@@ -1774,6 +1775,7 @@ void atender_lectura_archivo(){
 
     sem_post(&fin_ejecucion);
 
+    
     liberar_ce_string_2enteros(estructura_leer_archivo);
 
 }
@@ -1857,6 +1859,7 @@ void atender_escritura_archivo(){
     pthread_detach(hiloWrite);
 
     sem_post(&fin_ejecucion);
+    
     
     liberar_ce_string_2enteros(estructura_escribir_archivo);
 }
@@ -1948,6 +1951,7 @@ void atender_modificar_tamanio_archivo(){
     pthread_detach(hiloTruncate);
 
     sem_post(&fin_ejecucion);
+    
     
     liberar_ce_string_entero(estructura_mod_tam_archivo);
 }

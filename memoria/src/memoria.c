@@ -25,15 +25,15 @@ int main(int argc, char **argv)
 
     // ----------------------- cargo la configuracion de memoria ----------------------- //
 
-    log_trace(log_memoria, "antes de cargar la configuracion de Memoria");
+    //log_trace(log_memoria, "antes de cargar la configuracion de Memoria");
 
     load_config();
 
-    log_trace(log_memoria, "cargo la configuracion de Memoria");
+    //log_trace(log_memoria, "cargo la configuracion de Memoria");
 
     levantar_estructuras_administrativas();
 
-    log_trace(log_memoria, "levanto las estructuras");
+    //log_trace(log_memoria, "levanto las estructuras");
     pthread_mutex_init(&mutex_memoria, NULL);
     sem_init(&finModulo, 0, 0);
 
@@ -49,7 +49,7 @@ int main(int argc, char **argv)
     pthread_create(&atiende_cliente_CPU, NULL, (void *)recibir_cpu, (void *)socket_cliente_memoria_CPU);
     pthread_detach(atiende_cliente_CPU);
 
-    log_trace(log_memoria, "esperando cliente fileSystem");
+    //log_trace(log_memoria, "esperando cliente fileSystem");
     socket_cliente_memoria_FILESYSTEM = esperar_cliente(socket_servidor_memoria, log_memoria);
     pthread_create(&atiende_cliente_FILESYSTEM, NULL, (void *)recibir_fileSystem, (void *)socket_cliente_memoria_FILESYSTEM);
     pthread_detach(atiende_cliente_FILESYSTEM);
@@ -447,7 +447,7 @@ void borrar_segmento(uint32_t base, uint32_t limite) {
 }
 
 void escribir(uint32_t dir_fisca, void* data, uint32_t size) {
-    log_warning(log_memoria,"el size en escribir es :%d", size);
+    //log_warning(log_memoria,"el size en escribir es :%d", size);
     memcpy(ESPACIO_USUARIO + dir_fisca, data, size);
 }
 
@@ -500,12 +500,12 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
     int codigoOP = 0;
     while (codigoOP != -1)
     {
-        log_warning(log_memoria,"me quedo esperando");
+        //log_warning(log_memoria,"me quedo esperando");
         int codigoOperacion = recibir_operacion(SOCKET_CLIENTE_KERNEL);
         switch (codigoOperacion)
         {
         case INICIAR_ESTRUCTURAS:
-            log_trace(log_memoria, "recibi el op_cod %d INICIAR_ESTRUCTURAS", codigoOperacion);
+            //log_trace(log_memoria, "recibi el op_cod %d INICIAR_ESTRUCTURAS", codigoOperacion);
             //- Creación de Proceso: “Creación de Proceso PID: <PID>”
             
             uint32_t pid = recibir_entero_u32(SOCKET_CLIENTE_KERNEL, log_memoria);
@@ -585,7 +585,7 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU)
 {
 
     enviar_mensaje("recibido cpu", SOCKET_CLIENTE_CPU);
-    log_trace(log_memoria, "recibido cpu");
+    //log_trace(log_memoria, "recibido cpu");
     int codigoOP = 0;
     while (codigoOP != -1)
     {
@@ -619,7 +619,7 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU)
 
         case MOV_OUT: //(Dirección Fisica, Registro): Lee el valor del Registro y lo escribe en la dirección física de memoria obtenida a partir de la Dirección Lógica.
             pthread_mutex_lock(&mutex_memoria);
-            log_warning(log_memoria,"estoy en mov_out");
+            //log_warning(log_memoria,"estoy en mov_out");
             t_string_3enteros* mov_out_data = recibir_string_3enteros(SOCKET_CLIENTE_CPU);
             uint32_t dir_fisica = mov_out_data->entero1;
             uint32_t pid_mov_out = mov_out_data->entero2;
@@ -627,7 +627,7 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU)
             char* escritura = mov_out_data->string;
 
             char* valor = malloc(tam_escrito);
-            strcpy(valor,escritura);
+            strncpy(valor,escritura, strlen(escritura)+1);
 
             // Para probar
             // char* cadena = imprimir_cadena(valor, tam_escrito);
@@ -671,6 +671,7 @@ void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM)
             break;
 
         case F_READ:
+        pthread_mutex_lock(&mutex_memoria);
             t_string_3enteros* fread_data = recibir_string_3enteros(SOCKET_CLIENTE_FILESYSTEM);
             uint32_t pid_leer_archivo = fread_data->entero1;
             uint32_t dir_fisica_leer_archivo = fread_data->entero2;
@@ -689,6 +690,7 @@ void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM)
             break;
         
         case F_WRITE:
+        pthread_mutex_lock(&mutex_memoria);
             t_3_enteros* fwrite_data = recibir_3_enteros(SOCKET_CLIENTE_FILESYSTEM);
             uint32_t pid_escribir_archivo = fwrite_data->entero1;
             uint32_t dir_fisica_escribir_archivo = fwrite_data->entero2;
