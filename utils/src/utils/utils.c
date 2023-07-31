@@ -1032,7 +1032,7 @@ void enviar_string_3enteros(int client, char* string, int x, int y, int z, int c
     enviar_paquete(paquete, client);
     eliminar_paquete(paquete);
 }
-void enviar_string_4enteros(int client, char* string, int x, int y, int z, int j, int codOP)
+void enviar_string_4enteros(int client, char* string, uint32_t x, uint32_t y, uint32_t z, uint32_t j, int codOP)
 {
 	t_paquete* paquete = crear_paquete_op_code(codOP);
     agregar_entero_a_paquete(paquete, x); 
@@ -1044,7 +1044,7 @@ void enviar_string_4enteros(int client, char* string, int x, int y, int z, int j
     enviar_paquete(paquete, client);
     eliminar_paquete(paquete);
 }
-void enviar_string_5enteros(int client, char* string, int x, int y, int z, int j, int h, int codOP)
+void enviar_string_5enteros(int client, char* string, uint32_t x, uint32_t y, uint32_t z, uint32_t j, uint32_t h, int codOP)
 {
 	t_paquete* paquete = crear_paquete_op_code(codOP);
     agregar_entero_a_paquete(paquete, x); 

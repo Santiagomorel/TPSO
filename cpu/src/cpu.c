@@ -428,8 +428,8 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
 
             //desalojo_por_archivo = 1;
 
-            sale_proceso = 1;
             }
+            sale_proceso = 1;
             break;
         case I_F_WRITE:
             log_trace(cpu_logger, "Por ejecutar instruccion F_WRITE");
@@ -505,6 +505,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
                 //“PID: <PID> - Error SEG_FAULT- Segmento: <NUMERO SEGMENTO> - Offset: <OFFSET> - Tamaño: <TAMAÑO>”
                 enviar_ce(socket_kernel, ce, SEG_FAULT, cpu_logger);
                 sigsegv = 0;
+                sale_proceso = 1;
             }
 
             break;
@@ -541,6 +542,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
                 //“PID: <PID> - Error SEG_FAULT- Segmento: <NUMERO SEGMENTO> - Offset: <OFFSET> - Tamaño: <TAMAÑO>”
                 enviar_ce(socket_kernel, ce, SEG_FAULT, cpu_logger);
                 sigsegv = 0;
+                sale_proceso = 1;
             }
             break;
 

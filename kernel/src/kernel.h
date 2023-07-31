@@ -7,6 +7,8 @@
 #define PUERTO_KERNEL ""
 #define MAX_RECURSOS 20
 // Variables y structs globales
+
+int okthread = 1;
 typedef struct{
 
     char* ip_memoria;
@@ -41,9 +43,8 @@ typedef struct
 typedef struct
 {
 	char nombreArchivo[100];
-	t_entradaTAAP* puntero; // apunta a la entrada tabla por procesos
 	uint32_t tamanioArchivo;
-	t_list *lista_block_archivo;
+	t_list *lista_block_archivo;  //guarda TAAP
 	pthread_mutex_t m_lista_block_archivo;
 }t_entradaTGAA;
 
