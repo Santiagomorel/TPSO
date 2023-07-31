@@ -17,9 +17,9 @@ int main(int argc, char **argv)
     }
         load_config();
         
-        log_warning(logger_memoria, "Levanto config");
+        log_warning(log_memoria, "Levanto config");
 		levantar_estructuras_administrativas();
-        log_warning(logger_memoria, "Levanto estructuras administrativas");
+        log_warning(log_memoria, "Levanto estructuras administrativas");
 		//run_tests();
 		return EXIT_SUCCESS;
 	}
@@ -37,11 +37,11 @@ int main(int argc, char **argv)
         exit(1);
     }
         load_config();
-		log_warning(logger_memoria, "Levanto config");
+		log_warning(log_memoria, "Levanto config");
 		levantar_estructuras_administrativas();
-        log_warning(logger_memoria, "Levanto estructuras administrativas");
+        log_warning(log_memoria, "Levanto estructuras administrativas");
 		pthread_mutex_init(&mutex_memoria, NULL);
-        log_warning(logger_memoria, "Inicio mutex");
+        log_warning(log_memoria, "Inicio mutex");
 
     log_trace(log_memoria, "cargo la configuracion de Memoria");
 
@@ -58,18 +58,18 @@ int main(int argc, char **argv)
 
     pthread_t atiende_cliente_CPU, atiende_cliente_FILESYSTEM, atiende_cliente_KERNEL;
 
-    log_trace(logger_memoria, "esperando cliente CPU");
-    socket_cliente_memoria_CPU = esperar_cliente(socket_servidor_memoria, logger_memoria);
+    log_trace(log_memoria, "esperando cliente CPU");
+    socket_cliente_memoria_CPU = esperar_cliente(socket_servidor_memoria, log_memoria);
     pthread_create(&atiende_cliente_CPU, NULL, (void *)recibir_cpu, (void *)socket_cliente_memoria_CPU);
     pthread_detach(atiende_cliente_CPU);
 
-    log_trace(logger_memoria, "esperando cliente fileSystem");
-    socket_cliente_memoria_FILESYSTEM = esperar_cliente(socket_servidor_memoria, logger_memoria);
+    log_trace(log_memoria, "esperando cliente fileSystem");
+    socket_cliente_memoria_FILESYSTEM = esperar_cliente(socket_servidor_memoria, log_memoria);
     pthread_create(&atiende_cliente_FILESYSTEM, NULL, (void *)recibir_fileSystem, (void *)socket_cliente_memoria_FILESYSTEM);
     pthread_detach(atiende_cliente_FILESYSTEM);
 
-    log_trace(logger_memoria, "esperando cliente kernel");
-    socket_cliente_memoria_KERNEL = esperar_cliente(socket_servidor_memoria, logger_memoria);
+    log_trace(log_memoria, "esperando cliente kernel");
+    socket_cliente_memoria_KERNEL = esperar_cliente(socket_servidor_memoria, log_memoria);
     pthread_create(&atiende_cliente_KERNEL, NULL, (void *)recibir_kernel, (void *)socket_cliente_memoria_KERNEL);
     pthread_detach(atiende_cliente_KERNEL);
 
@@ -90,7 +90,7 @@ int main(int argc, char **argv)
     //log_trace(log_memoria, "Servidor Memoria listo para recibir al cliente");
     //sem_wait(&finModulo);
     sem_wait(&finModulo);
-    log_warning(logger_memoria, "FINALIZA EL MODULO DE MEMORIA");
+    log_warning(log_memoria, "FINALIZA EL MODULO DE MEMORIA");
     end_program();
 
     return 0;
@@ -520,7 +520,7 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
         switch (codigoOperacion)
         {
         case MENSAJE:
-         log_warning(logger_memoria, "recibi el op_cod %d MENSAJE , codigoOperacion", codigoOperacion);
+         log_warning(log_memoria, "recibi el op_cod %d MENSAJE , codigoOperacion", codigoOperacion);
 
             break;
         case INICIAR_ESTRUCTURAS:
@@ -598,11 +598,11 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
             break;
         // se desconecta kernel
         default:
-            log_trace(logger_memoria, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
+            log_trace(log_memoria, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
             break;
         }
     }
-    log_warning(logger_memoria, "se desconecto kernel");
+    log_warning(log_memoria, "se desconecto kernel");
     sem_post(&finModulo);
 }
 
@@ -610,7 +610,7 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU)
 {
 
     enviar_mensaje("recibido cpu", SOCKET_CLIENTE_CPU);
-    log_trace(logger_memoria, "recibido cpu");
+    log_trace(log_memoria, "recibido cpu");
     int codigoOP = 0;
     while (codigoOP != -1)
     {
@@ -675,7 +675,7 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU)
             break;
         }
     }
-    log_warning(logger_memoria, "se desconecto CPU");
+    log_warning(log_memoria, "se desconecto CPU");
 }
 
 void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM)
@@ -735,10 +735,10 @@ void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM)
         break;
 
         default:
-            log_trace(logger_memoria, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
+            log_trace(log_memoria, "recibi el op_cod %d y entro DEFAULT", codigoOperacion);
             break;
         }
     }
-    log_warning(logger_memoria, "se desconecto FILESYSTEM");
+    log_warning(log_memoria, "se desconecto FILESYSTEM");
 }
 

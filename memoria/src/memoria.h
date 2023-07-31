@@ -196,4 +196,3 @@ t_list* adaptar_TDP_salida();
 #endif /*MEMORIA_H_*/
 
 
-#endif

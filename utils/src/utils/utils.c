@@ -734,7 +734,7 @@ void liberar_ce(contexto_ejecucion* ce){
 	string_array_destroy(ce->instrucciones); // probablemente tengamos tambien que liberar las instrucciones 1 a 1 (me da paja)
 	//free(ce->program_counter); // seg fault por tratar de hacer un free a un int
 	free(ce->registros_cpu);
-	list_destroy(ce->tabla_segmentos, (void*)free);
+	//list_destroy_and_destroy_elements(ce->tabla_segmentos, (void*)free);
 	free(ce);
 }
 
