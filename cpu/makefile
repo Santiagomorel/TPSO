@@ -83,8 +83,10 @@ files:
 	mkdir runlogs
 
 .PHONY: default
+default: CFLAGS = $(CDEBUG)
 default: $(BIN)
 	./$(BIN) $(ARGS)
+
 
 .PHONY: start
 start: $(BIN)
@@ -98,10 +100,12 @@ daemon:
 	done
 
 .PHONY: memcheck
+memcheck: CFLAGS = $(CDEBUG)
 memcheck: $(BIN)
 	valgrind --leak-check=full $(MEMCHECK_FLAGS) ./$(BIN) $(ARGS)
 
 .PHONY: helgrind
+helgrind: CFLAGS = $(CDEBUG)
 helgrind: $(BIN)
 	valgrind --tool=helgrind $(HELGRIND_FLAGS) ./$(BIN) $(ARGS)
 

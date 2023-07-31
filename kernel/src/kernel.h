@@ -7,6 +7,8 @@
 #define PUERTO_KERNEL ""
 #define MAX_RECURSOS 20
 // Variables y structs globales
+
+int okthread = 1;
 typedef struct{
 
     char* ip_memoria;
@@ -41,9 +43,8 @@ typedef struct
 typedef struct
 {
 	char nombreArchivo[100];
-	t_entradaTAAP* puntero; // apunta a la entrada tabla por procesos
 	uint32_t tamanioArchivo;
-	t_list *lista_block_archivo;
+	t_list *lista_block_archivo;  //guarda TAAP
 	pthread_mutex_t m_lista_block_archivo;
 }t_entradaTGAA;
 
@@ -118,17 +119,22 @@ char** parsearPorSaltosDeLinea(char*);
 t_registro* crear_registros();
 
 // Variables de parte consola
-int contador_id = 60;
+uint32_t contador_id = 1;
 
 // Declaraciones de parte planificadores
 void cambiar_estado_a(t_pcb*, estados, estados);
-int obtenerPid(t_pcb*);
+uint32_t obtenerPid(t_pcb*);
+char* obtener_nombre_archivo(t_entradaTGAA*);
+bool existeArchivo(char*);
+t_entradaTGAA* obtenerEntrada(char*);
 char* obtenerEstado(estados);
 int estadoActual(t_pcb*);
 void agregar_a_lista_con_sems(t_pcb*, t_list*, pthread_mutex_t);
 void agregar_lista_ready_con_log(t_list*, t_pcb*, char*);
 t_pcb* actualizar_pcb_lget_devuelve_pcb(contexto_ejecucion*, t_list*, pthread_mutex_t);
-
+t_pcb* pcb_lget_devuelve_pcb(contexto_ejecucion*, t_list*, pthread_mutex_t);
+t_pcb* actualizar_pcb_lremove_devuelve_pcb(contexto_ejecucion*, t_list*, pthread_mutex_t);
+t_pcb* pcb_lremove(contexto_ejecucion*, t_list*, pthread_mutex_t);
 
 // Declaraciones de planificador to - ready
 void planificar_sig_to_ready();
@@ -168,6 +174,10 @@ void actualizar_pcb(t_pcb*, contexto_ejecucion*);
 // Declaraciones de fin de proceso
 void atender_final_proceso(int);
 void finalizar_proceso(contexto_ejecucion*, int);
+void liberar_memoria(t_pcb*);
+bool segmento_activo(t_ent_ts*);
+void solicitar_liberacion_segmento(uint32_t, uint32_t, uint32_t, uint32_t);
+void liberar_archivos_abiertos(t_pcb*);
 void liberar_recursos_pedidos(t_pcb*);
 void enviar_Fin_consola(int);
 
@@ -177,12 +187,11 @@ void sacar_rafaga_ejecutada(t_pcb*);
 void iniciar_nueva_espera_ready(t_pcb*);
 
 // Declaraciones manejo de recursos
-int recurso_no_existe(char*);
+uint32_t recurso_no_existe(char*);
 int obtener_id_recurso(char*);
-int id_proceso_en_lista(t_list*);
-int obtener_instancias_recurso(int);
-void restar_instancia(int);
-void sumar_instancia(int);
+uint32_t obtener_instancias_recurso(int);
+void restar_instancia(int, contexto_ejecucion*);
+void sumar_instancia(int, contexto_ejecucion*);
 void sumar_instancia_exit(int, t_pcb*);
 
 // Declaraciones WAIT_RECURSO
@@ -208,29 +217,26 @@ void rutina_io(thread_args*);
 void atender_crear_segmento();
 
 // Declaraciones COMPACTACION
-void atender_compactacion(int, int, int);
-void actualizar_ts_x_proceso();
-t_pcb* pcb_en_lista_coincide(t_list*, t_proceso*);
-void eliminar_tabla_segmentos(t_list*);
+void atender_compactacion(uint32_t, uint32_t, uint32_t);
+void recibir_nuevas_bases();
+t_pcb* pcb_en_lista_coincide(t_list*, uint32_t);
 
 // Variables COMPACTACION
 int f_execute;
 
 // Declaraciones BORRAR_SEGMENTO
 void atender_borrar_segmento();
-int obtener_tamanio_segmento(t_pcb* pcb,int id_segmento_elim);
-int obtener_base_segmento(t_pcb* pcb,int id_segmento_elim);
+void limpiar_tabla_segmentos(t_list*);
 
 //Declaraciones ABRIR_ARCHIVO
 void atender_apertura_archivo();
-char* obtener_nombre_archivo(t_entradaTGAA*);
-bool existeArchivo(char*);
 t_list* nombre_en_lista_coincide(t_list*, char* );
 t_list* nombre_en_lista_nombres_coincide(t_list* , char* );
+t_list* nombre_en_lista_coincide_TAAP(t_list* tabla, char* nombre);
 void crear_entrada_TAAP(char*,t_entradaTAAP*);
 void crear_entrada_TGAA(char*,t_entradaTAAP*);
 bool encontrar_nombre(char*);
-t_entradaTGAA* obtenerEntrada(char* );
+
 
 //Declaraciones CERRAR_ARCHIVO
 void atender_cierre_archivo();
@@ -247,9 +253,9 @@ void atender_lectura_archivo();
 typedef struct{
     t_pcb* pcb;
     char nombre [100];
-    int puntero;
-    int bytes;
-    int offset;
+    uint32_t puntero;
+    uint32_t bytes;
+    uint32_t dir_fisica;
 }thread_args_read;
 
 void rutina_read(thread_args_read*);
@@ -259,9 +265,10 @@ void atender_escritura_archivo();
 typedef struct{
     t_pcb* pcb;
     char nombre [100]; 
-    int puntero;
-    int bytes;
-    int offset;
+    uint32_t puntero;
+    uint32_t bytes;
+    uint32_t offset;
+    uint32_t dir_fisica;
 }thread_args_write;
 
 void rutina_write(thread_args_write*);
@@ -274,7 +281,7 @@ void desbloquear_FS();
 typedef struct{
     t_pcb* pcb;
     char nombre [100];
-    int tamanio;
+    uint32_t tamanio;
 }thread_args_truncate;
 
 void atender_modificar_tamanio_archivo();

@@ -16,6 +16,7 @@
 #include <commons/temporal.h>
 #include <commons/collections/list.h>
 #include <commons/bitarray.h>
+#include <commons/memory.h>
 #include <string.h>
 #include <assert.h>
 #include <errno.h>
@@ -40,6 +41,14 @@ t_list* recibir_paquete(int);
 void recibir_mensaje(int,t_log*);
 int recibir_operacion(int);
 void recieve_handshake(int);
+
+int server_escuchar(t_log *logger, int server_socket, void *(*procesar_conexion)(void *));
+
+typedef struct
+{
+	t_log *log;
+	int socket;
+} t_conexion;
 
 /*    Definiciones de Funcionalidad para Cliente    */
 
@@ -79,12 +88,14 @@ typedef enum
 	CREATE_SEGMENT,
 	DELETE_SEGMENT,
 	COMPACTAR,
+	OK_COMPACTACION,
 	SIN_ESPACIO,
 	ASK_COMPACTAR,
 	// -------KERNEL->FILESYSTEM --------
 	F_TRUNCATE,
 	F_WRITE,
 	F_WRITE_OK,
+	F_READ_OK,
 	F_READ,
 	F_OPEN,
 	F_CREATE,
@@ -112,13 +123,52 @@ typedef enum
 	NECESITO_COMPACTAR,
 	DIR_FISICA,
 	VALOR_A_RECIBIR,	
-	MEMORIA_SEGMENTO_CREADO,
 	CONFIG_MEMORIA,
 	FIN_CONSOLA,		
 	OK,
     FAIL = -1,
 	NUEVO_FCB_OK,
 } op_code;
+
+// codOPs juanpi
+typedef enum
+{
+	HANDSHAKE_CONSOLA,
+	HANDSHAKE_KERNEL,
+	HANDSHAKE_CPU,
+	HANDSHAKE_FILESYSTEM,
+	HANDSHAKE_MEMORIA,
+	PAQUETE_INSTRUCCIONES,
+	NUEVO_CONTEXTO_PCB,
+	CREATE_SEGTABLE,
+	MEMORIA_CREATE_SEGMENT,
+	MEMORIA_FREE_SEGMENT,
+	MEMORIA_MOV_IN,
+	MEMORIA_MOV_OUT,
+	TRUNCAR_ARCHIVO
+} cod_op;
+
+typedef enum
+{
+	CPU_EXIT,
+	CPU_YIELD,
+	CPU_IO,
+	CPU_WAIT, 
+	CPU_SIGNAL,
+	CPU_CREATE_SEGMENT,
+	CPU_DELETE_SEGMENT,
+	EXIT_RESOURCE_NOT_FOUND,
+	EXIT_OUT_OF_MEMORY,
+	MEMORIA_NECESITA_COMPACTACION,
+	MEMORIA_SEGMENTO_CREADO,
+	CPU_SEG_FAULT,
+	CPU_F_OPEN,
+  	CPU_F_CLOSE,
+  	CPU_F_SEEK,
+  	CPU_F_TRUNCATE,
+  	CPU_EFERRID,
+  	CPU_EFERRAIT
+} cod_op_kernel;
 
 typedef enum { // Los estados que puede tener un PCB
     NEW,
@@ -130,17 +180,27 @@ typedef enum { // Los estados que puede tener un PCB
 } estados;
 
 typedef struct{
-	int id_segmento;
-	int direccion_base;		//falta definir tipo
-	int tamanio_segmento;
+	uint32_t id_segmento;
+	uint32_t direccion_base;		//falta definir tipo
+	uint32_t tamanio_segmento;
 } t_segmento;
 
+//t_segmento juanpi => comento el anterior
+
 typedef struct {
-    int pid;
-    int id;
-    int base;
-    int limite;
-} t_segmento_v2; // Para marcar un segmento de la memoria
+    uint32_t pid;
+    uint32_t id_segmento;
+    uint32_t direccion_base;
+    uint32_t tamanio_segmento;
+} t_segmento_memoria; // Para marcar un segmento de la memoria
+
+//de juanpi
+typedef struct {
+    uint32_t id_seg;
+    uint32_t base;
+    uint32_t tam;
+	uint8_t activo;
+} t_ent_ts; // Entrada de la tabla de segmentos
 
 typedef struct{
 	char* archivo;
@@ -163,9 +223,9 @@ typedef struct{
 }t_registro;
 
 typedef struct {
-    int id;
+    uint32_t id;
 	char** instrucciones;
-    int program_counter;
+    uint32_t program_counter;
 	t_registro* registros_cpu;
 	t_list* tabla_segmentos;
 	double estimacion_rafaga;
@@ -195,30 +255,35 @@ typedef struct
 	t_buffer* buffer;
 } t_paquete;
 
+typedef struct
+{
+	op_code codigo_operacion;
+} t_cod;
+
 typedef struct{
-	int id;
+	uint32_t id;
 	t_list* tabla_segmentos;
 }t_proceso;
 
 
 
 typedef struct {
-	int id;
+	uint32_t id;
 	char** instrucciones;
-	int program_counter;
+	uint32_t program_counter;
 	t_registro* registros_cpu;
 	t_list* tabla_segmentos;
 } contexto_ejecucion;
 
 typedef struct{
 	contexto_ejecucion* ce;
-	int entero1;
-	int entero2;
+	uint32_t entero1;
+	uint32_t entero2;
 } t_ce_2enteros;
 
 typedef struct{
 	contexto_ejecucion* ce;
-	int entero;
+	uint32_t entero;
 } t_ce_entero;
 
 typedef struct{
@@ -229,85 +294,119 @@ typedef struct{
 typedef struct{
 	contexto_ejecucion* ce;
 	char* string;
-	int entero;
+	uint32_t entero;
 } t_ce_string_entero;
 typedef struct{
 	contexto_ejecucion* ce;
 	char* string;
-	int entero1;
-	int entero2;
+	uint32_t entero1;
+	uint32_t entero2;
 } t_ce_string_2enteros;
 
 typedef struct{
 	contexto_ejecucion* ce;
 	char* string;
-	int entero1;
-	int entero2;
-	int entero3;
+	uint32_t entero1;
+	uint32_t entero2;
+	uint32_t entero3;
 } t_ce_string_3enteros;
 
 typedef struct{
-	int entero1;
-	int entero2;
+	uint32_t entero1;
+	uint32_t entero2;
 } t_2_enteros;
 
 typedef struct{
 	char* string;
-	int entero1;
+	uint32_t entero1;
 } t_string_entero;
 typedef struct{
 	char* string;
-	int entero1;
-	int entero2;
+	uint32_t entero1;
+	uint32_t entero2;
 } t_string_2enteros;
 
 typedef struct{
 	char* string;
-	int entero1;
-	int entero2;
-	int entero3;
+	uint32_t entero1;
+	uint32_t entero2;
+	uint32_t entero3;
 } t_string_3enteros;
+
+// typedef struct{
+// 	char* string;
+// 	uint32_t entero1;
+// 	uint32_t entero2;
+// 	uint32_t entero3;
+// } t_string_3_u32;
+
 typedef struct{
 	char* string;
-	int entero1;
-	int entero2;
-	int entero3;
-	int entero4;
+	uint32_t entero1;
+	uint32_t entero2;
+	uint32_t entero3;
+	uint32_t entero4;
 } t_string_4enteros;
 
+typedef struct{
+	char* string;
+	uint32_t entero1;
+	uint32_t entero2;
+	uint32_t entero3;
+	uint32_t entero4;
+	uint32_t entero5;
+} t_string_5enteros;
 
 typedef struct{
-	int entero1;
-	int entero2;
-	int entero3;
+	uint32_t entero1;
+	uint32_t entero2;
+	uint32_t entero3;
 } t_3_enteros;
 
 typedef struct{
-	int entero1;
-	int entero2;
-	int entero3;
-	int entero4;
+	uint32_t entero1;
+	uint32_t entero2;
+	uint32_t entero3;
+	uint32_t entero4;
 } t_4_enteros;
+
+
+// typedef struct{
+// 	uint32_t entero1;
+// 	uint32_t entero2;
+// 	uint32_t entero3;
+// } t_3_u32;
+
+// typedef struct{
+// 	uint32_t entero1;
+// 	uint32_t entero2;
+// 	uint32_t entero3;
+// 	uint32_t entero4;
+// } t_4_u32;
+
 typedef struct{
-	int DF;
+	uint32_t DF;
 	char* registro;
-	int PID;
-	int size;
+	uint32_t PID;
+	uint32_t size;
 } recive_mov_out;
 
 int crear_conexion(char* ip, char* puerto);
 void enviar_mensaje(char* mensaje, int socket_cliente);
 t_paquete* crear_paquete(void);
 t_paquete* crear_paquete_op_code(op_code codigo_op);
+t_cod* crear_codigo(op_code codigo_op);
+void enviar_codigo(t_cod*, int);
 t_paquete* crear_super_paquete(void);
-void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio);
-void agregar_entero_a_paquete(t_paquete* , int );
+void agregar_a_paquete(t_paquete* paquete, void* valor, uint32_t tamanio);
+void agregar_entero_a_paquete(t_paquete* , uint32_t );
 void agregar_string_a_paquete(t_paquete *paquete, char* palabra);
 void agregar_array_string_a_paquete(t_paquete* paquete, char** arr);
 void agregar_registros_a_paquete(t_paquete* , t_registro*);
 void enviar_paquete(t_paquete* paquete, int socket_cliente);
 void liberar_conexion(int socket_cliente);
 void eliminar_paquete(t_paquete* paquete);
+void eliminar_codigo(t_cod* codigo);
 void send_handshake(int socket_cliente);
 
 /*    Definiciones de Funcionalidad para Configuracion Inicial    */
@@ -319,11 +418,16 @@ t_log* init_logger(char *file, char *process_name, bool is_active_console, t_log
 /*    Definiciones de Funcionalidad para Serializacion/Deserializacion    */
 
 int leer_entero(char* , int* );
+uint32_t leer_entero_u32(char *, int *);
 t_list* leer_segmento(char* , int* );
 float leer_float(char* , int* );
 char* leer_string(char* , int* );
 char** leer_string_array(char* , int* );
 t_registro * leer_registros(char* , int * );
+
+//Deserializar tabla segmentos V2 JP
+
+t_list* deserializar_tabla_segmentos(void*, uint32_t);
 
 void loggear_pcb(t_pcb* , t_log* );
 void loggear_estado(t_log* , int );
@@ -333,12 +437,12 @@ contexto_ejecucion * recibir_ce(int );
 char* recibir_string(int, t_log*);
 int recibir_entero(int, t_log*);
 
+
 void enviar_paquete_string(int, char*, int, int);
-void enviar_paquete_entero(int , int , int );
+void enviar_paquete_entero(int , uint32_t , int );
 
 void enviar_ce(int, contexto_ejecucion *, int, t_log*);
 void enviar_CodOp(int socket, int codOP);
-void enviar_paquete_entero(int, int, int);
 
 void agregar_ce_a_paquete(t_paquete *, contexto_ejecucion *, t_log*);
 contexto_ejecucion * obtener_ce(t_pcb * pcb);
@@ -356,7 +460,6 @@ t_proceso* recibir_tabla_segmentos_como_proceso(int, t_log*);
 t_list* recibir_tabla_segmentos(int);
 t_list* leer_tabla_segmentos(char*, int*);
 
-t_segmento* crear_segmento(int, int, int);
 
 void enviar_string_entero(int,char*,int,int codOP);
 void enviar_string_enterov2(int,char*,int,int codOP);
@@ -374,14 +477,16 @@ void enviar_3enteros(int client, int x, int y, int z, int codOP);
 void enviar_4enteros(int client, int x, int y, int z, int j, int codOP);
 void enviar_string_2enteros(int, char*, int, int, int);
 void enviar_string_3enteros(int client, char* string, int x, int y, int z, int codOP);
-void enviar_string_4enteros(int client, char* string, int x, int y, int z, int j, int codOP);
+void enviar_string_4enteros(int client, char* string, uint32_t x, uint32_t y, uint32_t z, uint32_t j, int codOP);
+void enviar_string_5enteros(int client, char* string, uint32_t x, uint32_t y, uint32_t z, uint32_t j, uint32_t h, int codOP);
 t_ce_string_3enteros * recibir_ce_string_3enteros(int socket);
 void enviar_3_enteros(int client_socket, int x, int y, int z, int codOP);
 t_ce_string_2enteros* recibir_ce_string_2enteros(int);
 t_3_enteros * recibir_3_enteros(int);
-t_4_enteros * recibir_4_enteros(int);
+t_4_enteros* recibir_4_enteros(int);
 t_string_3enteros* recibir_string_3enteros(int);
 t_string_4enteros* recibir_string_4enteros(int);
+t_string_5enteros* recibir_string_5enteros(int);
 recive_mov_out * recibir_mov_out(int);
 void liberar_ce_2enteros(t_ce_2enteros*);
 void liberar_ce_entero(t_ce_entero*);
@@ -391,4 +496,21 @@ void liberar_ce_string_2enteros(t_ce_string_2enteros*);
 void enviar_todas_tablas_segmentos(int, t_list*, int, t_log*);
 t_list* recibir_todas_tablas_segmentos(int);
 t_proceso* recibir_t_proceso(char*, int*);
+
+t_3_enteros * recibir_3_u32(int);
+// declaraciones de agregar_a_paquete
+void agregar_entero_32_a_paquete(t_paquete*, uint32_t);
+
+// declaraciones de recepcion de datos
+uint32_t recibir_entero_u32(int , t_log*);
+void* recibir_bufferv2(uint32_t* , int);
+
+// declaraciones de segmentos
+t_list* leer_tabla_segmentosv2(char*, int*);
+t_ent_ts* crear_segmento(uint32_t, uint32_t, uint32_t);
+
+
+// declaraciones de lectura de datos
+uint8_t leer_entero_u8(char*, int*);
+
 #endif /* UTILS_H_ */

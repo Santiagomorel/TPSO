@@ -81,15 +81,9 @@ void establecer_conexion(char * ip_memoria, char* puerto_memoria, t_config* conf
 		log_trace(logger, "Error al conectar con Memoria. El servidor no esta activo");
             
 		exit(2);
-	}else{
-		//handshake_cliente(conexion_cpu);
-		enviar_mensaje(ip_memoria, conexion_cpu);
 	}
-
     recibir_operacion(conexion_cpu);
     recibir_mensaje(conexion_cpu, cpu_logger);
-
-
 }
 
 void handshake_servidor(int socket_cliente){
@@ -334,13 +328,11 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             //Se deberá devolver el ce actualizado al Kernel para su finalización.
             log_trace(cpu_logger, "Instruccion EXIT ejecutada");
             log_info(cpu_logger, "PID: %d - Ejecutando: %s", ce->id, instruction[0]);
-
+            imprimir_registros(ce->registros_cpu, cpu_logger);
             enviar_ce(socket_kernel, ce, SUCCESS, cpu_logger);
 
             //end_process = 1; // saca del while de ejecucion
             sale_proceso = 1;
-
-            exit(1);
 
             break;
 
@@ -436,8 +428,8 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
 
             //desalojo_por_archivo = 1;
 
-            sale_proceso = 1;
             }
+            sale_proceso = 1;
             break;
         case I_F_WRITE:
             log_trace(cpu_logger, "Por ejecutar instruccion F_WRITE");
@@ -451,7 +443,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
                 enviar_ce(socket_kernel, ce, SEG_FAULT, cpu_logger);
                 sigsegv = 0;
             }else{
-            enviar_ce_con_string_3_enteros(socket_kernel, ce, instruction[1], direccion_fisica, instruction[3],offset, ESCRIBIR_ARCHIVO); 
+            enviar_ce_con_string_3_enteros(socket_kernel, ce, instruction[1], direccion_fisica, instruction[3], offset, ESCRIBIR_ARCHIVO); 
             }
             //desalojo_por_archivo = 1;
             sale_proceso = 1;
@@ -495,10 +487,10 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s", ce->id, instruction[0], instruction[1], instruction[2]);
 
             char* register_mov_in = instruction[1];
-            int logical_address_mov_in = atoi(instruction[2]);
+            uint32_t logical_address_mov_in = atoi(instruction[2]);
 
             int size_movin = tamanio_registro(register_mov_in);    
-            direccion_fisica = traducir_direccion_logica(logical_address_mov_in, ce, sizeof(register_mov_in));//fijarse si el sizeof(register_mov_in) es correcto
+            direccion_fisica = traducir_direccion_logica(logical_address_mov_in, ce, size_movin);//fijarse si el sizeof(register_mov_in) es correcto
 
             
             //------------SI NO TENEMOS SEG FAULT EJECUTAMOS LO DEMAS ------------ //
@@ -507,13 +499,13 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
                 char* value = fetch_value_in_memory(direccion_fisica, ce, size_movin);
 
                 store_value_in_register(register_mov_in, value);
-                log_info(cpu_logger, "PID: %d - Acción: LEER - Segmento: %d - Dirección Fisica: %d",
-                        ce->id, segmento->id_segmento, direccion_fisica);
-                    log_info(cpu_logger,"YA GUARDE VALOR EN REGISTRO!!");
+                log_info(cpu_logger, "PID: %d - Acción: LEER - Segmento: %d - Dirección Fisica: %d", ce->id, id_segmento, direccion_fisica);
+                log_info(cpu_logger,"YA GUARDE VALOR EN REGISTRO!!");
             }else{
                 //“PID: <PID> - Error SEG_FAULT- Segmento: <NUMERO SEGMENTO> - Offset: <OFFSET> - Tamaño: <TAMAÑO>”
                 enviar_ce(socket_kernel, ce, SEG_FAULT, cpu_logger);
                 sigsegv = 0;
+                sale_proceso = 1;
             }
 
             break;
@@ -522,22 +514,25 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             log_info(cpu_logger, "Ejecutando Instruccion MOV_OUT ");
             log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s", ce->id, instruction[0], instruction[1], instruction[2]);
 
-            int logical_address_mov_out = atoi(instruction[1]);
+            uint32_t logical_address_mov_out = atoi(instruction[1]);
             char* register_mov_out = instruction[2]; 
             
-            int size_movout = tamanio_registro(register_mov_out);
+            uint32_t size_movout = tamanio_registro(register_mov_out);
 
-            direccion_fisica = traducir_direccion_logica(logical_address_mov_out, ce, sizeof(register_mov_out));
+            direccion_fisica = traducir_direccion_logica(logical_address_mov_out, ce, size_movout);
 
             if(sigsegv != 1){
-                 log_info(cpu_logger, "Recibimos una physical address valida!");
+                log_info(cpu_logger, "Recibimos una physical address valida!");
                 char* register_value_mov_out = encontrarValorDeRegistro(register_mov_out);
                 
                 escribir_valor(direccion_fisica, register_value_mov_out, ce->id, size_movout);
+
+                free(register_value_mov_out);
                 int code_op = recibir_operacion(conexion_cpu); // Si ta todo ok prosigo, si no ta todo ok que hago?
+                log_info(cpu_logger, "recibo operacion :%d",code_op);
 
                 if(code_op == MOV_OUT_OK) {  
-                    log_info(cpu_logger, "PID: %d - Acción: ESCRIBIR - Segmento: %d -  Dirección Fisica: %d", ce->id, segmento->id_segmento, direccion_fisica);
+                    log_info(cpu_logger, "PID: %d - Acción: ESCRIBIR - Segmento: %d -  Dirección Fisica: %d", ce->id, id_segmento, direccion_fisica);
                 }
                 else {
                     log_error(conexion_cpu, "CODIGO DE OPERACION INVALIDO");
@@ -547,6 +542,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
                 //“PID: <PID> - Error SEG_FAULT- Segmento: <NUMERO SEGMENTO> - Offset: <OFFSET> - Tamaño: <TAMAÑO>”
                 enviar_ce(socket_kernel, ce, SEG_FAULT, cpu_logger);
                 sigsegv = 0;
+                sale_proceso = 1;
             }
             break;
 
@@ -582,6 +578,8 @@ void execute_process(contexto_ejecucion* ce){
     
     log_trace(cpu_logger, "SALI DEL WHILE DE EJECUCION");
     
+    free(registros);
+    liberar_ce(ce);
     sale_proceso = 0;
 }
 
@@ -589,7 +587,7 @@ void execute_process(contexto_ejecucion* ce){
 
 typedef struct { 
     char *key; 
-    int val; 
+    uint32_t val; 
     } t_symstruct;
 
 static t_symstruct lookuptable[] = {
@@ -632,7 +630,7 @@ void enviar_ce_con_string(int client_socket, contexto_ejecucion* ce, char* param
     t_paquete* paquete = crear_paquete_op_code(codOP);
 
     agregar_ce_a_paquete(paquete, ce, cpu_logger);
-    agregar_a_paquete(paquete, parameter, sizeof(parameter)+1);
+    agregar_a_paquete(paquete, parameter, strlen(parameter)+1);
     // agregar_string_a_paquete(paquete, parameter); 
     enviar_paquete(paquete, client_socket);
     eliminar_paquete(paquete);
@@ -667,7 +665,7 @@ void enviar_ce_con_string_entero(int client_socket, contexto_ejecucion* ce, char
         log_error(cpu_logger,"el entero del archivo es %s", parameter);
     agregar_entero_a_paquete(paquete, atoi(x));
 
-    agregar_a_paquete(paquete, parameter,sizeof(parameter)+1); 
+    agregar_a_paquete(paquete, parameter,strlen(parameter)+1); 
     enviar_paquete(paquete, client_socket);
     eliminar_paquete(paquete);
     
@@ -690,25 +688,25 @@ void enviar_ce_con_string_2_enteros(int client_socket, contexto_ejecucion* ce, c
     agregar_ce_a_paquete(paquete, ce, cpu_logger);
     agregar_entero_a_paquete(paquete, x);
     agregar_entero_a_paquete(paquete, atoi(y));
-    agregar_a_paquete(paquete, parameter,sizeof(parameter) +1 ); 
+    agregar_a_paquete(paquete, parameter,strlen(parameter) +1 ); 
     enviar_paquete(paquete, client_socket);
     eliminar_paquete(paquete);
     
 }
-void enviar_ce_con_string_3_enteros(int client_socket, contexto_ejecucion* ce, char* parameter, int x, char* y, int z, int codOP){
+void enviar_ce_con_string_3_enteros(int client_socket, contexto_ejecucion* ce, char* parameter, uint32_t x, char* y, uint32_t z, int codOP){
     t_paquete* paquete = crear_paquete_op_code(codOP);
 
     agregar_ce_a_paquete(paquete, ce, cpu_logger);
     agregar_entero_a_paquete(paquete, x);
-    agregar_entero_a_paquete(paquete, atoi(y));
+    agregar_entero_a_paquete(paquete, (uint32_t) atoi(y));
     agregar_entero_a_paquete(paquete, z);
-    agregar_a_paquete(paquete, parameter,sizeof(parameter)+1); 
+    agregar_a_paquete(paquete, parameter,strlen(parameter)+1); 
     enviar_paquete(paquete, client_socket);
     eliminar_paquete(paquete);
     
 }
 
-void enviar_paquete_con_string_2_enteros(int client_socket, char* parameter, int x, char* y, int codOP){
+void enviar_paquete_con_string_2_enteros(int client_socket, char* parameter, uint32_t x, char* y, int codOP){
     t_paquete* paquete = crear_paquete_op_code(codOP);
 
     agregar_string_a_paquete(paquete, parameter); 
@@ -733,39 +731,79 @@ void enviar_ce_con_entero(int client_socket, contexto_ejecucion* ce, char* x, in
 
 /*---------------------------------- PARA MOV_OUT ----------------------------------*/
 
-char* encontrarValorDeRegistro(char* register_to_find_value){ //Es t_registro* o char* ?
-    if (strcmp(register_to_find_value, "AX") == 0) return registros->AX;
-    else if (strcmp(register_to_find_value, "BX") == 0) return registros->BX;
-    else if (strcmp(register_to_find_value, "CX") == 0) return registros->CX;
-    else if (strcmp(register_to_find_value, "DX") == 0) return registros->DX;
-    else if (strcmp(register_to_find_value, "EAX") == 0) return registros->EAX;
-    else if (strcmp(register_to_find_value, "EBX") == 0) return registros->EBX;
-    else if (strcmp(register_to_find_value, "ECX") == 0) return registros->ECX;
-    else if (strcmp(register_to_find_value, "EDX") == 0) return registros->EDX;
-    else if (strcmp(register_to_find_value, "RAX") == 0) return registros->RAX;
-    else if (strcmp(register_to_find_value, "RBX") == 0) return registros->RBX;
-    else if (strcmp(register_to_find_value, "RCX") == 0) return registros->RCX;
-    else if (strcmp(register_to_find_value, "RDX") == 0) return registros->RDX;
-
-    else return 0;
+char* encontrarValorDeRegistro(char* register_to_find_value){ 
+    char *retorno = string_new();
+    
+    if (strcmp(register_to_find_value, "AX") == 0){  
+        string_n_append(&retorno, registros->AX, 4);
+        return retorno;
+        } 
+    else if (strcmp(register_to_find_value, "BX") == 0){ 
+        string_n_append(&retorno, registros->BX, 4);
+        return retorno;
+        } 
+    else if (strcmp(register_to_find_value, "CX") == 0) { 
+        string_n_append(&retorno, registros->CX, 4);
+        return retorno;
+        } 
+    else if (strcmp(register_to_find_value, "DX") == 0) { 
+        string_n_append(&retorno, registros->DX, 4);
+        return retorno;
+        } 
+    else if (strcmp(register_to_find_value, "EAX") == 0){  
+        string_n_append(&retorno, registros->EAX, 8);
+        return retorno;
+        } 
+    else if (strcmp(register_to_find_value, "EBX") == 0){ 
+        string_n_append(&retorno, registros->EBX, 8); 
+        return retorno;
+        } 
+    else if (strcmp(register_to_find_value, "ECX") == 0){  
+        string_n_append(&retorno, registros->ECX, 8);
+        return retorno;
+        } 
+    else if (strcmp(register_to_find_value, "EDX") == 0){  
+        string_n_append(&retorno, registros->EDX, 8);
+        return retorno;
+        } 
+    else if (strcmp(register_to_find_value, "RAX") == 0){ 
+        
+        string_n_append(&retorno, registros->RAX, 16);
+        
+        return retorno;
+    }
+    else if (strcmp(register_to_find_value, "RBX") == 0){  
+        string_n_append(&retorno, registros->RBX, 16);
+        return retorno;
+    }
+    else if (strcmp(register_to_find_value, "RCX") == 0){  
+        string_n_append(&retorno, registros->RCX, 16);
+        return retorno;
+    }
+    else if (strcmp(register_to_find_value, "RDX") == 0){ 
+       string_n_append(&retorno, registros->RDX, 16);
+        return retorno;
+    }
 }
 
-void escribir_valor(int physical_address, char* register_value_mov_out, int pid, int size){
+void escribir_valor(uint32_t physical_address, char* register_value_mov_out, uint32_t pid, uint32_t size){
     t_paquete* package = crear_paquete_op_code(MOV_OUT);
+    agregar_a_paquete(package, register_value_mov_out,strlen(register_value_mov_out)+1);
     agregar_entero_a_paquete(package, physical_address);
-    agregar_string_a_paquete(package, register_value_mov_out);
     agregar_entero_a_paquete(package, pid);
     agregar_entero_a_paquete(package, size);
     enviar_paquete(package, conexion_cpu);
+    log_warning(cpu_logger,"envie: physical adress: %d, reg value :%s,pid:%d,size:%d",physical_address,register_value_mov_out,pid,size);
+
 }
 /*---------------------------------- MMU ----------------------------------*/
 
 
-int traducir_direccion_logica(int logical_address, contexto_ejecucion* ce, int valor_a_sumar) {
+uint32_t traducir_direccion_logica(uint32_t logical_address, contexto_ejecucion* ce, uint32_t valor_a_sumar) {
 
 
-    int num_segmento = (int) floor(logical_address / atoi(cpu_config.tam_max_segmento));
-    int desplazamiento_segmento = logical_address % atoi(cpu_config.tam_max_segmento);
+    uint32_t num_segmento = (uint32_t) floor(logical_address / atoi(cpu_config.tam_max_segmento));
+    uint32_t desplazamiento_segmento = logical_address % atoi(cpu_config.tam_max_segmento);
 
    
     offset = desplazamiento_segmento;
@@ -777,24 +815,23 @@ int traducir_direccion_logica(int logical_address, contexto_ejecucion* ce, int v
     log_trace(cpu_logger, "tamanio segment table es :%d",list_size(segment_table_ce));
     
     t_segmento* segment = list_get(segment_table_ce, num_segmento);
-
     log_trace(cpu_logger, "el id del segmento es :%d",segment->id_segmento);
     log_trace(cpu_logger, "la direccion base del segmento es :%d",segment->direccion_base);
     log_trace(cpu_logger, "el tamanio es :%d",segment->tamanio_segmento);
 
-    /*segmento->id_segmento = num_segmento;
-    log_trace(cpu_logger, "el id del segmento es :%d",segmento->id_segmento);
-    segmento->tamanio_segmento = segment ->tamanio_segmento;
-    segmento->direccion_base = desplazamiento_segmento + segment->direccion_base ;*/
+    id_segmento = num_segmento;
+    log_trace(cpu_logger, "el id del segmento es :%d",id_segmento);
+    tamanio_segmento = segment ->tamanio_segmento;
+    direccion_base = desplazamiento_segmento + segment->direccion_base ;
 
-    log_error(cpu_logger,"el calculo da: %d",desplazamiento_segmento+valor_a_sumar);
+    // log_error(cpu_logger,"el calculo da: %d",desplazamiento_segmento+valor_a_sumar);
     if(desplazamiento_segmento + valor_a_sumar >= segment-> tamanio_segmento ){
         log_trace(cpu_logger, "entre en el if de segfault");
         desplazamiento_segfault = desplazamiento_segmento;
         log_trace(cpu_logger, "despues de desplazamiento segfault: %d",desplazamiento_segfault);
-        id_segmento_con_segfault = segmento->id_segmento;
-        log_trace(cpu_logger, "despues de segmento.idSegmento: %d",segmento->id_segmento);
-        tamanio_segfault = segmento->tamanio_segmento;   /* Esta linea y la anterior es porque hay que imprimir cual fue el 
+        id_segmento_con_segfault = id_segmento;
+        log_trace(cpu_logger, "despues de segmento.idSegmento: %d",id_segmento);
+        tamanio_segfault = tamanio_segmento;   /* Esta linea y la anterior es porque hay que imprimir cual fue el 
                                                             segmento que falló */
 
         sigsegv = 1;
@@ -803,7 +840,7 @@ int traducir_direccion_logica(int logical_address, contexto_ejecucion* ce, int v
       return (segment->direccion_base + desplazamiento_segmento);
 }
 
-char* fetch_value_in_memory(int physical_adress, contexto_ejecucion* ce, int size){
+char* fetch_value_in_memory(uint32_t physical_adress, contexto_ejecucion* ce, uint32_t size){
 
     t_paquete* package = crear_paquete_op_code(MOV_IN); 
     agregar_entero_a_paquete(package, ce->id);
@@ -815,39 +852,54 @@ char* fetch_value_in_memory(int physical_adress, contexto_ejecucion* ce, int siz
     eliminar_paquete(package);
     log_info(cpu_logger, "MOV IN enviado");    
 
-    int code_op = recibir_operacion(conexion_cpu);
-    char* value_received = recibir_string(conexion_cpu, cpu_logger);
-    log_info(cpu_logger, "CODIGO OPERACION RECIBIDO EN CPU: %d", code_op);
-    
-    if(code_op == MOV_IN_OK) {  
-        log_info(cpu_logger,"ENTRE CARAJO");
-
-        log_info(conexion_cpu, "EL VALOR DEL REGISTRO RECIBIDO ES: %d", value_received);
-    } else {
-        log_error(conexion_cpu, "CODIGO DE OPERACION INVALIDO");
+    while(1){
+        int code_op = recibir_operacion(conexion_cpu);
+        switch(code_op){
+            case 0:
+                log_error(cpu_logger, "Llego el codop 0");
+                break;
+            case MOV_IN_OK:
+                log_info(cpu_logger, "CODIGO OPERACION RECIBIDO EN CPU: %d", code_op);
+                char* value_received = recibir_string(conexion_cpu, cpu_logger);
+                log_info(cpu_logger, "recibo string %s", value_received);
+                return value_received;
+                break;
+            default:
+                log_warning(cpu_logger, "Llego un codigo de operacion desconocido, %d", code_op);
+                exit(54);
+                break;
+        }
     }
+    
+    
+    
 
-    return value_received;
+    //log_info(conexion_cpu, "EL VALOR DEL REGISTRO RECIBIDO ES: %d", value_received);
+
+
+
+
+   
 }
 
 
 
 void store_value_in_register(char* register_mov_in, char* value){
 
-    log_info(cpu_logger, "El registro %s quedara el valor: %d",register_mov_in ,value);
+    log_info(cpu_logger, "El registro %s quedara el valor: %s",register_mov_in ,value);
 
     add_value_to_register(register_mov_in, value);
 }
 
 /*---------------------------------- FUNCIONES EXTRAS ----------------------------------*/
 
-int read_int(char* buffer, int* desp) {
-	int ret;
+uint32_t read_int(char* buffer, int* desp) {
+	uint32_t ret;
 	memcpy(&ret, buffer + (*desp), sizeof(int));
 	(*desp)+=sizeof(int);
 	return ret;
 }
-int tamanio_registro(char* registro){
+uint32_t tamanio_registro(char* registro){
     if (strcmp(registro, "AX") == 0) return 4;
     else if (strcmp(registro, "BX") == 0) return 4;
     else if (strcmp(registro, "CX") == 0) return 4;

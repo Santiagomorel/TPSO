@@ -68,6 +68,17 @@ void *recibir_buffer(int *size, int socket_cliente)
 	return buffer;
 }
 
+void *recibir_bufferv2(uint32_t *size, int socket_cliente)
+{
+	void *buffer;
+
+	recv(socket_cliente, size, sizeof(uint32_t), MSG_WAITALL);
+	buffer = malloc(*size);
+	recv(socket_cliente, buffer, *size, MSG_WAITALL);
+
+	return buffer;
+}
+
 void recibir_mensaje(int socket_cliente, t_log *logger)
 {
 	int size;
@@ -109,6 +120,26 @@ t_list *recibir_paquete(int socket_cliente)
 	}
 	free(buffer);
 	return valores;
+}
+
+
+
+int server_escuchar(t_log *logger, int server_socket, void *(*procesar_conexion)(void *))
+{
+	int cliente_socket = esperar_cliente(logger, server_socket);
+
+	if (cliente_socket != -1)
+	{
+		pthread_t hilo;
+		t_conexion *args = malloc(sizeof(t_conexion));
+		args->log = logger;
+		args->socket = cliente_socket;
+		pthread_create(&hilo, NULL, procesar_conexion, (void *)args);
+		pthread_detach(hilo);
+		return 1;
+	}
+
+	return 0;
 }
 
 /*      -------------------  Funciones Cliente  -------------------      */
@@ -210,22 +241,30 @@ t_paquete *crear_paquete_op_code(op_code codigo_op)
 	return paquete;
 }
 
-void agregar_a_paquete(t_paquete *paquete, void *valor, int tamanio)
+t_cod* crear_codigo(op_code codigo_op)
+{
+	t_cod *paquete = malloc(sizeof(t_cod));
+	paquete->codigo_operacion = codigo_op;
+	return paquete;
+}
+
+void agregar_a_paquete(t_paquete *paquete, void *valor, uint32_t tamanio)
 {
 	paquete->buffer->stream = realloc(paquete->buffer->stream, paquete->buffer->size + tamanio + sizeof(int));
 
-	memcpy(paquete->buffer->stream + paquete->buffer->size, &tamanio, sizeof(int));
-	memcpy(paquete->buffer->stream + paquete->buffer->size + sizeof(int), valor, tamanio);
+	memcpy(paquete->buffer->stream + paquete->buffer->size, &tamanio, sizeof(uint32_t));
+	memcpy(paquete->buffer->stream + paquete->buffer->size + sizeof(uint32_t), valor, tamanio);
 
-	paquete->buffer->size += tamanio + sizeof(int);
+	paquete->buffer->size += tamanio + sizeof(uint32_t);
 }
 
-void agregar_entero_a_paquete(t_paquete *paquete, int x)
+void agregar_entero_a_paquete(t_paquete *paquete, uint32_t x)
 {
 	paquete->buffer->stream = realloc(paquete->buffer->stream, paquete->buffer->size + sizeof(int));
-	memcpy(paquete->buffer->stream + paquete->buffer->size, &x, sizeof(int));
-	paquete->buffer->size += sizeof(int);
+	memcpy(paquete->buffer->stream + paquete->buffer->size, &x, sizeof(uint32_t));
+	paquete->buffer->size += sizeof(uint32_t);
 }
+
 
 void agregar_string_a_paquete(t_paquete *paquete, char* palabra)
 {
@@ -271,11 +310,27 @@ void enviar_paquete(t_paquete *paquete, int socket_cliente)
 	free(a_enviar);
 }
 
+void enviar_codigo(t_cod* codigo, int socket_cliente)
+{
+	void *magic = malloc(sizeof(int));
+
+	memcpy(magic, &(codigo->codigo_operacion), sizeof(int));
+
+	send(socket_cliente, magic, sizeof(int), 0);
+
+	free(magic);
+}
+
 void eliminar_paquete(t_paquete *paquete)
 {
 	free(paquete->buffer->stream);
 	free(paquete->buffer);
 	free(paquete);
+}
+
+void eliminar_codigo(t_cod* codigo)
+{
+	free(codigo);
 }
 
 void liberar_conexion(int socket_cliente)
@@ -324,7 +379,24 @@ int leer_entero(char *buffer, int *desplazamiento) // Lee un entero en base a un
 	int ret;
 	memcpy(&ret, buffer + (*desplazamiento), sizeof(int)); // copia dentro de ret lo que tiene el buffer con un size de int
 	(*desplazamiento) += sizeof(int);
-		printf("allocating / copying entero %d \n", ret);
+	//printf("allocating / copying entero %d \n", ret);
+	return ret;
+}
+uint32_t leer_entero_u32(char *buffer, int *desplazamiento) // Lee un entero en base a un buffer y un desplazamiento, ambos se pasan por referencia
+{
+	uint32_t ret;
+	memcpy(&ret, buffer + (*desplazamiento), sizeof(uint32_t)); // copia dentro de ret lo que tiene el buffer con un size de int
+	(*desplazamiento) += sizeof(uint32_t);
+	//printf("allocating / copying entero %d \n", ret);
+	return ret;
+}
+
+uint8_t leer_entero_u8(char *buffer, int *desplazamiento) // Lee un entero en base a un buffer y un desplazamiento, ambos se pasan por referencia
+{
+	uint8_t ret;
+	memcpy(&ret, buffer + (*desplazamiento), sizeof(uint8_t)); // copia dentro de ret lo que tiene el buffer con un size de int
+	(*desplazamiento) += sizeof(uint8_t);
+	//printf("allocating / copying entero %d \n", ret);
 	return ret;
 }
 
@@ -352,7 +424,7 @@ char* leer_string(char *buffer, int *desplazamiento) // Lee un string en base a 
 	char *valor = malloc(tamanio);
 	memcpy(valor, buffer + (*desplazamiento), tamanio);
 	(*desplazamiento) += tamanio;
-	printf("allocating / copying string %s \n", valor);
+	//printf("allocating / copying string %s \n", valor);
 	return valor;
 }
 
@@ -412,6 +484,38 @@ t_registro * leer_registros(char* buffer, int * desp) {
 	(*desp) += 16;
 	return retorno;
 }
+
+//Deserializar tabla segmentos V2 JP
+
+t_list* deserializar_tabla_segmentos(void* buffer, uint32_t size) {
+    t_list* tabla = list_create();
+    uint32_t despl = 0;
+
+    t_ent_ts* entrada;
+    
+    for (int i = 0; i < size; i++)
+    {
+
+        entrada = malloc(sizeof(t_ent_ts));
+
+        memcpy(&entrada->id_seg, buffer + despl, sizeof(uint32_t));
+        despl += sizeof(uint32_t);
+
+        memcpy(&entrada->base, buffer + despl, sizeof(uint32_t));
+        despl += sizeof(uint32_t);
+
+        memcpy(&entrada->tam, buffer + despl, sizeof(uint32_t));
+        despl += sizeof(uint32_t);
+
+        memcpy(&entrada->activo, buffer + despl, sizeof(uint8_t));
+        despl += sizeof(uint8_t);
+
+        list_add(tabla, entrada);
+
+    }
+    return tabla;
+}
+
 
 void loggear_pcb(t_pcb *pcb, t_log *logger)
 {
@@ -514,6 +618,18 @@ int recibir_entero(int socket, t_log* logger)
 	return nuevoEntero;
 }
 
+uint32_t recibir_entero_u32(int socket, t_log* logger)
+{
+	int size = 0;
+	char *buffer;
+	int desp = 0;
+	buffer = recibir_buffer(&size, socket);
+	u_int32_t nuevoEntero = leer_entero_u32(buffer, &desp); // recibo el entero
+	free(buffer);
+	return nuevoEntero;
+}
+
+
 void enviar_paquete_string(int conexion, char* string, int codOP, int tamanio)
 {
 	t_paquete * paquete = crear_paquete_op_code(codOP);
@@ -522,7 +638,7 @@ void enviar_paquete_string(int conexion, char* string, int codOP, int tamanio)
 	eliminar_paquete(paquete);
 }
 
-void enviar_paquete_entero(int conexion, int entero, int codOP){
+void enviar_paquete_entero(int conexion, uint32_t entero, int codOP){
 	t_paquete * paquete = crear_paquete_op_code(codOP);
 	agregar_entero_a_paquete(paquete, entero);
 	enviar_paquete(paquete, conexion);
@@ -542,34 +658,34 @@ void enviar_ce(int conexion, contexto_ejecucion *ce, int codOP, t_log *logger)
 
 void enviar_CodOp(int conexion, int codOP)
 {
-	t_paquete *paquete = crear_paquete_op_code(codOP);
+	t_cod *codigo = crear_codigo(codOP);
 
-	enviar_paquete(paquete, conexion);
+	enviar_codigo(codigo, conexion);
 
-	eliminar_paquete(paquete);
+	eliminar_codigo(codigo);
 }
 
 void agregar_ce_a_paquete(t_paquete *paquete, contexto_ejecucion *ce, t_log *logger)
 {
 	agregar_entero_a_paquete(paquete, ce->id);
-	log_trace(logger, "agrego id");
+	// log_trace(logger, "agrego id");
 
 	agregar_array_string_a_paquete(paquete, ce->instrucciones);
-	log_trace(logger, "agrego instrucciones");
+	// log_trace(logger, "agrego instrucciones");
 
 	agregar_entero_a_paquete(paquete, ce->program_counter);
-	log_trace(logger, "agrego program counter");
+	// log_trace(logger, "agrego program counter");
 
 	agregar_registros_a_paquete(paquete, ce->registros_cpu);
-	log_trace(logger, "agrego registros"); // crear la funcion para mandar los registros.
+	// log_trace(logger, "agrego registros"); // crear la funcion para mandar los registros.
 
 	agregar_tabla_segmentos_a_paquete(paquete, ce->tabla_segmentos);
-	log_trace(logger, "agrego tabla de segmentos");
+	// log_trace(logger, "agrego tabla de segmentos");
 }
 
 void agregar_tabla_segmentos_a_paquete(t_paquete* paquete, t_list* tabla_segmentos)
 {
-    int tamanio = list_size(tabla_segmentos);
+    uint32_t tamanio = list_size(tabla_segmentos);
 	agregar_entero_a_paquete(paquete, tamanio);
     for (int i = 0; i < tamanio; i++)
     {
@@ -615,10 +731,11 @@ void imprimir_tabla_segmentos(t_list* tabla_segmentos, t_log* logger){
 
 void liberar_ce(contexto_ejecucion* ce){
 	//free(ce->id); // seg fault por tratar de hacer un free a un int
-	free(ce->instrucciones); // probablemente tengamos tambien que liberar las instrucciones 1 a 1 (me da paja)
+	string_array_destroy(ce->instrucciones); // probablemente tengamos tambien que liberar las instrucciones 1 a 1 (me da paja)
 	//free(ce->program_counter); // seg fault por tratar de hacer un free a un int
 	free(ce->registros_cpu);
-	//liberar_tabla(ce->tabla_segmentos); falta hacer
+	list_destroy(ce->tabla_segmentos, (void*)free);
+	free(ce);
 }
 
 char* obtenerCodOP(int cop){
@@ -661,13 +778,13 @@ t_proceso* recibir_tabla_segmentos_como_proceso(int socket, t_log *logger)
 
 t_list* recibir_tabla_segmentos(int socket)
 {
-    int size = 0;
+    uint32_t size = 0;
     char *buffer;
     int desp = 0;
 
-    buffer = recibir_buffer(&size, socket);
+    buffer = recibir_bufferv2(&size, socket);
     
-	t_list* nuevaTablaSegmentos = leer_tabla_segmentos(buffer, &desp);
+	t_list* nuevaTablaSegmentos = leer_tabla_segmentosv2(buffer, &desp);
 
     return nuevaTablaSegmentos;
 }
@@ -687,12 +804,29 @@ t_list* leer_tabla_segmentos(char *buffer, int *desp)
     return nuevalista;
 }
 
-t_segmento *crear_segmento(int id_seg, int base, int tamanio)
+t_list* leer_tabla_segmentosv2(char *buffer, int *desp)
 {
-    t_segmento *unSegmento = malloc(sizeof(t_segmento));
-    unSegmento->id_segmento = id_seg;
-    unSegmento->direccion_base = base;
-    unSegmento->tamanio_segmento = tamanio;
+    t_list *nuevalista = list_create();
+    u_int32_t tamanio = leer_entero_u32(buffer, desp);
+    for (int i = 0; i < tamanio; i++)
+    {
+        uint32_t id_segmento = leer_entero_u32(buffer, desp);
+        uint32_t direccion_base = leer_entero_u32(buffer, desp);
+        uint32_t tamanio_segmento = leer_entero_u32(buffer, desp);
+		uint8_t datobasuraquenonosinteresadelmodulodejuampi = leer_entero_u8(buffer, desp);
+        t_segmento *nuevoElemento = crear_segmento(id_segmento, direccion_base, tamanio_segmento);
+        list_add(nuevalista, nuevoElemento);
+    }
+    return nuevalista;
+}
+
+t_ent_ts *crear_segmento(uint32_t id_seg, uint32_t base, uint32_t tamanio)
+{
+    t_ent_ts *unSegmento = malloc(sizeof(t_ent_ts));
+    unSegmento->id_seg = id_seg;
+    unSegmento->base = base;
+    unSegmento->tam = tamanio;
+	unSegmento->activo = 1;
     return unSegmento;
 }
 
@@ -706,17 +840,17 @@ t_ce_2enteros * recibir_ce_2enteros(int socket)
 
 	buffer = recibir_buffer(&size, socket);
 
-	nuevoCe->id = leer_entero(buffer, &desp);
+	nuevoCe->id = leer_entero_u32(buffer, &desp);
 	nuevoCe->instrucciones = leer_string_array(buffer, &desp); // hay que liberar antes de perder la referencia
-	nuevoCe->program_counter = leer_entero(buffer, &desp);
+	nuevoCe->program_counter = leer_entero_u32(buffer, &desp);
 	nuevoCe->registros_cpu = leer_registros(buffer, &desp); // hay que liberar antes de perder la referencia
 	nuevoCe->tabla_segmentos = leer_tabla_segmentos(buffer, &desp);
 
 	nuevo_ce_2enteros->ce = nuevoCe;
 
-	nuevo_ce_2enteros->entero1 = leer_entero(buffer, &desp);
+	nuevo_ce_2enteros->entero1 = leer_entero_u32(buffer, &desp);
 
-	nuevo_ce_2enteros->entero2 = leer_entero(buffer, &desp);
+	nuevo_ce_2enteros->entero2 = leer_entero_u32(buffer, &desp);
 
 	free(buffer);
 	return nuevo_ce_2enteros;
@@ -733,17 +867,17 @@ t_ce_string_2enteros * recibir_ce_string_2enteros(int socket)
 
 	buffer = recibir_buffer(&size, socket);
 
-	nuevoCe->id = leer_entero(buffer, &desp);
+	nuevoCe->id = leer_entero_u32(buffer, &desp);
 	nuevoCe->instrucciones = leer_string_array(buffer, &desp); // hay que liberar antes de perder la referencia
-	nuevoCe->program_counter = leer_entero(buffer, &desp);
+	nuevoCe->program_counter = leer_entero_u32(buffer, &desp);
 	nuevoCe->registros_cpu = leer_registros(buffer, &desp); // hay que liberar antes de perder la referencia
 	nuevoCe->tabla_segmentos = leer_tabla_segmentos(buffer, &desp);
 
 	nuevo_ce_string_2enteros->ce = nuevoCe;
 
-	nuevo_ce_string_2enteros->entero1 = leer_entero(buffer, &desp);
+	nuevo_ce_string_2enteros->entero1 = leer_entero_u32(buffer, &desp);
 
-	nuevo_ce_string_2enteros->entero2 = leer_entero(buffer, &desp);
+	nuevo_ce_string_2enteros->entero2 = leer_entero_u32(buffer, &desp);
 
 	nuevo_ce_string_2enteros->string = leer_string(buffer,&desp);
 
@@ -761,19 +895,19 @@ t_ce_string_3enteros * recibir_ce_string_3enteros(int socket)
 
 	buffer = recibir_buffer(&size, socket);
 
-	nuevoCe->id = leer_entero(buffer, &desp);
+	nuevoCe->id = leer_entero_u32(buffer, &desp);
 	nuevoCe->instrucciones = leer_string_array(buffer, &desp); // hay que liberar antes de perder la referencia
-	nuevoCe->program_counter = leer_entero(buffer, &desp);
+	nuevoCe->program_counter = leer_entero_u32(buffer, &desp);
 	nuevoCe->registros_cpu = leer_registros(buffer, &desp); // hay que liberar antes de perder la referencia
 	nuevoCe->tabla_segmentos = leer_tabla_segmentos(buffer, &desp);
 
 	nuevo_ce_string_3enteros->ce = nuevoCe;
 
-	nuevo_ce_string_3enteros->entero1 = leer_entero(buffer, &desp);
+	nuevo_ce_string_3enteros->entero1 = leer_entero_u32(buffer, &desp);
 
-	nuevo_ce_string_3enteros->entero2 = leer_entero(buffer, &desp);
+	nuevo_ce_string_3enteros->entero2 = leer_entero_u32(buffer, &desp);
 
-	nuevo_ce_string_3enteros->entero3 = leer_entero(buffer, &desp);
+	nuevo_ce_string_3enteros->entero3 = leer_entero_u32(buffer, &desp);
 
 	nuevo_ce_string_3enteros->string = leer_string(buffer,&desp);
 
@@ -790,15 +924,15 @@ t_ce_entero* recibir_ce_entero(int socket){
 
 	buffer = recibir_buffer(&size, socket);
 
-	nuevoCe->id = leer_entero(buffer, &desp);
+	nuevoCe->id = leer_entero_u32(buffer, &desp);
 	nuevoCe->instrucciones = leer_string_array(buffer, &desp); // hay que liberar antes de perder la referencia
-	nuevoCe->program_counter = leer_entero(buffer, &desp);
+	nuevoCe->program_counter = leer_entero_u32(buffer, &desp);
 	nuevoCe->registros_cpu = leer_registros(buffer, &desp); // hay que liberar antes de perder la referencia
 	nuevoCe->tabla_segmentos = leer_tabla_segmentos(buffer, &desp);
 
 	nuevo_ce_entero->ce = nuevoCe;
 
-	nuevo_ce_entero->entero = leer_entero(buffer, &desp);
+	nuevo_ce_entero->entero = leer_entero_u32(buffer, &desp);
 
 	free(buffer);
 	return nuevo_ce_entero;
@@ -814,9 +948,9 @@ t_ce_string* recibir_ce_string(int socket)
 
 	buffer = recibir_buffer(&size, socket);
 
-	nuevoCe->id = leer_entero(buffer, &desp);
+	nuevoCe->id = leer_entero_u32(buffer, &desp);
 	nuevoCe->instrucciones = leer_string_array(buffer, &desp); // hay que liberar antes de perder la referencia
-	nuevoCe->program_counter = leer_entero(buffer, &desp);
+	nuevoCe->program_counter = leer_entero_u32(buffer, &desp);
 	nuevoCe->registros_cpu = leer_registros(buffer, &desp); // hay que liberar antes de perder la referencia
 	nuevoCe->tabla_segmentos = leer_tabla_segmentos(buffer, &desp);
 
@@ -838,15 +972,15 @@ t_ce_string_entero* recibir_ce_string_entero(int socket)
 
 	buffer = recibir_buffer(&size, socket);
 
-	nuevoCe->id = leer_entero(buffer, &desp);
+	nuevoCe->id = leer_entero_u32(buffer, &desp);
 	nuevoCe->instrucciones = leer_string_array(buffer, &desp); // hay que liberar antes de perder la referencia
-	nuevoCe->program_counter = leer_entero(buffer, &desp);
+	nuevoCe->program_counter = leer_entero_u32(buffer, &desp);
 	nuevoCe->registros_cpu = leer_registros(buffer, &desp); // hay que liberar antes de perder la referencia
 	nuevoCe->tabla_segmentos = leer_tabla_segmentos(buffer, &desp);
 
 	nuevo_ce_string_entero->ce = nuevoCe;
 
-	nuevo_ce_string_entero->entero = leer_entero(buffer, &desp);
+	nuevo_ce_string_entero->entero = leer_entero_u32(buffer, &desp);
 	nuevo_ce_string_entero->string = leer_string(buffer, &desp);
 	
 
@@ -855,6 +989,7 @@ t_ce_string_entero* recibir_ce_string_entero(int socket)
 	free(buffer);
 	return nuevo_ce_string_entero;
 }
+
 
 void enviar_2_enteros(int client_socket, int x, int y, int codOP){
     t_paquete* paquete = crear_paquete_op_code(codOP);
@@ -869,7 +1004,7 @@ void enviar_string_2enteros(int client, char* string, int x, int y, int codOP)
 {
 	t_paquete* paquete = crear_paquete_op_code(codOP);
 
-	agregar_a_paquete(paquete, string, sizeof(string)+1); 
+	agregar_a_paquete(paquete, string, strlen(string)+1); 
     agregar_entero_a_paquete(paquete, x); 
     agregar_entero_a_paquete(paquete, y); 
     enviar_paquete(paquete, client);
@@ -903,7 +1038,7 @@ void enviar_string_3enteros(int client, char* string, int x, int y, int z, int c
 {
 	t_paquete* paquete = crear_paquete_op_code(codOP);
 
-	agregar_a_paquete(paquete, string, sizeof(string)+1); 
+	agregar_a_paquete(paquete, string, strlen(string)+1); 
     agregar_entero_a_paquete(paquete, x); 
     agregar_entero_a_paquete(paquete, y); 
 	agregar_entero_a_paquete(paquete, z); 
@@ -912,7 +1047,7 @@ void enviar_string_3enteros(int client, char* string, int x, int y, int z, int c
     enviar_paquete(paquete, client);
     eliminar_paquete(paquete);
 }
-void enviar_string_4enteros(int client, char* string, int x, int y, int z, int j, int codOP)
+void enviar_string_4enteros(int client, char* string, uint32_t x, uint32_t y, uint32_t z, uint32_t j, int codOP)
 {
 	t_paquete* paquete = crear_paquete_op_code(codOP);
     agregar_entero_a_paquete(paquete, x); 
@@ -920,7 +1055,20 @@ void enviar_string_4enteros(int client, char* string, int x, int y, int z, int j
 	agregar_entero_a_paquete(paquete, z); 
 	agregar_entero_a_paquete(paquete, j);
 
-	agregar_a_paquete(paquete, string, sizeof(string) +1); 
+	agregar_a_paquete(paquete, string, strlen(string) +1); 
+    enviar_paquete(paquete, client);
+    eliminar_paquete(paquete);
+}
+void enviar_string_5enteros(int client, char* string, uint32_t x, uint32_t y, uint32_t z, uint32_t j, uint32_t h, int codOP)
+{
+	t_paquete* paquete = crear_paquete_op_code(codOP);
+    agregar_entero_a_paquete(paquete, x); 
+    agregar_entero_a_paquete(paquete, y); 
+	agregar_entero_a_paquete(paquete, z); 
+	agregar_entero_a_paquete(paquete, j);
+	agregar_entero_a_paquete(paquete, h);
+
+	agregar_a_paquete(paquete, string, strlen(string) +1); 
     enviar_paquete(paquete, client);
     eliminar_paquete(paquete);
 }
@@ -936,9 +1084,9 @@ t_string_2enteros* recibir_string_2enteros(int)
 
 	nuevo_string_2enteros->string = leer_string(buffer, &desp);
 
-	nuevo_string_2enteros->entero1 = leer_entero(buffer, &desp);
+	nuevo_string_2enteros->entero1 = leer_entero_u32(buffer, &desp);
 
-	nuevo_string_2enteros->entero2 = leer_entero(buffer, &desp);
+	nuevo_string_2enteros->entero2 = leer_entero_u32(buffer, &desp);
 
 	free(buffer);
 	return nuevo_string_2enteros;
@@ -953,11 +1101,11 @@ t_string_3enteros* recibir_string_3enteros(int socket){
 
 	nuevo_string_3enteros->string = leer_string(buffer, &desp);
 
-	nuevo_string_3enteros->entero1 = leer_entero(buffer, &desp);
+	nuevo_string_3enteros->entero1 = leer_entero_u32(buffer, &desp);
 
-	nuevo_string_3enteros->entero2 = leer_entero(buffer, &desp);
+	nuevo_string_3enteros->entero2 = leer_entero_u32(buffer, &desp);
 
-	nuevo_string_3enteros->entero3 = leer_entero(buffer, &desp);
+	nuevo_string_3enteros->entero3 = leer_entero_u32(buffer, &desp);
 
 	free(buffer);
 	return nuevo_string_3enteros;
@@ -973,18 +1121,43 @@ t_string_4enteros* recibir_string_4enteros(int socket)
 	buffer = recibir_buffer(&size, socket);
 
 
-	nuevo_string_4enteros->entero1 = leer_entero(buffer, &desp);
+	nuevo_string_4enteros->entero1 = leer_entero_u32(buffer, &desp);
 
-	nuevo_string_4enteros->entero2 = leer_entero(buffer, &desp);
+	nuevo_string_4enteros->entero2 = leer_entero_u32(buffer, &desp);
 
-	nuevo_string_4enteros->entero3 = leer_entero(buffer, &desp);
+	nuevo_string_4enteros->entero3 = leer_entero_u32(buffer, &desp);
 
-	nuevo_string_4enteros->entero4 = leer_entero(buffer, &desp);
+	nuevo_string_4enteros->entero4 = leer_entero_u32(buffer, &desp);
 
 	nuevo_string_4enteros->string = leer_string(buffer, &desp);
 
 	free(buffer);
 	return nuevo_string_4enteros;
+}
+t_string_5enteros* recibir_string_5enteros(int socket)
+{
+	t_string_5enteros* nuevo_string_5enteros = malloc(sizeof(t_string_5enteros));
+	int size = 0;
+	char *buffer;
+	int desp = 0;
+
+	buffer = recibir_buffer(&size, socket);
+
+
+	nuevo_string_5enteros->entero1 = leer_entero_u32(buffer, &desp);
+
+	nuevo_string_5enteros->entero2 = leer_entero_u32(buffer, &desp);
+
+	nuevo_string_5enteros->entero3 = leer_entero_u32(buffer, &desp);
+
+	nuevo_string_5enteros->entero4 = leer_entero_u32(buffer, &desp);
+
+	nuevo_string_5enteros->entero5 = leer_entero_u32(buffer, &desp);
+
+	nuevo_string_5enteros->string = leer_string(buffer, &desp);
+
+	free(buffer);
+	return nuevo_string_5enteros;
 }
 
 t_string_entero* recibir_string_entero(int socket)
@@ -998,7 +1171,7 @@ t_string_entero* recibir_string_entero(int socket)
 
 	nuevo_string_2enteros->string = leer_string(buffer, &desp);
 
-	nuevo_string_2enteros->entero1 = leer_entero(buffer, &desp);
+	nuevo_string_2enteros->entero1 = leer_entero_u32(buffer, &desp);
 
 	free(buffer);
 	return nuevo_string_2enteros;
@@ -1013,7 +1186,7 @@ t_string_entero* recibir_string_enterov2(int socket)
 
 	buffer = recibir_buffer(&size, socket);
 	nuevo_string_2enteros->string = leer_string(buffer, &desp);
-	nuevo_string_2enteros->entero1 = leer_entero(buffer, &desp);
+	nuevo_string_2enteros->entero1 = leer_entero_u32(buffer, &desp);
 
 
 
@@ -1040,9 +1213,9 @@ t_2_enteros * recibir_2_enteros(int socket)
 
 	buffer = recibir_buffer(&size, socket);
 
-	nuevo_2_enteros->entero1 = leer_entero(buffer, &desp);
+	nuevo_2_enteros->entero1 = leer_entero_u32(buffer, &desp);
 
-	nuevo_2_enteros->entero2 = leer_entero(buffer, &desp);
+	nuevo_2_enteros->entero2 = leer_entero_u32(buffer, &desp);
 
 	free(buffer);
 	return nuevo_2_enteros;
@@ -1056,35 +1229,52 @@ t_3_enteros * recibir_3_enteros(int socket)
 
 	buffer = recibir_buffer(&size, socket);
 
-	nuevo_3_enteros->entero1 = leer_entero(buffer, &desp);
+	nuevo_3_enteros->entero1 = leer_entero_u32(buffer, &desp);
 
-	nuevo_3_enteros->entero2 = leer_entero(buffer, &desp);
+	nuevo_3_enteros->entero2 = leer_entero_u32(buffer, &desp);
 
-	nuevo_3_enteros->entero3 = leer_entero(buffer, &desp);
+	nuevo_3_enteros->entero3 = leer_entero_u32(buffer, &desp);
 
 	free(buffer);
 	return nuevo_3_enteros;
 }
 
-t_4_enteros * recibir_4_enteros(int socket)
+t_3_enteros * recibir_3_u32(int socket)
 {
-	t_4_enteros* nuevo_4_enteros = malloc(sizeof(t_4_enteros));
+	t_3_enteros* nuevo_3_u32 = malloc(sizeof(t_3_enteros));
 	int size = 0;
 	char *buffer;
 	int desp = 0;
 
 	buffer = recibir_buffer(&size, socket);
 
-	nuevo_4_enteros->entero1 = leer_entero(buffer, &desp);
+	nuevo_3_u32->entero1 = leer_entero_u32(buffer, &desp);
 
-	nuevo_4_enteros->entero2 = leer_entero(buffer, &desp);
+	nuevo_3_u32->entero2 = leer_entero_u32(buffer, &desp);
 
-	nuevo_4_enteros->entero3 = leer_entero(buffer, &desp);
-
-	nuevo_4_enteros->entero4 = leer_entero(buffer, &desp);
+	nuevo_3_u32->entero3 = leer_entero_u32(buffer, &desp);
 
 	free(buffer);
-	return nuevo_4_enteros;
+	return nuevo_3_u32;
+}
+t_4_enteros * recibir_4_enteros(int socket)
+{
+	t_4_enteros* nuevo_4_u32 = malloc(sizeof(t_4_enteros));
+	int size = 0;
+	char *buffer;
+	int desp = 0;
+
+	buffer = recibir_buffer(&size, socket);
+
+	nuevo_4_u32->entero1 = leer_entero_u32(buffer, &desp);
+
+	nuevo_4_u32->entero2 = leer_entero_u32(buffer, &desp);
+
+	nuevo_4_u32->entero3 = leer_entero_u32(buffer, &desp);
+
+	nuevo_4_u32->entero4 = leer_entero_u32(buffer, &desp);
+	free(buffer);
+	return nuevo_4_u32;
 }
 
 recive_mov_out * recibir_mov_out(int socket)
@@ -1148,6 +1338,7 @@ void enviar_todas_tablas_segmentos(int conexion, t_list* lista_t_procesos, int c
 	t_paquete* paquete = crear_paquete_op_code(codOP);
 
 	int cantidad_procesos = list_size(lista_t_procesos);
+	log_debug(logger, "la funcion enviar, lee %d cantidad de procesos", cantidad_procesos);
 	agregar_entero_a_paquete(paquete, cantidad_procesos);
 
 	for (int i = 0; i < cantidad_procesos; i++)
@@ -1164,13 +1355,13 @@ void enviar_todas_tablas_segmentos(int conexion, t_list* lista_t_procesos, int c
 t_list* recibir_todas_tablas_segmentos(int conexion)
 {
 	t_list* lista_t_procesos = list_create();
-	int size = 0;
+	uint32_t size = 0;
 	char *buffer;
 	int desp = 0;
 
-	buffer = recibir_buffer(&size, socket);
+	buffer = recibir_bufferv2(&size, conexion);
 
-	int cant_t_procesos = leer_entero(buffer, &desp);
+	uint32_t cant_t_procesos = leer_entero_u32(buffer, &desp);
 
 	for (int i = 0; i < cant_t_procesos; i++)
 	{
@@ -1203,9 +1394,12 @@ void enviar_string_entero(int client_socket, char* parameter, int x, int codOP){
 
 void enviar_string_enterov2(int client_socket, char* parameter, int x, int codOP){
     t_paquete* paquete = crear_paquete_op_code(codOP); 
-		agregar_a_paquete(paquete, parameter,sizeof(parameter)+1); 
+		agregar_a_paquete(paquete, parameter,strlen(parameter)+1); 
     agregar_entero_a_paquete(paquete,x);
     enviar_paquete(paquete, client_socket);
     eliminar_paquete(paquete);
     
 }
+
+
+//memoria extra

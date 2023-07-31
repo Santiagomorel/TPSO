@@ -4,7 +4,7 @@ int main(int argc, char **argv)
 {
     // ----------------------- creo el log del kernel ----------------------- //
 
-    kernel_logger = init_logger("./runlogs/kernel.log", "KERNEL", 1, LOG_LEVEL_TRACE);
+    kernel_logger = init_logger("./runlogs/kernel.log", "KERNEL", 1, LOG_LEVEL_INFO);
 
     // ----------------------- levanto y cargo la configuracion del kernel ----------------------- //
     log_info(kernel_logger, "INICIA EL MODULO DE KERNEL");
@@ -221,7 +221,7 @@ void recibir_consola(int SOCKET_CLIENTE)
         t_pcb *pcb_a_iniciar = iniciar_pcb(SOCKET_CLIENTE);
         log_trace(kernel_logger, "pcb iniciado PID : %d", pcb_a_iniciar->id);
         pthread_mutex_lock(&m_listaNuevos);
-        list_add(listaNuevos, pcb_a_iniciar);
+            list_add(listaNuevos, pcb_a_iniciar);
         pthread_mutex_unlock(&m_listaNuevos);
         log_info(kernel_logger, "Se crea el proceso [%d] en [NEW]", pcb_a_iniciar->id);
 
@@ -251,7 +251,7 @@ t_pcb* iniciar_pcb(int socket)
     free(instrucciones);
     free(buffer);
 
-    loggear_pcb(nuevo_pcb, kernel_logger);
+    // loggear_pcb(nuevo_pcb, kernel_logger);
 
     return nuevo_pcb;
 }
@@ -285,8 +285,8 @@ t_pcb* pcb_create(char* instrucciones, int socket_consola)
 void generar_id(t_pcb* pcb)
 { // Con esta funcion le asignamos a un pcb su id, cuidando de no repetir el numero
     pthread_mutex_lock(&m_contador_id);
-    pcb->id = contador_id;
-    contador_id++;
+        pcb->id = contador_id;
+        contador_id++;
     pthread_mutex_unlock(&m_contador_id);
 }
 
@@ -340,7 +340,7 @@ void cambiar_estado_a(t_pcb* a_pcb, estados nuevo_estado, estados estado_anterio
     log_info(kernel_logger,"Cambio de Estado: PID: [%d] - Estado Anterior: [%s] - Estado Actual: [%s]", obtenerPid(a_pcb), obtenerEstado(estado_anterior), obtenerEstado(nuevo_estado));
 }
 
-int obtenerPid(t_pcb* pcb)
+uint32_t obtenerPid(t_pcb* pcb)
 {
     return pcb->id;
 }
@@ -364,7 +364,7 @@ bool existeArchivo(char* nombreArchivo){
     log_error(kernel_logger, "La lista de nombres es de tamanio: %d", list_size(archivoEnLista));
     if(list_size(archivoEnLista)){
         t_entradaTGAA* entradaGlobal = list_get(archivoEnLista,0);
-        log_error(kernel_logger, "La lista de nombres es de tamanio: %d",entradaGlobal->nombreArchivo);
+        log_error(kernel_logger, "el nombre del archivo es: %s",entradaGlobal->nombreArchivo);
         return strcmp(entradaGlobal->nombreArchivo, nombreArchivo) == 0;
     }else{
         return 0;
@@ -373,7 +373,7 @@ bool existeArchivo(char* nombreArchivo){
  
 }
 
-t_entradaTGAA* obtenerEntrada(char* nombreArchivo) {
+t_entradaTGAA* obtenerEntrada(char* nombreArchivo){
     
     bool buscarArchivo(t_entradaTGAA* entrada){
     return strcmp(entrada->nombreArchivo, nombreArchivo) == 0;
@@ -414,7 +414,7 @@ int estadoActual(t_pcb* pcb)
 void agregar_a_lista_con_sems(t_pcb* pcb_a_agregar, t_list* lista, pthread_mutex_t m_sem)
 {
     pthread_mutex_lock(&m_sem);
-    agregar_lista_ready_con_log(lista, pcb_a_agregar, kernel_config.algoritmo_planificacion);
+        agregar_lista_ready_con_log(lista, pcb_a_agregar, kernel_config.algoritmo_planificacion);
     pthread_mutex_unlock(&m_sem);
 }
 
@@ -440,24 +440,54 @@ void agregar_lista_ready_con_log(t_list* listaready,t_pcb* pcb_a_encolar,char* a
 
         list_destroy(lista_pids);
     }
-    
     else {
         log_info(kernel_logger,"Cola Ready [%s] : [%s]", algoritmo, string_pids);
 
         list_destroy(lista_pids);
     }
+    free(string_pids);
 }
 
-t_pcb* actualizar_pcb_lget_devuelve_pcb(contexto_ejecucion* contexto_actualiza, t_list* lista_del_pcb, pthread_mutex_t sem)
+t_pcb* actualizar_pcb_lget_devuelve_pcb(contexto_ejecucion* contexto_actualiza, t_list* lista_del_pcb, pthread_mutex_t sem) // actualiza un pcb en base a su id de una lista y lo devuelve
 {
     pthread_mutex_lock(&sem);
-        t_pcb * pcb_a_actualizar = (t_pcb *) list_get(lista_del_pcb, 0);
+        t_pcb * pcb_a_actualizar = pcb_en_lista_coincide(lista_del_pcb, contexto_actualiza->id);
         actualizar_pcb(pcb_a_actualizar, contexto_actualiza);
     pthread_mutex_unlock(&sem);
 
     return pcb_a_actualizar;
 } // probar que funcione
 
+t_pcb* pcb_lget_devuelve_pcb(contexto_ejecucion* contexto_actualiza, t_list* lista_del_pcb, pthread_mutex_t sem) // devuelve un pcb en base a su id de una lista
+{
+    pthread_mutex_lock(&sem);
+        t_pcb * pcb_a_devolver = pcb_en_lista_coincide(lista_del_pcb, contexto_actualiza->id);
+    pthread_mutex_unlock(&sem);
+
+    return pcb_a_devolver;
+}
+
+t_pcb* actualizar_pcb_lremove_devuelve_pcb(contexto_ejecucion* contexto_actualiza, t_list* lista_del_pcb, pthread_mutex_t sem) // actualiza y remueve un pcb en base a su id de una lista y lo devuelve
+{
+    pthread_mutex_lock(&sem);
+        t_pcb * pcb_a_actualizar = pcb_en_lista_coincide(lista_del_pcb, contexto_actualiza->id);
+        bool valor_retorno_de_eliminacion_elemento = list_remove_element(lista_del_pcb, pcb_a_actualizar);
+        log_debug(kernel_logger, "el valor que me da cuando intento eliminar el elemento con id %d es %d", pcb_a_actualizar->id, valor_retorno_de_eliminacion_elemento);
+        actualizar_pcb(pcb_a_actualizar, contexto_actualiza);
+    pthread_mutex_unlock(&sem);
+
+    return pcb_a_actualizar;
+}
+
+t_pcb* pcb_lremove(contexto_ejecucion* contexto_actualiza, t_list* lista_del_pcb, pthread_mutex_t sem) // remueve un pcb en base a su id de una lista y lo devuelve
+{
+    pthread_mutex_lock(&sem);
+        t_pcb * pcb_coincide_con_id = pcb_en_lista_coincide(lista_del_pcb, contexto_actualiza->id);
+        list_remove_element(lista_del_pcb, pcb_coincide_con_id);
+    pthread_mutex_unlock(&sem);
+
+    return pcb_coincide_con_id;
+}
 // ----------------------- Funciones planificador to - ready ----------------------- //
 
 void planificar_sig_to_ready()
@@ -471,6 +501,7 @@ void planificar_sig_to_ready()
         pthread_mutex_unlock(&m_listaNuevos);
 
         log_trace(kernel_logger, "Inicializamos estructuras del pcb en memoria");
+        
         inicializar_estructuras(pcb_a_ready);
 
         t_list* nuevo_segmento = pedir_tabla_segmentos();
@@ -502,7 +533,19 @@ t_list* pedir_tabla_segmentos()
         log_error(kernel_logger, "Perdir tabla de segmentos no recibio una Tabla");
     }
 
-    return recibir_tabla_segmentos(memory_connection);
+    uint32_t size;
+
+    recv(memory_connection, &size, sizeof(uint32_t), NULL);
+
+    void* buffer = malloc(size * sizeof(t_ent_ts));
+
+    recv(memory_connection, buffer, size * sizeof(t_ent_ts), NULL);
+
+    t_list* tabla_de_segmentos = deserializar_tabla_segmentos(buffer, size);
+
+    free(buffer);
+
+    return tabla_de_segmentos;
 }
 
 // ----------------------- Funciones planificador to - running ----------------------- //
@@ -520,7 +563,7 @@ void planificar_sig_to_running()
             funcion_agregar_running(pcb_a_ejecutar);
         }
         else if (strcmp(kernel_config.algoritmo_planificacion, "HRRN") == 0){ // HRRN
-            int tamanioLista = list_size(listaReady);
+            uint32_t tamanioLista = list_size(listaReady);
             if(tamanioLista == 1){
                 log_trace(kernel_logger, "El tamanio de la lista de ready es 1, hago FIFO");
                 pthread_mutex_lock(&m_listaReady);
@@ -638,22 +681,22 @@ contexto_ejecucion* obtener_ce(t_pcb* pcb)
     contexto_ejecucion * nuevoContexto = malloc(sizeof(contexto_ejecucion));
     nuevoContexto->instrucciones = string_array_new();
     nuevoContexto->registros_cpu = malloc(sizeof(t_registro));
-    log_trace(kernel_logger, "hace maloc del nuevo contexto");
+    // log_trace(kernel_logger, "hace maloc del nuevo contexto");
 
     copiar_id_pcb_a_ce(pcb, nuevoContexto);
-    log_trace(kernel_logger, "copia el id del pcb");
+    // log_trace(kernel_logger, "copia el id del pcb");
 
     copiar_instrucciones_pcb_a_ce(pcb, nuevoContexto);
-    log_trace(kernel_logger, "copia instrucciones del pcb");
+    // log_trace(kernel_logger, "copia instrucciones del pcb");
 
     copiar_PC_pcb_a_ce(pcb, nuevoContexto);
-    log_trace(kernel_logger, "copia program counter");
+    // log_trace(kernel_logger, "copia program counter");
 
     copiar_registros_pcb_a_ce(pcb, nuevoContexto);
-    log_trace(kernel_logger, "copia registros del pcb");
+    // log_trace(kernel_logger, "copia registros del pcb");
 
     copiar_tabla_segmentos_pcb_a_ce(pcb, nuevoContexto);
-    log_trace(kernel_logger, "copia tabla segmentos del pcb");
+    // log_trace(kernel_logger, "copia tabla segmentos del pcb");
 
     return nuevoContexto;
 }
@@ -682,34 +725,34 @@ void copiar_PC_ce_a_pcb(contexto_ejecucion* ce, t_pcb* pcb)
 
 void copiar_registros_pcb_a_ce(t_pcb* pcb, contexto_ejecucion* ce)
 {
-    strcpy(ce->registros_cpu->AX , pcb->registros_cpu->AX);
-    strcpy(ce->registros_cpu->BX , pcb->registros_cpu->BX);
-    strcpy(ce->registros_cpu->CX , pcb->registros_cpu->CX);
-    strcpy(ce->registros_cpu->DX , pcb->registros_cpu->DX);
-	strcpy(ce->registros_cpu->EAX , pcb->registros_cpu->EAX);
-	strcpy(ce->registros_cpu->EBX , pcb->registros_cpu->EBX);
-	strcpy(ce->registros_cpu->ECX , pcb->registros_cpu->ECX);
-	strcpy(ce->registros_cpu->EDX , pcb->registros_cpu->EDX);
-	strcpy(ce->registros_cpu->RAX , pcb->registros_cpu->RAX);
-	strcpy(ce->registros_cpu->RBX , pcb->registros_cpu->RBX);
-	strcpy(ce->registros_cpu->RCX , pcb->registros_cpu->RCX);
-	strcpy(ce->registros_cpu->RDX , pcb->registros_cpu->RDX);
+    strncpy(ce->registros_cpu->AX , pcb->registros_cpu->AX, 4);
+    strncpy(ce->registros_cpu->BX , pcb->registros_cpu->BX, 4);
+    strncpy(ce->registros_cpu->CX , pcb->registros_cpu->CX, 4);
+    strncpy(ce->registros_cpu->DX , pcb->registros_cpu->DX, 4);
+	strncpy(ce->registros_cpu->EAX , pcb->registros_cpu->EAX, 8);
+	strncpy(ce->registros_cpu->EBX , pcb->registros_cpu->EBX, 8);
+	strncpy(ce->registros_cpu->ECX , pcb->registros_cpu->ECX, 8);
+	strncpy(ce->registros_cpu->EDX , pcb->registros_cpu->EDX, 8);
+	strncpy(ce->registros_cpu->RAX , pcb->registros_cpu->RAX, 16);
+	strncpy(ce->registros_cpu->RBX , pcb->registros_cpu->RBX, 16);
+	strncpy(ce->registros_cpu->RCX , pcb->registros_cpu->RCX, 16);
+	strncpy(ce->registros_cpu->RDX , pcb->registros_cpu->RDX, 16);
 }
 
 void copiar_registros_ce_a_pcb(contexto_ejecucion* ce, t_pcb* pcb)
 {
-    strcpy(pcb->registros_cpu->AX , ce->registros_cpu->AX);
-    strcpy(pcb->registros_cpu->BX , ce->registros_cpu->BX);
-    strcpy(pcb->registros_cpu->CX , ce->registros_cpu->CX);
-    strcpy(pcb->registros_cpu->DX , ce->registros_cpu->DX);
-	strcpy(pcb->registros_cpu->EAX , ce->registros_cpu->EAX);
-	strcpy(pcb->registros_cpu->EBX , ce->registros_cpu->EBX);
-	strcpy(pcb->registros_cpu->ECX , ce->registros_cpu->ECX);
-	strcpy(pcb->registros_cpu->EDX , ce->registros_cpu->EDX);
-	strcpy(pcb->registros_cpu->RAX , ce->registros_cpu->RAX);
-	strcpy(pcb->registros_cpu->RBX , ce->registros_cpu->RBX);
-	strcpy(pcb->registros_cpu->RCX , ce->registros_cpu->RCX);
-	strcpy(pcb->registros_cpu->RDX , ce->registros_cpu->RDX);
+    strncpy(pcb->registros_cpu->AX , ce->registros_cpu->AX, 4);
+    strncpy(pcb->registros_cpu->BX , ce->registros_cpu->BX, 4);
+    strncpy(pcb->registros_cpu->CX , ce->registros_cpu->CX, 4);
+    strncpy(pcb->registros_cpu->DX , ce->registros_cpu->DX, 4);
+	strncpy(pcb->registros_cpu->EAX , ce->registros_cpu->EAX, 8);
+	strncpy(pcb->registros_cpu->EBX , ce->registros_cpu->EBX, 8);
+	strncpy(pcb->registros_cpu->ECX , ce->registros_cpu->ECX, 8);
+	strncpy(pcb->registros_cpu->EDX , ce->registros_cpu->EDX, 8);
+	strncpy(pcb->registros_cpu->RAX , ce->registros_cpu->RAX, 16);
+	strncpy(pcb->registros_cpu->RBX , ce->registros_cpu->RBX, 16);
+	strncpy(pcb->registros_cpu->RCX , ce->registros_cpu->RCX, 16);
+	strncpy(pcb->registros_cpu->RDX , ce->registros_cpu->RDX, 16);
 }
 
 void copiar_tabla_segmentos_pcb_a_ce(t_pcb* pcb, contexto_ejecucion* ce)
@@ -816,12 +859,13 @@ void atender_final_proceso(int cod_op)
 
 void finalizar_proceso(contexto_ejecucion* ce, int cod_op) // Saca de la lista de ejecucion, actualiza el pcb, y finaliza el proceso
 {
-    pthread_mutex_lock(&m_listaEjecutando);
-        t_pcb * pcb_a_finalizar = (t_pcb *) list_remove(listaEjecutando, 0);
-        actualizar_pcb(pcb_a_finalizar, ce);
-    pthread_mutex_unlock(&m_listaEjecutando);
+    t_pcb* pcb_a_finalizar = actualizar_pcb_lremove_devuelve_pcb(ce, listaEjecutando, m_listaEjecutando);
 
     cambiar_estado_a(pcb_a_finalizar, EXIT, estadoActual(pcb_a_finalizar));
+
+    liberar_memoria(pcb_a_finalizar);
+
+    liberar_archivos_abiertos(pcb_a_finalizar);
 
     liberar_recursos_pedidos(pcb_a_finalizar);
     
@@ -835,17 +879,57 @@ void finalizar_proceso(contexto_ejecucion* ce, int cod_op) // Saca de la lista d
     enviar_Fin_consola(pcb_a_finalizar->socket_consola);
 }
 
+void liberar_memoria(t_pcb* pcb)
+{
+    t_list* segmentos_activos = list_filter(pcb->tabla_segmentos, segmento_activo);
+    for (int i = 0; i < list_size(segmentos_activos); i++)
+    {
+        t_ent_ts* seg = list_get(segmentos_activos, i);
+        printf("SEG: %d, BASE: %d, TAM: %d, ACTIVO: %d\n", seg->id_seg, seg->base, seg->tam, seg->activo);
+        solicitar_liberacion_segmento(seg->base, seg->tam, pcb->id, seg->id_seg);
+    }
+    list_destroy_and_destroy_elements(pcb->tabla_segmentos, (void*) free);
+    list_destroy(segmentos_activos);
+}
+
+bool segmento_activo(t_ent_ts *seg) {
+    return seg->activo && (seg->id_seg != 0);
+}
+
+void solicitar_liberacion_segmento(uint32_t base, uint32_t tam, uint32_t pid, uint32_t seg_id)
+{
+    t_paquete* paquete = crear_paquete_op_code(DELETE_SEGMENT);
+
+    agregar_entero_a_paquete(paquete, pid); 
+    agregar_entero_a_paquete(paquete, seg_id); 
+	agregar_entero_a_paquete(paquete, base);
+    agregar_entero_a_paquete(paquete, tam);
+
+    enviar_paquete(paquete, memory_connection);
+
+    eliminar_paquete(paquete);
+
+    log_error(kernel_logger, "PID: %d - Eliminar Segmento - Id: %d - Tamaño: %d", pid, seg_id, tam);
+}
+
+void liberar_archivos_abiertos(t_pcb*)
+{
+    log_error(kernel_logger, "Elimino los archivos abiertos del proceso que entra en EXIT");
+}
+
+
 void liberar_recursos_pedidos(t_pcb* pcb)
 {
     for (int i = 0; i < list_size(pcb->recursos_pedidos); i++)
     {
+        log_warning(kernel_logger, "El proceso con id: %d tiene %d recursos pedidos", pcb->id, list_size(pcb->recursos_pedidos));
         log_warning(kernel_logger, "se libera un recurso al finalizar el proceso");
         int element = list_get(pcb->recursos_pedidos, i);
         sumar_instancia_exit(element, pcb);
         log_warning(kernel_logger, "se suma la instancia");
-        if (tiene_que_reencolar_bloq_recurso(i)) {
+        if (tiene_que_reencolar_bloq_recurso(element)) {
             log_warning(kernel_logger, "se detecto un proceso a reencolar");
-            reencolar_bloqueo_por_recurso(i);
+            reencolar_bloqueo_por_recurso(element);
         }
     }
     list_clean(pcb->recursos_pedidos);
@@ -866,10 +950,12 @@ void atender_desalojo_yield()
 {
     contexto_ejecucion* contexto_a_reencolar = recibir_ce(cpu_dispatch_connection);
 
-    pthread_mutex_lock(&m_listaEjecutando);
-        t_pcb * pcb_a_reencolar = (t_pcb *) list_remove(listaEjecutando, 0); // inicializar pcb y despues liberarlo
-        actualizar_pcb(pcb_a_reencolar, contexto_a_reencolar);
-    pthread_mutex_unlock(&m_listaEjecutando);
+    t_pcb* pcb_a_reencolar = actualizar_pcb_lremove_devuelve_pcb(contexto_a_reencolar, listaEjecutando, m_listaEjecutando);
+
+    // pthread_mutex_lock(&m_listaEjecutando);
+    //     t_pcb * pcb_a_reencolar = (t_pcb *) list_remove(listaEjecutando, 0); // inicializar pcb y despues liberarlo
+    //     actualizar_pcb(pcb_a_reencolar, contexto_a_reencolar);
+    // pthread_mutex_unlock(&m_listaEjecutando);
 
     cambiar_estado_a(pcb_a_reencolar, READY, estadoActual(pcb_a_reencolar));
 
@@ -898,7 +984,7 @@ void iniciar_nueva_espera_ready(t_pcb* pcb)
 
 // ----------------------- Funciones Manejo de Recursos ----------------------- //
 
-int recurso_no_existe(char* recurso)
+uint32_t recurso_no_existe(char* recurso)
 { // verifica si no existe el recurso - retorna 0 si existe - 1 si no existe
     int cantidad = string_array_size(kernel_config.recursos);
 
@@ -921,34 +1007,31 @@ int obtener_id_recurso(char* recurso)
     }
 }
 
-int id_proceso_en_lista(t_list* lista)
-{
-    t_pcb * pcb = (t_pcb* ) list_get(lista, 0);
-    return obtenerPid(pcb);
-}
-
-int obtener_instancias_recurso(int id_recurso)
+uint32_t obtener_instancias_recurso(int id_recurso)
 {
     return kernel_config.instancias_recursos[id_recurso];
 }
 
-void restar_instancia(int id_recurso)
+void restar_instancia(int id_recurso, contexto_ejecucion* contexto)
 { // resta 1 a la instancia y se la asigno a recursos_pedidos del proceso en ejecucion
     kernel_config.instancias_recursos[id_recurso] -= 1;
+
+    t_pcb * pcb_pide_recurso = pcb_lget_devuelve_pcb(contexto, listaEjecutando, m_listaEjecutando);
+
     pthread_mutex_lock(&m_listaEjecutando);
-        t_pcb * pcb_pide_recurso = (t_pcb *) list_get(listaEjecutando, 0); 
         list_add(pcb_pide_recurso->recursos_pedidos, id_recurso);
     pthread_mutex_unlock(&m_listaEjecutando);
 }
 
-void sumar_instancia(int id_recurso) // tednria que haber un sumar_instancia por exit que saque los elementos de el pcb q esta de salida
+void sumar_instancia(int id_recurso, contexto_ejecucion* contexto) // tednria que haber un sumar_instancia por exit que saque los elementos de el pcb q esta de salida
 { // suma 1 a la instancia y se la saco a recursos_pedidos del proceso en ejecucion
     kernel_config.instancias_recursos[id_recurso] += 1;
 
     sem_post(sem_recurso[id_recurso]);
 
+    t_pcb * pcb_quita_recurso = pcb_lget_devuelve_pcb(contexto, listaEjecutando, m_listaEjecutando);
+    
     pthread_mutex_lock(&m_listaEjecutando);
-        t_pcb * pcb_quita_recurso = (t_pcb *) list_get(listaEjecutando, 0); 
         list_remove_element(pcb_quita_recurso->recursos_pedidos, id_recurso);
     pthread_mutex_unlock(&m_listaEjecutando);
 }
@@ -977,9 +1060,9 @@ void atender_wait_recurso()
     } else {
         int id_recurso = obtener_id_recurso(recurso_wait);
 
-        restar_instancia(id_recurso);
+        restar_instancia(id_recurso, contexto_ejecuta_wait);
         
-        log_info(kernel_logger, "PID: [%d] - Wait: [%s] - Instancias: [%d]", id_proceso_en_lista(listaEjecutando), recurso_wait, obtener_instancias_recurso(id_recurso));
+        log_info(kernel_logger, "PID: [%d] - Wait: [%s] - Instancias: [%d]", contexto_ejecuta_wait->id, recurso_wait, obtener_instancias_recurso(id_recurso));
         
         if (tiene_instancia_wait(id_recurso)) {
             t_pcb* pcb_ejecuta_wait = actualizar_pcb_lget_devuelve_pcb(contexto_ejecuta_wait, listaEjecutando, m_listaEjecutando);
@@ -992,10 +1075,13 @@ void atender_wait_recurso()
 
             sem_wait(sem_recurso[id_recurso]);
         } else {
-            pthread_mutex_lock(&m_listaEjecutando);
-                t_pcb * pcb_bloqueado_en_recurso = (t_pcb *) list_remove(listaEjecutando, 0); // inicializar pcb y despues liberarlo
-                actualizar_pcb(pcb_bloqueado_en_recurso, contexto_ejecuta_wait);
-            pthread_mutex_unlock(&m_listaEjecutando);
+
+            t_pcb * pcb_bloqueado_en_recurso = actualizar_pcb_lremove_devuelve_pcb(contexto_ejecuta_wait, listaEjecutando, m_listaEjecutando);
+            
+            // pthread_mutex_lock(&m_listaEjecutando);
+            //     t_pcb * pcb_bloqueado_en_recurso = (t_pcb *) list_remove(listaEjecutando, 0); // inicializar pcb y despues liberarlo
+            //     actualizar_pcb(pcb_bloqueado_en_recurso, contexto_ejecuta_wait);
+            // pthread_mutex_unlock(&m_listaEjecutando);
             
             cambiar_estado_a(pcb_bloqueado_en_recurso, BLOCKED, estadoActual(pcb_bloqueado_en_recurso));
             
@@ -1046,9 +1132,9 @@ void atender_signal_recurso()
 
         int id_recurso = obtener_id_recurso(recurso_signal);
 
-        sumar_instancia(id_recurso);
+        sumar_instancia(id_recurso, nuevo_contexto_ejecuta_signal);
         
-        log_info(kernel_logger, "PID: [%d] - Signal: [%s] - Instancias: [%d]", id_proceso_en_lista(listaEjecutando), recurso_signal, obtener_instancias_recurso(id_recurso));
+        log_info(kernel_logger, "PID: [%d] - Signal: [%s] - Instancias: [%d]", nuevo_contexto_ejecuta_signal->id, recurso_signal, obtener_instancias_recurso(id_recurso));
                             
         if (tiene_que_reencolar_bloq_recurso(id_recurso)) {
             reencolar_bloqueo_por_recurso(id_recurso);
@@ -1091,10 +1177,12 @@ void atender_block_io()
     
     int bloqueo = atoi(tiempo_bloqueo);
     
-    pthread_mutex_lock(&m_listaEjecutando);
-        t_pcb * pcb_IO = (t_pcb *) list_remove(listaEjecutando, 0);
-        actualizar_pcb(pcb_IO, contexto_IO);
-    pthread_mutex_unlock(&m_listaEjecutando);
+    t_pcb * pcb_IO = actualizar_pcb_lremove_devuelve_pcb(contexto_IO, listaEjecutando, m_listaEjecutando);
+    
+    // pthread_mutex_lock(&m_listaEjecutando);
+    //     t_pcb * pcb_IO = (t_pcb *) list_remove(listaEjecutando, 0);
+    //     actualizar_pcb(pcb_IO, contexto_IO);
+    // pthread_mutex_unlock(&m_listaEjecutando);
     
     sacar_rafaga_ejecutada(pcb_IO); // hacer cada vez que sale de running
     
@@ -1120,7 +1208,7 @@ void atender_block_io()
 void rutina_io(thread_args* args)
 {
     t_pcb* pcb = args->pcb;
-    int bloqueo = args->bloqueo;
+    uint32_t bloqueo = args->bloqueo;
 
     log_info(kernel_logger,"PID: [%d] - Ejecuta IO: [%d]",pcb->id, bloqueo);
 
@@ -1149,45 +1237,50 @@ void atender_crear_segmento()
 
     contexto_ejecucion* contexto_crea_segmento = estructura_crear_segmento->ce;
 
-    int id_segmento = estructura_crear_segmento->entero1;
+    uint32_t id_segmento = estructura_crear_segmento->entero1;
 
-    int tamanio_segmento = estructura_crear_segmento->entero2;
+    uint32_t tamanio_segmento = estructura_crear_segmento->entero2;
+    
+    uint32_t id_proceso = contexto_crea_segmento->id;
 
-    int id_proceso = ((t_pcb *) list_get(listaEjecutando, 0))->id;
+    log_info(kernel_logger, "PID: [%d] - Crear Segmento - Id: [%d] - Tamaño: [%d]", id_proceso, id_segmento, tamanio_segmento);
 
     enviar_3_enteros(memory_connection, id_proceso, id_segmento, tamanio_segmento, CREATE_SEGMENT); // mando a memoria idP, idS, tamanio
 
-    int compactacion = 1;
+    uint32_t compactacion = 1;
     while(compactacion){
         int cod_op_creacion = recibir_operacion(memory_connection);
-        log_warning(kernel_logger, "Recibi el codOP: %d", cod_op_creacion);
         switch (cod_op_creacion)
         {
+        case MENSAJE:
+            log_error(kernel_logger, "El codop dio mensaje");
+        break;
         case OUT_OF_MEMORY:
             finalizar_proceso(contexto_crea_segmento, OUT_OF_MEMORY);
             compactacion = 0;
             break;
         
         case NECESITO_COMPACTAR:
+
+            if (f_execute) { // si se ejecuta una instruccion f_* bloqueante
+                log_info(kernel_logger, "Compactacion: [Esperando Fin de Operaciones de FS]");
+                pthread_mutex_lock(&m_F_operation);
+                pthread_mutex_unlock(&m_F_operation); // esto me parece una warangada, pero creo que funciona
+            }
+
             atender_compactacion(id_proceso, id_segmento, tamanio_segmento);
             break;
 
         case OK:
-            t_3_enteros* estructura_a_recibir = recibir_3_enteros(memory_connection);
-            t_segmento* nuevoElemento = malloc(sizeof(t_segmento));
-            log_warning(kernel_logger, "Aca estoy en OK");
-            nuevoElemento->id_segmento = estructura_a_recibir->entero1;
-            nuevoElemento->direccion_base = estructura_a_recibir->entero2;
-            nuevoElemento->tamanio_segmento = estructura_a_recibir->entero3;
-            //log_warning(kernel_logger, "Aca estoy en OK x1.5");
-            //int base_segmento = recibir_entero(memory_connection, kernel_logger);
+        
+            uint32_t base_segmento = recibir_entero_u32(memory_connection, kernel_logger);
             
-            //t_segmento *nuevoElemento = crear_segmento(id_segmento, base_segmento, tamanio_segmento);
+            t_ent_ts *nuevoElemento = crear_segmento(id_segmento, base_segmento, tamanio_segmento);
             
-            t_pcb* pcb_crea_segmento = actualizar_pcb_lget_devuelve_pcb(contexto_crea_segmento, listaBloqueados, m_listaEjecutando);
-            log_warning(kernel_logger, "Aca estoy en OK x2");
-            list_add(pcb_crea_segmento->tabla_segmentos, nuevoElemento);
+            t_pcb* pcb_crea_segmento = actualizar_pcb_lget_devuelve_pcb(contexto_crea_segmento, listaEjecutando, m_listaEjecutando);
             
+            list_replace_and_destroy_element(pcb_crea_segmento->tabla_segmentos, id_segmento, nuevoElemento, (void*)free);
+
             contexto_ejecucion* nuevo_contexto_crea_segmento = obtener_ce(pcb_crea_segmento);
 
             enviar_ce(cpu_dispatch_connection, nuevo_contexto_crea_segmento, EJECUTAR_CE, kernel_logger);
@@ -1205,41 +1298,48 @@ void atender_crear_segmento()
     liberar_ce_2enteros(estructura_crear_segmento); // VER SI FUNCIONA
 }
 
-void atender_compactacion(int id_proceso, int id_segmento, int tamanio_segmento)
+void atender_compactacion(uint32_t id_proceso, uint32_t id_segmento, uint32_t tamanio_segmento)
 {
-    if (f_execute) { // si se ejecuta una instruccion f_* bloqueante
-        log_info(kernel_logger, "Compactacion: [Esperando Fin de Operaciones de FS]");
-        pthread_mutex_lock(&m_F_operation);
-        pthread_mutex_unlock(&m_F_operation); // esto me parece una warangada, pero creo que funciona
-    } else {
-        log_info(kernel_logger, "Compactacion: [Se Solicito Compactacion]");
+    log_info(kernel_logger, "Compactacion: [Se Solicito Compactacion]");
 
-        enviar_CodOp(memory_connection, COMPACTAR);
+    enviar_CodOp(memory_connection, COMPACTAR);
 
-        int cod_op_compactacion = recibir_operacion(memory_connection);
-
-        switch (cod_op_compactacion){
-            case OK:
-                actualizar_ts_x_proceso(); // VER ESTO
-
-                log_info(kernel_logger, "Compactacion: [Finalizo el proceso de compactacion]");
-
-                enviar_3_enteros(memory_connection, id_proceso, id_segmento, tamanio_segmento, CREATE_SEGMENT);
-
-                break;
+    uint32_t cod_op_compactacion = recibir_operacion(memory_connection);
+    log_error(kernel_logger,"el codop es %d",cod_op_compactacion);
+    
+    switch (cod_op_compactacion){
+        case OK_COMPACTACION:
             
-            default:
-                log_error(kernel_logger, "El codigo de recepcion de la compactacion del segmento es erroneo");
+            recibir_nuevas_bases();
+            // actualizar_ts_x_proceso();
 
-                break;
-        }
+            log_info(kernel_logger, "Compactacion: [Finalizo el proceso de compactacion]");
+
+            enviar_3_enteros(memory_connection, id_proceso, id_segmento, tamanio_segmento, CREATE_SEGMENT);
+
+            break;
+        
+        default:
+            log_error(kernel_logger, "El codigo de recepcion de la compactacion del segmento es erroneo");
+
+            break;
     }
 }
 
-void actualizar_ts_x_proceso() // PROBAR
-{
-    t_list* lista_ts_x_procesos = recibir_todas_tablas_segmentos(memory_connection);
+void recibir_nuevas_bases(int socket_memoria) {
+    uint32_t tam_buffer;
+    recv(memory_connection, &tam_buffer, sizeof(uint32_t), NULL);
+    tam_buffer -= sizeof(uint32_t);
 
+    void *buffer = malloc(tam_buffer);
+    recv(memory_connection, buffer, tam_buffer, NULL);
+    int desplazamiento = 0;
+
+    int cant_segmentos = tam_buffer / (sizeof(uint32_t) * 3);
+    
+    uint32_t pid;
+    uint32_t id;
+    uint32_t n_base;
     t_list* lista_de_pcbs = list_create();
 
     list_add_all(lista_de_pcbs, listaReady);
@@ -1248,41 +1348,39 @@ void actualizar_ts_x_proceso() // PROBAR
 
     for(int i = 0; i < cantidad_instancias; i++)
     {
-        list_add_all(lista_de_pcbs, list_get(lista_recurso, i));
+        list_add_all(lista_de_pcbs, lista_recurso[i]);
     }
-    
 
-    int cantidad_procesos = list_size(lista_ts_x_procesos);
-    for(int i = 0; i < cantidad_procesos; i++)
+    for (int i = 0; i < cant_segmentos; i++)
     {
-        t_proceso* proceso_i = list_get(lista_ts_x_procesos, i);
+        memcpy(&pid, buffer + desplazamiento, sizeof(uint32_t));
+        desplazamiento += sizeof(uint32_t);
+        memcpy(&id, buffer + desplazamiento, sizeof(uint32_t));
+        desplazamiento += sizeof(uint32_t);
+        memcpy(&n_base, buffer + desplazamiento, sizeof(uint32_t));
+        desplazamiento += sizeof(uint32_t);
 
-        t_pcb* pcb_encontrado = pcb_en_lista_coincide(lista_de_pcbs, proceso_i);
 
-        list_clean_and_destroy_elements(pcb_encontrado->tabla_segmentos, (void*)eliminar_tabla_segmentos);
+        t_pcb* pcb_encontrado = pcb_en_lista_coincide(lista_de_pcbs, pid);
 
-        list_add_all(pcb_encontrado->tabla_segmentos, proceso_i->tabla_segmentos);
+        // imprimir_tabla_segmentos(pcb_encontrado->tabla_segmentos,kernel_logger);
+        // Search PID in PROCESOS_EN_MEMORIA
+        
+        t_ent_ts* segmento = list_get(pcb_encontrado->tabla_segmentos, id);
+
+        segmento->base = n_base;
+        
     }
-    
-    list_destroy(lista_de_pcbs); 
+    free(buffer);
 }
 
-t_pcb* pcb_en_lista_coincide(t_list* lista_pcbs, t_proceso* proceso_a_matchear)
+t_pcb* pcb_en_lista_coincide(t_list* lista_pcbs, uint32_t idproceso)
 {
     bool encontrar_pcb(t_pcb* pcb){
-        return pcb->id == proceso_a_matchear->id;
+        return pcb->id == idproceso;
     }
 
     return list_find(lista_pcbs, (void*) encontrar_pcb);
-}
-
-void eliminar_tabla_segmentos(t_list* tabla_segmentos)
-{
-    for (int i = 0; i < list_size(tabla_segmentos); i++)
-    {
-        free(list_get(tabla_segmentos, i));
-    }
-    
 }
 
 // ----------------------- Funciones BORRAR_SEGMENTO ----------------------- //
@@ -1293,25 +1391,29 @@ void atender_borrar_segmento() //TODO
 
     contexto_ejecucion* contexto_borrar_segmento = estructura_borrar_segmento->ce;
 
-    int id_segmento = estructura_borrar_segmento->entero;
+    t_pcb* pcb_a_borrar = pcb_en_lista_coincide(listaEjecutando, contexto_borrar_segmento->id);
 
-    int id_proceso = ((t_pcb *) list_get(listaEjecutando, 0))->id;
+    uint32_t id_proceso = pcb_a_borrar->id;
 
-    int tamanio = obtener_tamanio_segmento(((t_pcb *) list_get(listaEjecutando, 0)), id_segmento);
-
-    int base = obtener_base_segmento(((t_pcb *) list_get(listaEjecutando, 0)), id_segmento);
+    uint32_t id_segmento = estructura_borrar_segmento->entero;
     
-    enviar_4enteros(memory_connection, id_proceso, id_segmento, tamanio, base, DELETE_SEGMENT);
+    t_ent_ts* seg_a_modificar = list_get(pcb_a_borrar->tabla_segmentos, id_segmento);
 
-    recibir_operacion(memory_connection);
+    uint32_t base_segmento = seg_a_modificar->base;
+
+    uint32_t tam_segmento = seg_a_modificar->tam;
+
+    solicitar_liberacion_segmento(base_segmento, tam_segmento, id_proceso, id_segmento);
+
+    seg_a_modificar->base = 0;
+    seg_a_modificar->tam = 0;
+    seg_a_modificar->activo = 0;
     
-    t_list* nueva_tabla_segmentos = recibir_tabla_segmentos(memory_connection);
+    log_info(kernel_logger, "PID: [%d] - Eliminar Segmento - Id Segmento: [%d]", id_proceso, id_segmento);
     
     t_pcb* pcb_borrar_segmento = actualizar_pcb_lget_devuelve_pcb(contexto_borrar_segmento, listaEjecutando, m_listaEjecutando);
 
-    eliminar_tabla_segmentos(pcb_borrar_segmento->tabla_segmentos);
-
-    list_add_all(pcb_borrar_segmento->tabla_segmentos, nueva_tabla_segmentos);
+    // imprimir_tabla_segmentos(pcb_borrar_segmento->tabla_segmentos, kernel_logger);
 
     contexto_ejecucion* nuevo_contexto_borrar_segmento = obtener_ce(pcb_borrar_segmento);
     
@@ -1319,7 +1421,12 @@ void atender_borrar_segmento() //TODO
     
     liberar_ce(nuevo_contexto_borrar_segmento);
 
-    liberar_ce_entero(estructura_borrar_segmento); // VER SI FUNCIONA
+    liberar_ce_entero(estructura_borrar_segmento);
+}
+
+void limpiar_tabla_segmentos(t_list* tabla_segmentos)
+{
+    list_clean_and_destroy_elements(tabla_segmentos, (void*) free);
 }
 
 int obtener_tamanio_segmento(t_pcb* pcb,int id_segmento_elim){
@@ -1345,12 +1452,15 @@ void atender_apertura_archivo()
 
     t_list* nombreArchivosAbiertos = list_map(tablaGlobalArchivosAbiertos,(void*) obtener_nombre_archivo);
 
-    pthread_mutex_lock(&m_listaEjecutando);
-        t_pcb * pcb_en_ejecucion = (t_pcb *) list_get(listaEjecutando, 0);
-        actualizar_pcb(pcb_en_ejecucion, contextoDeEjecucion);
-    pthread_mutex_unlock(&m_listaEjecutando);
+    t_pcb * pcb_en_ejecucion = actualizar_pcb_lget_devuelve_pcb(contextoDeEjecucion, listaEjecutando, m_listaEjecutando);
+    
+    // pthread_mutex_lock(&m_listaEjecutando);
+    //     t_pcb * pcb_en_ejecucion = (t_pcb *) list_get(listaEjecutando, 0);
+    //     actualizar_pcb(pcb_en_ejecucion, contextoDeEjecucion);
+    // pthread_mutex_unlock(&m_listaEjecutando);
     
     if(existeArchivo(nombreArchivo)){ // si existe en la tabla global de kernel
+        log_warning(kernel_logger, "Kernel dice que existe el archivo en la tabla global, does kernel miente?");
         t_entradaTAAP* entradaTAAP3= malloc(sizeof(t_entradaTAAP));
         crear_entrada_TAAP(nombreArchivo,entradaTAAP3);
         list_add(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso,entradaTAAP3);
@@ -1358,9 +1468,9 @@ void atender_apertura_archivo()
 
         sacar_rafaga_ejecutada(pcb_en_ejecucion);
         cambiar_estado_a(pcb_en_ejecucion, BLOCKED, estadoActual(pcb_en_ejecucion));
-        log_info(kernel_logger, "PID: [%d] - Bloqueado por: [%s]",pcb_en_ejecucion->id, nombreArchivo);
         sem_post(&fin_ejecucion);
-        agregar_a_lista_con_sems(pcb_en_ejecucion,entradaEncontrada->lista_block_archivo,entradaEncontrada->m_lista_block_archivo);
+        agregar_a_lista_con_sems(pcb_en_ejecucion, entradaEncontrada->lista_block_archivo, entradaEncontrada->m_lista_block_archivo);
+        log_info(kernel_logger, "PID: [%d] - Bloqueado por: [%s]", pcb_en_ejecucion->id, nombreArchivo);
 
     }
     else{
@@ -1404,10 +1514,10 @@ void atender_apertura_archivo()
             default:
                 log_error(kernel_logger,"CodOp invalido");
                 break;
-        }   
+            
+        }
+        log_info(kernel_logger, "PID: [%d] - Abrir Archivo: [%s]",pcb_en_ejecucion->id, nombreArchivo);
     }
-
-    log_trace(kernel_logger, "PID: <%d> - Abrir Archivo: <%s>",pcb_en_ejecucion->id, nombreArchivo);
     liberar_ce_string_entero(estructuraApertura);
 }
 
@@ -1416,8 +1526,6 @@ void crear_entrada_TGAA(char* nombre, t_entradaTAAP* entrada)
     t_entradaTGAA* nuevaEntradaTGAA = malloc(sizeof(t_entradaTGAA));
 
     strcpy(nuevaEntradaTGAA->nombreArchivo,nombre);
-
-    nuevaEntradaTGAA->puntero = entrada;
 
     nuevaEntradaTGAA->tamanioArchivo = 0;
     
@@ -1446,13 +1554,25 @@ void crear_entrada_TAAP(char* nombre,t_entradaTAAP* nuevaEntrada){
     
     nuevaEntrada->tamanioArchivo = entradaGlobal->tamanioArchivo;
 
+    list_destroy(listaFiltrada);
 }
 
 t_list* nombre_en_lista_coincide(t_list* tabla, char* nombre)
 {
     bool encontrar_nombre(t_entradaTGAA* entrada){
     
-        log_trace(kernel_logger, "Busco en lista de entradas, %s", entrada->nombreArchivo);
+        log_trace(kernel_logger, "Busco en lista de entradas, nombre en lista coincide, %s", entrada->nombreArchivo);
+        return strcmp(entrada->nombreArchivo, nombre) == 0;
+    }
+
+    return list_filter(tabla, (void*)encontrar_nombre);
+}
+
+t_list* nombre_en_lista_coincide_TAAP(t_list* tabla, char* nombre)
+{
+    bool encontrar_nombre(t_entradaTAAP* entrada){
+    
+        log_trace(kernel_logger, "Busco en lista de entradas, TAAP, %s", entrada->nombreArchivo);
         return strcmp(entrada->nombreArchivo, nombre) == 0;
     }
 
@@ -1475,12 +1595,14 @@ void atender_cierre_archivo(){
     contexto_ejecucion* contextoDeEjecucion = estructuraCierre->ce;
     char* nombreArchivo = estructuraCierre->string;
 
-    pthread_mutex_lock(&m_listaEjecutando);
-        t_pcb * pcb_en_ejecucion = (t_pcb *) list_get(listaEjecutando, 0);
-        actualizar_pcb(pcb_en_ejecucion, contextoDeEjecucion);
-    pthread_mutex_unlock(&m_listaEjecutando);
+    t_pcb * pcb_en_ejecucion = actualizar_pcb_lget_devuelve_pcb(contextoDeEjecucion, listaEjecutando, m_listaEjecutando);
 
-    log_trace(kernel_logger, "PID: <%d> - Cerrar Archivo: <%s>",pcb_en_ejecucion->id,nombreArchivo);
+    // pthread_mutex_lock(&m_listaEjecutando);
+    //     t_pcb * pcb_en_ejecucion = (t_pcb *) list_get(listaEjecutando, 0);
+    //     actualizar_pcb(pcb_en_ejecucion, contextoDeEjecucion);
+    // pthread_mutex_unlock(&m_listaEjecutando);
+
+    log_info(kernel_logger, "PID: [%d] - Cerrar Archivo: [%s]",pcb_en_ejecucion->id,nombreArchivo);
     
     t_list* listaFiltrada = nombre_en_lista_coincide(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso,(char*) nombreArchivo);
     
@@ -1488,31 +1610,38 @@ void atender_cierre_archivo(){
 
     t_entradaTAAP* entradaProceso = list_get(listaFiltrada,0);
     
+    t_entradaTGAA* entradaGlobalAA = conseguirEntradaTablaGlobal(nombreArchivo);
+
+    list_remove_element(entradaGlobalAA->lista_block_archivo, pcb_en_ejecucion);
+
     log_error(kernel_logger,"la TAAP tiene :%d elementos", list_size(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso));
 
-    list_remove_element(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso,entradaProceso);
+    list_remove_element(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso, entradaProceso);
 
     log_error(kernel_logger,"la TAAP tiene :%d elementos", list_size(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso));
     
     free(entradaProceso);
     
     if(otrosUsanArchivo(nombreArchivo)){
-        t_entradaTGAA* entrada = conseguirEntradaTablaGlobal(nombreArchivo);
+        log_debug(kernel_logger, "Entro al log que dice que hay otros usuarios abriendo el archivo");
         t_pcb* pcb_a_ejectuar = hallarPrimerPcb(nombreArchivo);
         enviar_ce(cpu_dispatch_connection, contextoDeEjecucion, EJECUTAR_CE, kernel_logger);
-        reencolar_bloq_por_archivo(nombreArchivo,entrada);
+        reencolar_bloq_por_archivo(nombreArchivo,entradaGlobalAA);
     }
     
     else{
-    t_list* listaFiltrada =  nombre_en_lista_coincide(tablaGlobalArchivosAbiertos,(char*) nombreArchivo);
-    t_entradaTGAA* entradaGlobal = list_get(listaFiltrada,0);
-    list_remove_element(tablaGlobalArchivosAbiertos,entradaGlobal);
-    log_warning(kernel_logger,"la TAAG tiene :%d",list_size(tablaGlobalArchivosAbiertos));
-    enviar_ce(cpu_dispatch_connection, contextoDeEjecucion, EJECUTAR_CE, kernel_logger);
-    free(entradaGlobal);
+        log_debug(kernel_logger, "no hay mas usuarios abriendo el archivo, mamawebo");
+        t_list* listaFiltradaEnElse =  nombre_en_lista_coincide(tablaGlobalArchivosAbiertos,(char*) nombreArchivo);
+        t_entradaTGAA* entradaGlobal = list_get(listaFiltradaEnElse,0);
+        list_remove_element(tablaGlobalArchivosAbiertos,entradaGlobal);
+        log_warning(kernel_logger,"la TAAG tiene :%d",list_size(tablaGlobalArchivosAbiertos));
+        enviar_ce(cpu_dispatch_connection, contextoDeEjecucion, EJECUTAR_CE, kernel_logger);
+        list_destroy(listaFiltradaEnElse);
+        free(entradaGlobal);
     }
 
-liberar_ce_string_entero(estructuraCierre);
+    list_destroy(listaFiltrada);
+    liberar_ce_string_entero(estructuraCierre);
 }
 
 void reencolar_bloq_por_archivo(char* nombreArchivo,t_entradaTGAA* entrada){
@@ -1527,8 +1656,6 @@ void reencolar_bloq_por_archivo(char* nombreArchivo,t_entradaTGAA* entrada){
     agregar_a_lista_con_sems(pcb_a_reencolar, listaReady, m_listaReady);
     
     sem_post(&proceso_en_ready);
-
-
 }
 /*
 void reencolar_bloqueo_por_recurso(int id_recurso)
@@ -1549,7 +1676,9 @@ void reencolar_bloqueo_por_recurso(int id_recurso)
 
 t_entradaTGAA* conseguirEntradaTablaGlobal(char* nombreArchivo){
     t_list* listaFiltrada = nombre_en_lista_coincide(tablaGlobalArchivosAbiertos,(char*)nombreArchivo);
-    return list_get(listaFiltrada,0);
+    t_entradaTGAA* entradaConseguida = list_get(listaFiltrada, 0);
+    list_destroy(listaFiltrada);
+    return entradaConseguida;
 }
 
 t_pcb* hallarPrimerPcb(char* nombreArchivo){
@@ -1574,18 +1703,20 @@ void atender_actualizar_puntero(){
     
     estructura_actualizacion = recibir_ce_string_entero(cpu_dispatch_connection);
 
-    int posicion = estructura_actualizacion->entero;
+    uint32_t posicion = estructura_actualizacion->entero;
     char* nombreArchivo = estructura_actualizacion->string;
          
     log_error(kernel_logger,"el nombre del archivo es %s",nombreArchivo);
     log_error(kernel_logger,"el entero del paquete es %d",posicion);
-    imprimir_ce(estructura_actualizacion->ce, kernel_logger);
+    // imprimir_ce(estructura_actualizacion->ce, kernel_logger);
     contexto_ejecucion* contextoDeEjecucion=estructura_actualizacion->ce;
 
-    pthread_mutex_lock(&m_listaEjecutando);
-    t_pcb * pcb_en_ejecucion = (t_pcb *) list_get(listaEjecutando, 0);
-    actualizar_pcb(pcb_en_ejecucion, contextoDeEjecucion);
-    pthread_mutex_unlock(&m_listaEjecutando);
+    t_pcb * pcb_en_ejecucion = actualizar_pcb_lget_devuelve_pcb(contextoDeEjecucion, listaEjecutando, m_listaEjecutando);
+
+    // pthread_mutex_lock(&m_listaEjecutando);
+    // t_pcb * pcb_en_ejecucion = (t_pcb *) list_get(listaEjecutando, 0);
+    // actualizar_pcb(pcb_en_ejecucion, contextoDeEjecucion);
+    // pthread_mutex_unlock(&m_listaEjecutando);
 
     log_error(kernel_logger,"estoy por filtrar lista");
     
@@ -1606,9 +1737,10 @@ void atender_actualizar_puntero(){
     contexto_ejecucion* contextoAEnviar = obtener_ce(pcb_en_ejecucion);
     enviar_ce(cpu_dispatch_connection,contextoAEnviar,EJECUTAR_CE,kernel_logger);
     //falta liberar algo?
-    log_trace(kernel_logger, "PID: <%d> - Actualizar puntero Archivo: <%s> - Puntero <%u>",pcb_en_ejecucion->id,entradaProceso->nombreArchivo,entradaProceso->puntero);
+    log_info(kernel_logger, "PID: [%d] - Actualizar puntero Archivo: [%s] - Puntero [%u]",pcb_en_ejecucion->id,entradaProceso->nombreArchivo,entradaProceso->puntero);
 
-liberar_ce_string_entero(estructura_actualizacion);
+    list_destroy(listaFiltrada);
+    liberar_ce_string_entero(estructura_actualizacion);
     
 }
 // ----------------------- Funciones LEER_ARCHIVO ----------------------- //
@@ -1620,26 +1752,31 @@ void atender_lectura_archivo(){
     log_error(kernel_logger,"el nombre es :%s",estructura_leer_archivo->string);
     contexto_ejecucion* ce_a_updatear = estructura_leer_archivo->ce;
 
+    t_pcb * pcb_lectura = actualizar_pcb_lget_devuelve_pcb(ce_a_updatear, listaEjecutando, m_listaEjecutando);
+
     char nombre_archivo[100];
     strcpy(nombre_archivo,estructura_leer_archivo->string);
 
-    int offset = estructura_leer_archivo ->entero1;
+    uint32_t dir_fisica = estructura_leer_archivo ->entero1;
 
-    int bytes_a_leer = estructura_leer_archivo->entero2;
+    uint32_t bytes_a_leer = estructura_leer_archivo->entero2;
 
-    int puntero_archivo = estructura_leer_archivo->entero3;
+    uint32_t estavariablenosirve = estructura_leer_archivo->entero3;
+
+    t_list* lista_filtrada = nombre_en_lista_coincide_TAAP(pcb_lectura->tabla_archivos_abiertos_por_proceso, estructura_leer_archivo->string);
+    log_debug(kernel_logger, "La lista filtrada tiene %d cantidad de elementos", list_size(lista_filtrada));
+    t_entradaTAAP* entradaProceso = list_get(lista_filtrada,0);
+    uint32_t puntero_archivo = entradaProceso->puntero;
+
+    log_info(kernel_logger, "PID: [%d] - Leer Archivo: [%s] - Puntero [%d] - Dirección Memoria [%d] - Tamaño [%d]", ce_a_updatear->id, nombre_archivo, puntero_archivo, dir_fisica, bytes_a_leer); // verificar con el resto
 
     
-
-        
-    pthread_mutex_lock(&m_listaEjecutando);
-        t_pcb * pcb_lectura = (t_pcb *) list_get(listaEjecutando, 0);
-        actualizar_pcb(pcb_lectura, ce_a_updatear);
-    pthread_mutex_unlock(&m_listaEjecutando);
-
+    // pthread_mutex_lock(&m_listaEjecutando);
+    //     t_pcb * pcb_lectura = (t_pcb *) list_get(listaEjecutando, 0);
+    //     actualizar_pcb(pcb_lectura, ce_a_updatear);
+    // pthread_mutex_unlock(&m_listaEjecutando);
+    
     sacar_rafaga_ejecutada(pcb_lectura); // hacer cada vez que sale de running
-    
-    sem_post(&fin_ejecucion);
     
     cambiar_estado_a(pcb_lectura, BLOCKED, estadoActual(pcb_lectura));
 
@@ -1652,42 +1789,43 @@ void atender_lectura_archivo(){
     strcpy(argumentos->nombre,nombre_archivo);
     argumentos->puntero = puntero_archivo;
     argumentos->bytes = bytes_a_leer;
-    argumentos->offset = offset;
+    argumentos->dir_fisica = dir_fisica;
 
     pthread_create(&hiloRead, NULL, (void*) rutina_read, (void*) (thread_args_read*) argumentos);
     pthread_detach(hiloRead);
 
+    list_destroy(lista_filtrada);
     liberar_ce_string_2enteros(estructura_leer_archivo);
 
-    desbloquear_FS();
 }
    
-   void rutina_read(thread_args_read* args)
+void rutina_read(thread_args_read* args)
 {
+    sem_post(&fin_ejecucion);
     t_pcb* pcb = args->pcb;
     char nombre [100];
     strcpy(nombre,args->nombre);
-    int puntero = args->puntero;
-    int bytes = args->bytes;
-    int offset = args->offset;
+    uint32_t puntero = args->puntero;
+    uint32_t bytes = args->bytes;
+    uint32_t dir_fisica = args->dir_fisica;
 
-    enviar_string_4enteros(file_system_connection, nombre, pcb->id, puntero,bytes, offset, F_READ);
+    enviar_string_4enteros(file_system_connection, nombre, pcb->id, puntero,bytes, dir_fisica, F_READ);
     log_error(kernel_logger,"Envio fread a fs");
 
-    int cod_op = recibir_operacion(file_system_connection);
+    uint32_t cod_op = recibir_operacion(file_system_connection);
 
-    pthread_mutex_lock(&m_listaBloqueados);
-        list_remove_element(listaBloqueados, pcb);
-    pthread_mutex_unlock(&m_listaBloqueados);
+    log_warning(kernel_logger, "El codigo de operacion que recibo en la rutina read es: %d", cod_op);
 
-    cambiar_estado_a(pcb, READY, estadoActual(pcb));
+    t_pcb* pcb_activo = pcb_lremove(obtener_ce(pcb), listaBloqueados, m_listaBloqueados);
+
+    cambiar_estado_a(pcb_activo, READY, estadoActual(pcb_activo));
     
-    iniciar_nueva_espera_ready(pcb); // hacer cada vez que se mete en la lista de ready
+    iniciar_nueva_espera_ready(pcb_activo); // hacer cada vez que se mete en la lista de ready
     
-    agregar_a_lista_con_sems(pcb, listaReady, m_listaReady);
+    agregar_a_lista_con_sems(pcb_activo, listaReady, m_listaReady);
     
     sem_post(&proceso_en_ready);
-
+    desbloquear_FS();
 }
 
 // ----------------------- Funciones ESCRIBIR_ARCHIVO ----------------------- //
@@ -1699,22 +1837,27 @@ void atender_escritura_archivo(){
 
     contexto_ejecucion* ce_a_updatear = estructura_escribir_archivo->ce;
 
+    t_pcb * pcb_escritura = actualizar_pcb_lget_devuelve_pcb(ce_a_updatear, listaEjecutando, m_listaEjecutando);
+    
     char nombre_archivo[100];
     strcpy(nombre_archivo,estructura_escribir_archivo->string);
 
-    int offset = estructura_escribir_archivo->entero1;
-    int bytes_a_leer = estructura_escribir_archivo->entero2;
-    int puntero_archivo = estructura_escribir_archivo->entero3;
+    uint32_t direccion_fisica = estructura_escribir_archivo->entero1;
+    uint32_t bytes_a_leer = estructura_escribir_archivo->entero2;
+    uint32_t offset = estructura_escribir_archivo->entero3;
+    t_list* lista_filtrada = nombre_en_lista_coincide_TAAP(pcb_escritura->tabla_archivos_abiertos_por_proceso, estructura_escribir_archivo->string);
+    t_entradaTAAP* entradaProceso = list_get(lista_filtrada,0);
+    uint32_t puntero_archivo = entradaProceso->puntero;
 
-        
-    pthread_mutex_lock(&m_listaEjecutando);
-        t_pcb * pcb_escritura = (t_pcb *) list_get(listaEjecutando, 0);
-        actualizar_pcb(pcb_escritura, ce_a_updatear);
-    pthread_mutex_unlock(&m_listaEjecutando);
+    log_info(kernel_logger, "PID: [%d] - Escribir Archivo: [%s] - Puntero [%d] - Dirección Memoria [%d] - Tamaño [%d]", ce_a_updatear->id, nombre_archivo, puntero_archivo, offset, bytes_a_leer);
+    
+
+    // pthread_mutex_lock(&m_listaEjecutando);
+    //     t_pcb * pcb_escritura = (t_pcb *) list_get(listaEjecutando, 0);
+    //     actualizar_pcb(pcb_escritura, ce_a_updatear);
+    // pthread_mutex_unlock(&m_listaEjecutando);
 
     sacar_rafaga_ejecutada(pcb_escritura); // hacer cada vez que sale de running
-    
-    sem_post(&fin_ejecucion);
     
     cambiar_estado_a(pcb_escritura, BLOCKED, estadoActual(pcb_escritura));
 
@@ -1728,30 +1871,32 @@ void atender_escritura_archivo(){
     argumentos->puntero = puntero_archivo;
     argumentos->bytes = bytes_a_leer;
     argumentos->offset = offset;
+    argumentos->dir_fisica = direccion_fisica;
 
     pthread_create(&hiloWrite, NULL, (void*) rutina_write, (void*) (thread_args_write*) argumentos);
     pthread_detach(hiloWrite);
+    
+    list_destroy(lista_filtrada);
 
     liberar_ce_string_2enteros(estructura_escribir_archivo);
-
-    desbloquear_FS();
-
 }
 
 void rutina_write(thread_args_write* args)
 {
+    sem_post(&fin_ejecucion);
     t_pcb* pcb = args->pcb;
     char nombre [100];
     strcpy(nombre,args->nombre);
-    int puntero = args->puntero;
-    int bytes = args->bytes;
-    int offset = args->offset;
+    uint32_t puntero = args->puntero;
+    uint32_t bytes = args->bytes;
+    uint32_t offset = args->offset;
+    uint32_t dir_fisica = args->dir_fisica;
 
-      log_error(kernel_logger,"el nombre en rutina es :%s",nombre);
+      log_error(kernel_logger,"el nombre en rutina es :%s, el puntero es: %d",nombre, puntero);
     
-    enviar_string_4enteros(file_system_connection, nombre, pcb->id, puntero,bytes,offset, F_WRITE);
+    enviar_string_5enteros(file_system_connection, nombre, pcb->id, puntero,bytes,offset, dir_fisica, F_WRITE);
     
-    int cod_op = recibir_operacion(file_system_connection);
+    uint32_t cod_op = recibir_operacion(file_system_connection);
 
     log_warning(kernel_logger,"recibi CODOP de fwrite %d",cod_op);
 
@@ -1766,7 +1911,7 @@ void rutina_write(thread_args_write* args)
     agregar_a_lista_con_sems(pcb, listaReady, m_listaReady);
     
     sem_post(&proceso_en_ready);
-
+    desbloquear_FS();
 }
 
 void bloquear_FS(){
@@ -1776,7 +1921,7 @@ void bloquear_FS(){
 
 void desbloquear_FS(){
     f_execute = 0;
-    pthread_mutex_lock(&m_F_operation);
+    pthread_mutex_unlock(&m_F_operation);
 }
 
 // ----------------------- Funciones MODIFICAR_TAMANIO_ARCHIVO ----------------------- //
@@ -1790,17 +1935,19 @@ void atender_modificar_tamanio_archivo(){
     strcpy(nombre_archivo,estructura_mod_tam_archivo->string);
 
     log_error(kernel_logger,"el nombre es :%s",nombre_archivo);
-    int tamanio_archivo = estructura_mod_tam_archivo->entero;
+    uint32_t tamanio_archivo = estructura_mod_tam_archivo->entero;
     log_error(kernel_logger,"el tamanio es :%d",tamanio_archivo);
-        
-    pthread_mutex_lock(&m_listaEjecutando);
-        t_pcb * pcb_mod_tam_arch = (t_pcb *) list_get(listaEjecutando, 0);
-        actualizar_pcb(pcb_mod_tam_arch, contexto_mod_tam_arch);
-    pthread_mutex_unlock(&m_listaEjecutando);
+    
+    log_info(kernel_logger, "PID: [%d] - Truncar Archivo: [%s] - Tamaño: [%d]", contexto_mod_tam_arch->id, nombre_archivo, tamanio_archivo);
+
+    t_pcb * pcb_mod_tam_arch = actualizar_pcb_lget_devuelve_pcb(contexto_mod_tam_arch, listaEjecutando, m_listaEjecutando);
+    
+    // pthread_mutex_lock(&m_listaEjecutando);
+    //     t_pcb * pcb_mod_tam_arch = (t_pcb *) list_get(listaEjecutando, 0);
+    //     actualizar_pcb(pcb_mod_tam_arch, contexto_mod_tam_arch);
+    // pthread_mutex_unlock(&m_listaEjecutando);
 
     sacar_rafaga_ejecutada(pcb_mod_tam_arch); // hacer cada vez que sale de running
-    
-    sem_post(&fin_ejecucion);
     
     cambiar_estado_a(pcb_mod_tam_arch, BLOCKED, estadoActual(pcb_mod_tam_arch));
 
@@ -1819,9 +1966,9 @@ void atender_modificar_tamanio_archivo(){
     pthread_create(&hiloTruncate, NULL, (void*) rutina_truncate, (void*) (thread_args*) argumentos);
     pthread_detach(hiloTruncate);
 
+    sem_post(&fin_ejecucion);
+    
     liberar_ce_string_entero(estructura_mod_tam_archivo);
-    
-    
 }
 
 void rutina_truncate(thread_args_truncate* args)
@@ -1829,13 +1976,15 @@ void rutina_truncate(thread_args_truncate* args)
     t_pcb* pcb = args->pcb;
     char nombre[100];
     strcpy(nombre,args->nombre);
-    int tamanio = args->tamanio;
+    uint32_t tamanio = args->tamanio;
 
     log_error(kernel_logger,"el nombre en rutina es :%s",nombre);
     
     enviar_string_enterov2(file_system_connection, nombre, tamanio, F_TRUNCATE);
     
-    int cod_op = recibir_operacion(file_system_connection);
+    uint32_t cod_op = recibir_operacion(file_system_connection);
+
+    log_debug(kernel_logger, "El codigo de operacion que llega dentro de la rutina truncate es: %d", cod_op);
 
     pthread_mutex_lock(&m_listaBloqueados);
         list_remove_element(listaBloqueados, pcb);
@@ -1861,24 +2010,5 @@ void destruirSemaforos()
 
 /*
 Logs minimos obligatorios TODO
-Fin de Proceso: Finaliza el proceso <PID> - Motivo: <SEG_FAULT / OUT_OF_MEMORY>
-Motivo de Bloqueo: PID: <PID> - Bloqueado por: <IO / NOMBRE_RECURSO / NOMBRE_ARCHIVO>
-Ingreso a Ready: Cola Ready <ALGORITMO>: [<LISTA DE PIDS>]
-Wait: PID: <PID> - Wait: <NOMBRE RECURSO> - Instancias: <INSTANCIAS RECURSO>    Nota: El valor de las instancias es después de ejecutar el Wait
-Signal: PID: <PID> - Signal: <NOMBRE RECURSO> - Instancias: <INSTANCIAS RECURSO>    Nota: El valor de las instancias es después de ejecutar el Signal
-Crear Segmento: PID: <PID> - Crear Segmento - Id: <ID SEGMENTO> - Tamaño: <TAMAÑO>
-Eliminar Segmento: PID: <PID> - Eliminar Segmento - Id Segmento: <ID SEGMENTO>
-Inicio Compactación: Compactación: <Se solicitó compactación / Esperando Fin de Operaciones de FS>
-Fin Compactación: Se finalizó el proceso de compactación
-Abrir Archivo: PID: <PID> - Abrir Archivo: <NOMBRE ARCHIVO>
-Cerrar Archivo: PID: <PID> - Cerrar Archivo: <NOMBRE ARCHIVO>
-Actualizar Puntero Archivo: PID: <PID> - Actualizar puntero Archivo: <NOMBRE ARCHIVO> - Puntero <PUNTERO>   Nota: El valor del puntero debe ser luego de ejecutar F_SEEK.
-Truncar Archivo: PID: <PID> - Archivo: <NOMBRE ARCHIVO> - Tamaño: <TAMAÑO>
-Leer Archivo: PID: <PID> - Leer Archivo: <NOMBRE ARCHIVO> - Puntero <PUNTERO> - Dirección Memoria <DIRECCIÓN MEMORIA> - Tamaño <TAMAÑO>
-Escribir Archivo: PID: <PID> -  Escribir Archivo: <NOMBRE ARCHIVO> - Puntero <PUNTERO> - Dirección Memoria <DIRECCIÓN MEMORIA> - Tamaño <TAMAÑO>
-
-
-TODO:
-PID: <PID> - Bloqueado por: <NOMBRE_ARCHIVO>
- 
+Escribir Archivo: PID: <PID> -  Escribir Archivo: <NOMBRE ARCHIVO> - Puntero <PUNTERO> - Dirección Memoria <DIRECCIÓN MEMORIA> - Tamaño <TAMAÑO> 
 */
