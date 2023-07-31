@@ -445,6 +445,7 @@ void agregar_lista_ready_con_log(t_list* listaready,t_pcb* pcb_a_encolar,char* a
 
         list_destroy(lista_pids);
     }
+    free(string_pids);
 }
 
 t_pcb* actualizar_pcb_lget_devuelve_pcb(contexto_ejecucion* contexto_actualiza, t_list* lista_del_pcb, pthread_mutex_t sem) // actualiza un pcb en base a su id de una lista y lo devuelve
@@ -724,34 +725,34 @@ void copiar_PC_ce_a_pcb(contexto_ejecucion* ce, t_pcb* pcb)
 
 void copiar_registros_pcb_a_ce(t_pcb* pcb, contexto_ejecucion* ce)
 {
-    strcpy(ce->registros_cpu->AX , pcb->registros_cpu->AX);
-    strcpy(ce->registros_cpu->BX , pcb->registros_cpu->BX);
-    strcpy(ce->registros_cpu->CX , pcb->registros_cpu->CX);
-    strcpy(ce->registros_cpu->DX , pcb->registros_cpu->DX);
-	strcpy(ce->registros_cpu->EAX , pcb->registros_cpu->EAX);
-	strcpy(ce->registros_cpu->EBX , pcb->registros_cpu->EBX);
-	strcpy(ce->registros_cpu->ECX , pcb->registros_cpu->ECX);
-	strcpy(ce->registros_cpu->EDX , pcb->registros_cpu->EDX);
-	strcpy(ce->registros_cpu->RAX , pcb->registros_cpu->RAX);
-	strcpy(ce->registros_cpu->RBX , pcb->registros_cpu->RBX);
-	strcpy(ce->registros_cpu->RCX , pcb->registros_cpu->RCX);
-	strcpy(ce->registros_cpu->RDX , pcb->registros_cpu->RDX);
+    strncpy(ce->registros_cpu->AX , pcb->registros_cpu->AX, 4);
+    strncpy(ce->registros_cpu->BX , pcb->registros_cpu->BX, 4);
+    strncpy(ce->registros_cpu->CX , pcb->registros_cpu->CX, 4);
+    strncpy(ce->registros_cpu->DX , pcb->registros_cpu->DX, 4);
+	strncpy(ce->registros_cpu->EAX , pcb->registros_cpu->EAX, 8);
+	strncpy(ce->registros_cpu->EBX , pcb->registros_cpu->EBX, 8);
+	strncpy(ce->registros_cpu->ECX , pcb->registros_cpu->ECX, 8);
+	strncpy(ce->registros_cpu->EDX , pcb->registros_cpu->EDX, 8);
+	strncpy(ce->registros_cpu->RAX , pcb->registros_cpu->RAX, 16);
+	strncpy(ce->registros_cpu->RBX , pcb->registros_cpu->RBX, 16);
+	strncpy(ce->registros_cpu->RCX , pcb->registros_cpu->RCX, 16);
+	strncpy(ce->registros_cpu->RDX , pcb->registros_cpu->RDX, 16);
 }
 
 void copiar_registros_ce_a_pcb(contexto_ejecucion* ce, t_pcb* pcb)
 {
-    strcpy(pcb->registros_cpu->AX , ce->registros_cpu->AX);
-    strcpy(pcb->registros_cpu->BX , ce->registros_cpu->BX);
-    strcpy(pcb->registros_cpu->CX , ce->registros_cpu->CX);
-    strcpy(pcb->registros_cpu->DX , ce->registros_cpu->DX);
-	strcpy(pcb->registros_cpu->EAX , ce->registros_cpu->EAX);
-	strcpy(pcb->registros_cpu->EBX , ce->registros_cpu->EBX);
-	strcpy(pcb->registros_cpu->ECX , ce->registros_cpu->ECX);
-	strcpy(pcb->registros_cpu->EDX , ce->registros_cpu->EDX);
-	strcpy(pcb->registros_cpu->RAX , ce->registros_cpu->RAX);
-	strcpy(pcb->registros_cpu->RBX , ce->registros_cpu->RBX);
-	strcpy(pcb->registros_cpu->RCX , ce->registros_cpu->RCX);
-	strcpy(pcb->registros_cpu->RDX , ce->registros_cpu->RDX);
+    strncpy(pcb->registros_cpu->AX , ce->registros_cpu->AX, 4);
+    strncpy(pcb->registros_cpu->BX , ce->registros_cpu->BX, 4);
+    strncpy(pcb->registros_cpu->CX , ce->registros_cpu->CX, 4);
+    strncpy(pcb->registros_cpu->DX , ce->registros_cpu->DX, 4);
+	strncpy(pcb->registros_cpu->EAX , ce->registros_cpu->EAX, 8);
+	strncpy(pcb->registros_cpu->EBX , ce->registros_cpu->EBX, 8);
+	strncpy(pcb->registros_cpu->ECX , ce->registros_cpu->ECX, 8);
+	strncpy(pcb->registros_cpu->EDX , ce->registros_cpu->EDX, 8);
+	strncpy(pcb->registros_cpu->RAX , ce->registros_cpu->RAX, 16);
+	strncpy(pcb->registros_cpu->RBX , ce->registros_cpu->RBX, 16);
+	strncpy(pcb->registros_cpu->RCX , ce->registros_cpu->RCX, 16);
+	strncpy(pcb->registros_cpu->RDX , ce->registros_cpu->RDX, 16);
 }
 
 void copiar_tabla_segmentos_pcb_a_ce(t_pcb* pcb, contexto_ejecucion* ce)
@@ -1542,6 +1543,7 @@ void crear_entrada_TAAP(char* nombre,t_entradaTAAP* nuevaEntrada){
     
     nuevaEntrada->tamanioArchivo = entradaGlobal->tamanioArchivo;
 
+    list_destroy(listaFiltrada);
 }
 
 t_list* nombre_en_lista_coincide(t_list* tabla, char* nombre)
@@ -1618,15 +1620,17 @@ void atender_cierre_archivo(){
     
     else{
         log_debug(kernel_logger, "no hay mas usuarios abriendo el archivo, mamawebo");
-        t_list* listaFiltrada =  nombre_en_lista_coincide(tablaGlobalArchivosAbiertos,(char*) nombreArchivo);
-        t_entradaTGAA* entradaGlobal = list_get(listaFiltrada,0);
+        t_list* listaFiltradaEnElse =  nombre_en_lista_coincide(tablaGlobalArchivosAbiertos,(char*) nombreArchivo);
+        t_entradaTGAA* entradaGlobal = list_get(listaFiltradaEnElse,0);
         list_remove_element(tablaGlobalArchivosAbiertos,entradaGlobal);
         log_warning(kernel_logger,"la TAAG tiene :%d",list_size(tablaGlobalArchivosAbiertos));
         enviar_ce(cpu_dispatch_connection, contextoDeEjecucion, EJECUTAR_CE, kernel_logger);
+        list_destroy(listaFiltradaEnElse);
         free(entradaGlobal);
     }
 
-liberar_ce_string_entero(estructuraCierre);
+    list_destroy(listaFiltrada);
+    liberar_ce_string_entero(estructuraCierre);
 }
 
 void reencolar_bloq_por_archivo(char* nombreArchivo,t_entradaTGAA* entrada){
@@ -1661,7 +1665,9 @@ void reencolar_bloqueo_por_recurso(int id_recurso)
 
 t_entradaTGAA* conseguirEntradaTablaGlobal(char* nombreArchivo){
     t_list* listaFiltrada = nombre_en_lista_coincide(tablaGlobalArchivosAbiertos,(char*)nombreArchivo);
-    return list_get(listaFiltrada,0);
+    t_entradaTGAA* entradaConseguida = list_get(listaFiltrada, 0);
+    list_destroy(listaFiltrada);
+    return entradaConseguida;
 }
 
 t_pcb* hallarPrimerPcb(char* nombreArchivo){
@@ -1722,7 +1728,8 @@ void atender_actualizar_puntero(){
     //falta liberar algo?
     log_info(kernel_logger, "PID: [%d] - Actualizar puntero Archivo: [%s] - Puntero [%u]",pcb_en_ejecucion->id,entradaProceso->nombreArchivo,entradaProceso->puntero);
 
-liberar_ce_string_entero(estructura_actualizacion);
+    list_destroy(listaFiltrada);
+    liberar_ce_string_entero(estructura_actualizacion);
     
 }
 // ----------------------- Funciones LEER_ARCHIVO ----------------------- //
@@ -1776,6 +1783,7 @@ void atender_lectura_archivo(){
     pthread_create(&hiloRead, NULL, (void*) rutina_read, (void*) (thread_args_read*) argumentos);
     pthread_detach(hiloRead);
 
+    list_destroy(lista_filtrada);
     liberar_ce_string_2enteros(estructura_leer_archivo);
 
 }
@@ -1857,6 +1865,8 @@ void atender_escritura_archivo(){
     pthread_create(&hiloWrite, NULL, (void*) rutina_write, (void*) (thread_args_write*) argumentos);
     pthread_detach(hiloWrite);
     
+    list_destroy(lista_filtrada);
+
     liberar_ce_string_2enteros(estructura_escribir_archivo);
 }
 
