@@ -627,7 +627,7 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU)
             char* escritura = mov_out_data->string;
 
             char* valor = malloc(tam_escrito);
-            strncpy(valor,escritura, strlen(escritura)+1);
+            strncpy(valor,escritura, strlen(escritura));
 
             // Para probar
             // char* cadena = imprimir_cadena(valor, tam_escrito);
