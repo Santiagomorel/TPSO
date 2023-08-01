@@ -7,6 +7,7 @@ void funcion(char *str, int i) {
 void end_cpu_module(sig_t s){
     close(socket_cpu);
     close(conexion_cpu);
+    //free(registros);
     exit(1); 
 }
 
@@ -162,10 +163,12 @@ void process_dispatch() {
 
 		switch (op_code) {
             case EJECUTAR_CE: 
-                contexto_ejecucion* ce = recibir_ce(socket_kernel);
+                contexto_ejecucion* ce = malloc(sizeof(contexto_ejecucion));
+                recibir_ce_v2(socket_kernel, ce);
                 log_trace(cpu_logger, "Llego correctamente el CE con id: %d", ce->id);
                 //imprimir_ce(ce, cpu_logger);
                 execute_process(ce);
+                liberar_ce(ce);
                 break;   
             case -1:
                 log_warning(cpu_logger, "El kernel se desconecto");

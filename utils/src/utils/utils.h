@@ -434,6 +434,7 @@ void loggear_estado(t_log* , int );
 
 t_list* recibir_paquete_segmento(int );
 contexto_ejecucion * recibir_ce(int );
+void recibir_ce_v2(int, contexto_ejecucion*);
 char* recibir_string(int, t_log*);
 int recibir_entero(int, t_log*);
 

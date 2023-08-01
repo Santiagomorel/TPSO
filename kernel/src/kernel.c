@@ -874,7 +874,8 @@ void actualizar_pcb(t_pcb* pcb, contexto_ejecucion* ce) //TODO
 void atender_final_proceso(int cod_op)
 {
     // TODO es probable que necesite liberar las instancias en memoria y en file system antes de encolar en EXIT
-    contexto_ejecucion* contexto_a_finalizar = recibir_ce(cpu_dispatch_connection);
+    contexto_ejecucion* contexto_a_finalizar = malloc(sizeof(contexto_ejecucion));
+    recibir_ce_v2(cpu_dispatch_connection, contexto_a_finalizar);
 
     finalizar_proceso(contexto_a_finalizar, cod_op);
 
@@ -972,7 +973,8 @@ void enviar_Fin_consola(int socket)
 
 void atender_desalojo_yield()
 {
-    contexto_ejecucion* contexto_a_reencolar = recibir_ce(cpu_dispatch_connection);
+    contexto_ejecucion* contexto_a_reencolar = malloc(sizeof(contexto_ejecucion));
+    recibir_ce_v2(cpu_dispatch_connection, contexto_a_reencolar);
 
     t_pcb* pcb_a_reencolar = actualizar_pcb_lremove_devuelve_pcb(contexto_a_reencolar, listaEjecutando, m_listaEjecutando);
 

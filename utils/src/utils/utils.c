@@ -13,7 +13,7 @@ int iniciar_servidor(char *port, t_log *logger)
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;
 
-	getaddrinfo(NULL, port, &hints, &servinfo);
+	getaddrinfo(IP, port, &hints, &servinfo);
 	// Creamos el socket de escucha del servidor
 	socket_servidor = socket(servinfo->ai_family,
 							 servinfo->ai_socktype,
@@ -593,6 +593,24 @@ contexto_ejecucion *recibir_ce(int socket)
 	free(buffer);
 	return nuevoCe;
 }
+void recibir_ce_v2(int socket, contexto_ejecucion *nuevoCe)
+{
+
+	int size = 0;
+	char *buffer;
+	int desp = 0;
+
+	buffer = recibir_buffer(&size, socket);
+
+	nuevoCe->id = leer_entero(buffer, &desp);
+	nuevoCe->instrucciones = leer_string_array(buffer, &desp); // hay que liberar antes de perder la referencia
+	nuevoCe->program_counter = leer_entero(buffer, &desp);
+	nuevoCe->registros_cpu = leer_registros(buffer, &desp); // hay que liberar antes de perder la referencia
+	nuevoCe->tabla_segmentos = leer_tabla_segmentos(buffer, &desp);
+	free(buffer);
+	
+}
+
 
 char* recibir_string(int socket, t_log* logger)
 {
