@@ -1,7 +1,9 @@
-#ifndef COMUNICACION_H
-#define COMUNICACION_H
+#ifndef MEMORIA_H_
+#define MEMORIA_H_
+
 
 #include <utils/utils.h>
+
 typedef enum {
     FIRST,
     BEST,
@@ -194,5 +196,3 @@ t_list* adaptar_TDP_salida();
 //void* serializar_segmento(void* segmento);
 */
 #endif /*MEMORIA_H_*/
-
-

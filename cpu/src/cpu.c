@@ -578,8 +578,6 @@ void execute_process(contexto_ejecucion* ce){
     
     log_trace(cpu_logger, "SALI DEL WHILE DE EJECUCION");
     
-    free(registros);
-    liberar_ce(ce);
     sale_proceso = 0;
 }
 

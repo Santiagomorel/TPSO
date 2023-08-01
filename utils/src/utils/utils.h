@@ -474,7 +474,6 @@ t_string_entero* recibir_string_entero(int);
 t_string_entero* recibir_string_enterov2(int);
 t_2_enteros * recibir_2_enteros(int);
 void enviar_3enteros(int client, int x, int y, int z, int codOP);
-void enviar_4enteros(int client, int x, int y, int z, int j, int codOP);
 void enviar_string_2enteros(int, char*, int, int, int);
 void enviar_string_3enteros(int client, char* string, int x, int y, int z, int codOP);
 void enviar_string_4enteros(int client, char* string, uint32_t x, uint32_t y, uint32_t z, uint32_t j, int codOP);

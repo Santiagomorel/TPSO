@@ -158,6 +158,7 @@ t_pcb* mayor_prioridad_PID(t_pcb*, t_pcb*);
 
 // Declaraciones CE (contexto de ejecucion)
 contexto_ejecucion* obtener_ce(t_pcb*);
+void obtener_ce_v2(t_pcb*, contexto_ejecucion*);
 void copiar_id_pcb_a_ce(t_pcb*, contexto_ejecucion*);
 void copiar_instrucciones_pcb_a_ce(t_pcb*, contexto_ejecucion*);
 void copiar_PC_pcb_a_ce(t_pcb*, contexto_ejecucion*);

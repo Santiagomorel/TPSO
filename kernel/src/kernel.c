@@ -592,10 +592,11 @@ void funcion_agregar_running(t_pcb* pcb_a_ejecutar)
 
     agregar_a_lista_con_sems(pcb_a_ejecutar, listaEjecutando, m_listaEjecutando);
 
-    contexto_ejecucion * nuevoContexto = obtener_ce(pcb_a_ejecutar);
+    contexto_ejecucion * nuevoContexto = malloc(sizeof(contexto_ejecucion));
+    obtener_ce_v2(pcb_a_ejecutar, nuevoContexto);
 
     enviar_ce(cpu_dispatch_connection, nuevoContexto, EJECUTAR_CE, kernel_logger);
-
+    liberar_ce(nuevoContexto);
     log_trace(kernel_logger, "Agrego un proceso a running y envio el contexto de ejecucion");
 }
 
@@ -700,6 +701,28 @@ contexto_ejecucion* obtener_ce(t_pcb* pcb)
     // log_trace(kernel_logger, "copia tabla segmentos del pcb");
 
     return nuevoContexto;
+}
+void obtener_ce_v2(t_pcb* pcb, contexto_ejecucion * nuevoContexto)
+{
+    nuevoContexto->instrucciones = string_array_new();
+    nuevoContexto->registros_cpu = malloc(sizeof(t_registro));
+    // log_trace(kernel_logger, "hace maloc del nuevo contexto");
+
+    copiar_id_pcb_a_ce(pcb, nuevoContexto);
+    // log_trace(kernel_logger, "copia el id del pcb");
+
+    copiar_instrucciones_pcb_a_ce(pcb, nuevoContexto);
+    // log_trace(kernel_logger, "copia instrucciones del pcb");
+
+    copiar_PC_pcb_a_ce(pcb, nuevoContexto);
+    // log_trace(kernel_logger, "copia program counter");
+
+    copiar_registros_pcb_a_ce(pcb, nuevoContexto);
+    // log_trace(kernel_logger, "copia registros del pcb");
+
+    copiar_tabla_segmentos_pcb_a_ce(pcb, nuevoContexto);
+    // log_trace(kernel_logger, "copia tabla segmentos del pcb");
+
 }
 
 void copiar_id_pcb_a_ce(t_pcb* pcb, contexto_ejecucion* ce)
@@ -1068,7 +1091,8 @@ void atender_wait_recurso()
         if (tiene_instancia_wait(id_recurso)) {
             t_pcb* pcb_ejecuta_wait = actualizar_pcb_lget_devuelve_pcb(contexto_ejecuta_wait, listaEjecutando, m_listaEjecutando);
 
-            contexto_ejecucion* nuevo_contexto_ejecuta_wait = obtener_ce(pcb_ejecuta_wait);
+            contexto_ejecucion* nuevo_contexto_ejecuta_wait = malloc(sizeof(contexto_ejecucion));
+            obtener_ce_v2(pcb_ejecuta_wait, nuevo_contexto_ejecuta_wait);
 
             enviar_ce(cpu_dispatch_connection, nuevo_contexto_ejecuta_wait, EJECUTAR_CE, kernel_logger);
 
@@ -1125,7 +1149,8 @@ void atender_signal_recurso()
     } else {
         t_pcb * pcb_ejecuta_signal = actualizar_pcb_lget_devuelve_pcb(contexto_ejecuta_signal, listaEjecutando, m_listaEjecutando);
 
-        contexto_ejecucion* nuevo_contexto_ejecuta_signal = obtener_ce(pcb_ejecuta_signal);
+        contexto_ejecucion* nuevo_contexto_ejecuta_signal = malloc(sizeof(contexto_ejecucion));
+        obtener_ce_v2(pcb_ejecuta_signal, nuevo_contexto_ejecuta_signal);
         
         enviar_ce(cpu_dispatch_connection, nuevo_contexto_ejecuta_signal, EJECUTAR_CE, kernel_logger);
 
@@ -1283,7 +1308,8 @@ void atender_crear_segmento()
             
             list_replace_and_destroy_element(pcb_crea_segmento->tabla_segmentos, id_segmento, nuevoElemento, (void*)free);
 
-            contexto_ejecucion* nuevo_contexto_crea_segmento = obtener_ce(pcb_crea_segmento);
+            contexto_ejecucion* nuevo_contexto_crea_segmento = malloc(sizeof(contexto_ejecucion));
+            obtener_ce_v2(pcb_crea_segmento, nuevo_contexto_crea_segmento);
 
             enviar_ce(cpu_dispatch_connection, nuevo_contexto_crea_segmento, EJECUTAR_CE, kernel_logger);
             log_warning(kernel_logger, "Aca estoy en OK x3");
@@ -1417,7 +1443,8 @@ void atender_borrar_segmento() //TODO
 
     // imprimir_tabla_segmentos(pcb_borrar_segmento->tabla_segmentos, kernel_logger);
 
-    contexto_ejecucion* nuevo_contexto_borrar_segmento = obtener_ce(pcb_borrar_segmento);
+    contexto_ejecucion* nuevo_contexto_borrar_segmento = malloc(sizeof(contexto_ejecucion));
+    obtener_ce_v2(pcb_borrar_segmento, nuevo_contexto_borrar_segmento);
     
     enviar_ce(cpu_dispatch_connection, nuevo_contexto_borrar_segmento, EJECUTAR_CE, kernel_logger);
     
@@ -1431,18 +1458,7 @@ void limpiar_tabla_segmentos(t_list* tabla_segmentos)
     list_clean_and_destroy_elements(tabla_segmentos, (void*) free);
 }
 
-int obtener_tamanio_segmento(t_pcb* pcb,int id_segmento_elim){
 
-    t_segmento* segmento_a_eliminar = list_find(pcb->tabla_segmentos, id_segmento_elim);
-    return segmento_a_eliminar->tamanio_segmento;
-
-}
-int obtener_base_segmento(t_pcb* pcb,int id_segmento_elim){
-
-    t_segmento* segmento_a_eliminar = list_find(pcb->tabla_segmentos, id_segmento_elim);
-    return segmento_a_eliminar->direccion_base;
-
-}
 // ----------------------- Funciones ABRIR_ARCHIVO ----------------------- //
 void atender_apertura_archivo()
 {
@@ -1491,10 +1507,11 @@ void atender_apertura_archivo()
                 log_trace(kernel_logger,"Creamos Entrada TGAA");
                 crear_entrada_TAAP(nombreArchivo,entradaTAAP);
                 list_add(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso,entradaTAAP);
-                contexto_ejecucion* contextoAEnviar = obtener_ce(pcb_en_ejecucion);
+                contexto_ejecucion* contextoAEnviar = malloc(sizeof(contexto_ejecucion));
+                obtener_ce_v2(pcb_en_ejecucion, contextoAEnviar);
                 enviar_ce(cpu_dispatch_connection,contextoAEnviar,EJECUTAR_CE,kernel_logger);
                 log_trace(kernel_logger,"llegamos al final del NO_EXISTE_ARCHIVO");
-            
+                liberar_ce(contextoAEnviar);
                 break;
 
             case EXISTE_ARCHIVO: // existe en el FS
@@ -1507,10 +1524,11 @@ void atender_apertura_archivo()
 
                 list_add(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso, entradaTAAP2);
 
-                contexto_ejecucion* contextoAEnviar2 = obtener_ce(pcb_en_ejecucion);
+                contexto_ejecucion* contextoAEnviar2 = malloc(sizeof(contexto_ejecucion));
+                obtener_ce_v2(pcb_en_ejecucion, contextoAEnviar2);
 
                 enviar_ce(cpu_dispatch_connection, contextoAEnviar2, EJECUTAR_CE, kernel_logger);
-                
+                liberar_ce(contextoAEnviar2);
                 break;
 
             default:
@@ -1736,11 +1754,12 @@ void atender_actualizar_puntero(){
 
     log_error(kernel_logger,"consegui posicion %u",entradaProceso->puntero);
     
-    contexto_ejecucion* contextoAEnviar = obtener_ce(pcb_en_ejecucion);
+    contexto_ejecucion* contextoAEnviar =malloc(sizeof(contexto_ejecucion));
+    obtener_ce_v2(pcb_en_ejecucion, contextoAEnviar);
     enviar_ce(cpu_dispatch_connection,contextoAEnviar,EJECUTAR_CE,kernel_logger);
     //falta liberar algo?
     log_info(kernel_logger, "PID: [%d] - Actualizar puntero Archivo: [%s] - Puntero [%u]",pcb_en_ejecucion->id,entradaProceso->nombreArchivo,entradaProceso->puntero);
-
+    liberar_ce(contextoAEnviar);
     list_destroy(listaFiltrada);
     liberar_ce_string_entero(estructura_actualizacion);
     
@@ -1819,15 +1838,16 @@ void rutina_read(thread_args_read* args)
     uint32_t cod_op = recibir_operacion(file_system_connection);
 
     log_warning(kernel_logger, "El codigo de operacion que recibo en la rutina read es: %d", cod_op);
-
-    t_pcb* pcb_activo = pcb_lremove(obtener_ce(pcb), listaBloqueados, m_listaBloqueados);
+    contexto_ejecucion* contexto = malloc(sizeof(contexto_ejecucion));
+    obtener_ce_v2(pcb, contexto);
+    t_pcb* pcb_activo = pcb_lremove(contexto, listaBloqueados, m_listaBloqueados);
 
     cambiar_estado_a(pcb_activo, READY, estadoActual(pcb_activo));
     
     iniciar_nueva_espera_ready(pcb_activo); // hacer cada vez que se mete en la lista de ready
     
     agregar_a_lista_con_sems(pcb_activo, listaReady, m_listaReady);
-    
+    liberar_ce(contexto);
     sem_post(&proceso_en_ready);
     desbloquear_FS();
 }

@@ -14,7 +14,6 @@ int iniciar_servidor(char *port, t_log *logger)
 	hints.ai_flags = AI_PASSIVE;
 
 	getaddrinfo(IP, port, &hints, &servinfo);
-
 	// Creamos el socket de escucha del servidor
 	socket_servidor = socket(servinfo->ai_family,
 							 servinfo->ai_socktype,
@@ -28,7 +27,6 @@ int iniciar_servidor(char *port, t_log *logger)
 	log_trace(logger, "Listo para escuchar a mi cliente");
 
 	freeaddrinfo(servinfo);
-
 	return socket_servidor;
 }
 
@@ -856,6 +854,7 @@ t_ce_2enteros * recibir_ce_2enteros(int socket)
 
 }
 
+
 t_ce_string_2enteros * recibir_ce_string_2enteros(int socket)
 {
 	t_ce_string_2enteros* nuevo_ce_string_2enteros = malloc(sizeof(t_ce_string_2enteros));
@@ -1021,18 +1020,6 @@ void enviar_3enteros(int client, int x, int y, int z, int codOP)
     eliminar_paquete(paquete);
 }
 
-void enviar_4enteros(int client, int x, int y, int z, int j, int codOP)
-{
-	t_paquete* paquete = crear_paquete_op_code(codOP);
-
-    agregar_entero_a_paquete(paquete, x); 
-    agregar_entero_a_paquete(paquete, y); 
-	agregar_entero_a_paquete(paquete, z); 
-	agregar_entero_a_paquete(paquete, j); 
-    enviar_paquete(paquete, client);
-    eliminar_paquete(paquete);
-}
-
 void enviar_string_3enteros(int client, char* string, int x, int y, int z, int codOP)
 {
 	t_paquete* paquete = crear_paquete_op_code(codOP);
@@ -1041,7 +1028,7 @@ void enviar_string_3enteros(int client, char* string, int x, int y, int z, int c
     agregar_entero_a_paquete(paquete, x); 
     agregar_entero_a_paquete(paquete, y); 
 	agregar_entero_a_paquete(paquete, z); 
-	 
+ 
 	printf("se esta por enviar: %d , %d , %d ,%s.",x,y,z,string);
     enviar_paquete(paquete, client);
     eliminar_paquete(paquete);

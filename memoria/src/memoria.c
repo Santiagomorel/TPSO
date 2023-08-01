@@ -1,47 +1,33 @@
 #include "memoria.h"
 
-
 int main(int argc, char **argv)
 {
-	if (argc > 1 && strcmp(argv[1], "-test") == 0)
-	{
-		        
-		levantar_loggers_memoria();
 
-        config_memoria = init_config(argv[1]);
+    log_memoria = log_create("./runlogs/memoria.log", "Memoria", 1, LOG_LEVEL_TRACE);
 
-    if (config_memoria == NULL)
+    /*Estructuras administrativas*/
+
+    // ----------------------- levanto la configuracion de Memoria ----------------------- //
+
+    if (argc < 2)
+    {
+        fprintf(stderr, "Se esperaba: %s [CONFIG_PATH]\n", argv[0]);
+        exit(1);
+    }
+
+    memoria_config_file = init_config(argv[1]);
+
+    if (memoria_config_file == NULL)
     {
         perror("Ocurrió un error al intentar abrir el archivo config");
         exit(1);
     }
-        load_config();
-        
-        log_warning(log_memoria, "Levanto config");
-		levantar_estructuras_administrativas();
-        log_warning(log_memoria, "Levanto estructuras administrativas");
-		//run_tests();
-		return EXIT_SUCCESS;
-	}
-	else
-	{
-		
 
-		levantar_loggers_memoria();
+    // ----------------------- cargo la configuracion de memoria ----------------------- //
 
     //log_trace(log_memoria, "antes de cargar la configuracion de Memoria");
 
-    if (config_memoria == NULL)
-    {
-        perror("Ocurrió un error al intentar abrir el archivo config");
-        exit(1);
-    }
-        load_config();
-		log_warning(log_memoria, "Levanto config");
-		levantar_estructuras_administrativas();
-        log_warning(log_memoria, "Levanto estructuras administrativas");
-		pthread_mutex_init(&mutex_memoria, NULL);
-        log_warning(log_memoria, "Inicio mutex");
+    load_config();
 
     //log_trace(log_memoria, "cargo la configuracion de Memoria");
 
@@ -94,7 +80,6 @@ int main(int argc, char **argv)
     end_program();
 
     return 0;
-	}
 }
 
 void load_config(void)
@@ -519,10 +504,6 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
         int codigoOperacion = recibir_operacion(SOCKET_CLIENTE_KERNEL);
         switch (codigoOperacion)
         {
-        case MENSAJE:
-         log_warning(log_memoria, "recibi el op_cod %d MENSAJE , codigoOperacion", codigoOperacion);
-
-            break;
         case INICIAR_ESTRUCTURAS:
             //log_trace(log_memoria, "recibi el op_cod %d INICIAR_ESTRUCTURAS", codigoOperacion);
             //- Creación de Proceso: “Creación de Proceso PID: <PID>”
@@ -557,12 +538,6 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
 
             devolver_resultado_creacion(resultado, SOCKET_CLIENTE_KERNEL, n_base);
             
-            // print_lista_segmentos();
-            // print_lista_esp(LISTA_ESPACIOS_LIBRES);
-
-            devolver_resultado_creacion(resultado, SOCKET_CLIENTE_KERNEL, n_base);
-            pthread_mutex_unlock(&mutex_memoria);
-
             break;
 
         case DELETE_SEGMENT:
@@ -695,7 +670,6 @@ void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM)
 
             break;
 
-        break;
         case F_READ:
         pthread_mutex_lock(&mutex_memoria);
             t_string_3enteros* fread_data = recibir_string_3enteros(SOCKET_CLIENTE_FILESYSTEM);
@@ -743,4 +717,3 @@ void recibir_fileSystem(int SOCKET_CLIENTE_FILESYSTEM)
     }
     log_warning(log_memoria, "se desconecto FILESYSTEM");
 }
-
