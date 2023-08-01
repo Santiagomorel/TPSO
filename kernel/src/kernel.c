@@ -438,13 +438,14 @@ void agregar_lista_ready_con_log(t_list* listaready,t_pcb* pcb_a_encolar,char* a
 
         log_info(kernel_logger,"Cola Ready [%s] : [%s]", algoritmo, string_pids);
 
-        list_destroy(lista_pids);
+        //list_destroy(lista_pids);
     }
     else {
         log_info(kernel_logger,"Cola Ready [%s] : [%s]", algoritmo, string_pids);
 
-        list_destroy(lista_pids);
+        //list_destroy(lista_pids);
     }
+    list_destroy(lista_pids);
     free(string_pids);
 }
 
