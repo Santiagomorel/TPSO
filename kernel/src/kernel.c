@@ -48,7 +48,7 @@ int main(int argc, char **argv)
     // for(int i = 0; i < 3; i++) // tirar 2 consolas, esperar a que terminen, luego tirar la 3ra para cortar el programa
     while (1)
     {
-        log_trace(kernel_logger, "esperando cliente consola");
+        //log_trace(kernel_logger, "esperando cliente consola");
         socket_cliente = esperar_cliente(socket_servidor_kernel, kernel_logger);
         log_trace(kernel_logger, "entro una consola con el socket: %d", socket_cliente);
 
@@ -438,13 +438,14 @@ void agregar_lista_ready_con_log(t_list* listaready,t_pcb* pcb_a_encolar,char* a
 
         log_info(kernel_logger,"Cola Ready [%s] : [%s]", algoritmo, string_pids);
 
-        list_destroy(lista_pids);
+        //list_destroy(lista_pids);
     }
     else {
         log_info(kernel_logger,"Cola Ready [%s] : [%s]", algoritmo, string_pids);
 
-        list_destroy(lista_pids);
+        //list_destroy(lista_pids);
     }
+    list_destroy(lista_pids);
     free(string_pids);
 }
 
@@ -763,7 +764,7 @@ void copiar_tabla_segmentos_pcb_a_ce(t_pcb* pcb, contexto_ejecucion* ce)
 // ----------------------- Funciones Dispatch Manager ----------------------- //
 void manejar_dispatch()
 {
-    log_trace(kernel_logger, "Entre por manejar dispatch");
+    //log_trace(kernel_logger, "Entre por manejar dispatch");
     while(1){
         int cod_op = recibir_operacion(cpu_dispatch_connection);
         switch(cod_op){
@@ -839,7 +840,7 @@ void manejar_dispatch()
 }
 
 void actualizar_pcb(t_pcb* pcb, contexto_ejecucion* ce) //TODO
-{
+{   
     copiar_PC_ce_a_pcb(ce, pcb);
     copiar_registros_ce_a_pcb(ce, pcb);
     //falta copiar la tabla de segmentos.
@@ -1202,6 +1203,7 @@ void atender_block_io()
     pthread_create(&hiloIO, NULL, (void*) rutina_io, (void*) (thread_args*) argumentos);
     pthread_detach(hiloIO);
 
+    
     liberar_ce_string(estructura_block_io);
 }
 
@@ -1794,6 +1796,8 @@ void atender_lectura_archivo(){
     pthread_create(&hiloRead, NULL, (void*) rutina_read, (void*) (thread_args_read*) argumentos);
     pthread_detach(hiloRead);
 
+    sem_post(&fin_ejecucion);
+
     list_destroy(lista_filtrada);
     liberar_ce_string_2enteros(estructura_leer_archivo);
 
@@ -1875,6 +1879,7 @@ void atender_escritura_archivo(){
 
     pthread_create(&hiloWrite, NULL, (void*) rutina_write, (void*) (thread_args_write*) argumentos);
     pthread_detach(hiloWrite);
+    
     
     list_destroy(lista_filtrada);
 
@@ -1967,6 +1972,7 @@ void atender_modificar_tamanio_archivo(){
     pthread_detach(hiloTruncate);
 
     sem_post(&fin_ejecucion);
+    
     
     liberar_ce_string_entero(estructura_mod_tam_archivo);
 }
