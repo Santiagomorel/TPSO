@@ -414,6 +414,13 @@ int estadoActual(t_pcb* pcb)
 void agregar_a_lista_con_sems(t_pcb* pcb_a_agregar, t_list* lista, pthread_mutex_t m_sem)
 {
     pthread_mutex_lock(&m_sem);
+        list_add(lista, pcb_a_agregar);
+    pthread_mutex_unlock(&m_sem);
+}
+
+void agregar_a_lista_ready_con_sems(t_pcb* pcb_a_agregar, t_list* lista, pthread_mutex_t m_sem)
+{
+    pthread_mutex_lock(&m_sem);
         agregar_lista_ready_con_log(lista, pcb_a_agregar, kernel_config.algoritmo_planificacion);
     pthread_mutex_unlock(&m_sem);
 }
@@ -511,7 +518,7 @@ void planificar_sig_to_ready()
 
         cambiar_estado_a(pcb_a_ready, READY, estadoActual(pcb_a_ready));
 
-        agregar_a_lista_con_sems(pcb_a_ready, listaReady, m_listaReady);
+        agregar_a_lista_ready_con_sems(pcb_a_ready, listaReady, m_listaReady);
 
         sem_post(&proceso_en_ready);
     }
@@ -990,7 +997,7 @@ void atender_desalojo_yield()
     sacar_rafaga_ejecutada(pcb_a_reencolar); // hacer cada vez que sale de running
     iniciar_nueva_espera_ready(pcb_a_reencolar); // hacer cada vez que se mete en la lista de ready
     
-    agregar_a_lista_con_sems(pcb_a_reencolar, listaReady, m_listaReady);
+    agregar_a_lista_ready_con_sems(pcb_a_reencolar, listaReady, m_listaReady);
 
     sem_post(&proceso_en_ready);
     sem_post(&fin_ejecucion);
@@ -1190,7 +1197,7 @@ void reencolar_bloqueo_por_recurso(int id_recurso)
     
     iniciar_nueva_espera_ready(pcb_a_reencolar); // hacer cada vez que se mete en la lista de ready
     
-    agregar_a_lista_con_sems(pcb_a_reencolar, listaReady, m_listaReady);
+    agregar_a_lista_ready_con_sems(pcb_a_reencolar, listaReady, m_listaReady);
     
     sem_post(&proceso_en_ready);
 }
@@ -1253,7 +1260,7 @@ void rutina_io(thread_args* args)
     
     iniciar_nueva_espera_ready(pcb); // hacer cada vez que se mete en la lista de ready
     
-    agregar_a_lista_con_sems(pcb, listaReady, m_listaReady);
+    agregar_a_lista_ready_con_sems(pcb, listaReady, m_listaReady);
     
     sem_post(&proceso_en_ready);
 
@@ -1677,7 +1684,7 @@ void reencolar_bloq_por_archivo(char* nombreArchivo,t_entradaTGAA* entrada){
     
     iniciar_nueva_espera_ready(pcb_a_reencolar); // hacer cada vez que se mete en la lista de ready
     
-    agregar_a_lista_con_sems(pcb_a_reencolar, listaReady, m_listaReady);
+    agregar_a_lista_ready_con_sems(pcb_a_reencolar, listaReady, m_listaReady);
     
     sem_post(&proceso_en_ready);
 }
@@ -1850,7 +1857,7 @@ void rutina_read(thread_args_read* args)
     
     iniciar_nueva_espera_ready(pcb_activo); // hacer cada vez que se mete en la lista de ready
     
-    agregar_a_lista_con_sems(pcb_activo, listaReady, m_listaReady);
+    agregar_a_lista_ready_con_sems(pcb_activo, listaReady, m_listaReady);
     liberar_ce(contexto);
     sem_post(&proceso_en_ready);
     desbloquear_FS();
@@ -1937,7 +1944,7 @@ void rutina_write(thread_args_write* args)
     
     iniciar_nueva_espera_ready(pcb); // hacer cada vez que se mete en la lista de ready
     
-    agregar_a_lista_con_sems(pcb, listaReady, m_listaReady);
+    agregar_a_lista_ready_con_sems(pcb, listaReady, m_listaReady);
     
     sem_post(&proceso_en_ready);
     desbloquear_FS();
@@ -2024,7 +2031,7 @@ void rutina_truncate(thread_args_truncate* args)
     
     iniciar_nueva_espera_ready(pcb); // hacer cada vez que se mete en la lista de ready
     
-    agregar_a_lista_con_sems(pcb, listaReady, m_listaReady);
+    agregar_a_lista_ready_con_sems(pcb, listaReady, m_listaReady);
     
     sem_post(&proceso_en_ready);
 }
