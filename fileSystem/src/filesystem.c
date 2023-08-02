@@ -271,7 +271,7 @@ void asignar_bloque_directo(t_fcb *fcb)
   {
     ocupar_bloque(bloque_libre);
     fcb->f_dp = BLOCK_SIZE * bloque_libre;
-    printf("Puntero directo: %d\n", fcb->f_dp);
+    log_trace(logger_filesystem, "Puntero directo: %d\n", fcb->f_dp);
   }
 }
 
@@ -282,7 +282,7 @@ void asignar_bloque_indirecto(t_fcb *fcb)
   {
     ocupar_bloque(bloque_libre);
     fcb->f_ip = BLOCK_SIZE * bloque_libre;
-    printf("Puntero indirecto: %d\n", fcb->f_ip);
+    log_trace(logger_filesystem, "Puntero indirecto: %d\n", fcb->f_ip);
   }
 }
 
@@ -299,7 +299,7 @@ void asignar_bloque_al_bloque_indirecto(t_fcb *fcb, int bloques_ya_asignados)
     memcpy(bloque_a_modificar + offset, &puntero_nb, sizeof(uint32_t));
     modificar_bloque(fcb->f_ip, bloque_a_modificar);
 
-    printf("Puntero a bloque nuevo: %d\n", puntero_nb);
+    log_trace(logger_filesystem,"Puntero a bloque nuevo: %d\n", puntero_nb);
   }
 }
 

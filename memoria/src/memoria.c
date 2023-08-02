@@ -214,18 +214,18 @@ bool comparador_base_segmento(void* data1, void* data2) {
 }
 
 void print_lista_esp(t_list* lista) {
-    printf("Lista de espacios libres:\n");
+    log_trace(log_memoria, "Lista de espacios libres:");
     for (int i = 0; i < list_size(lista); i++) {
         t_esp* elemento = list_get(lista, i);
-        printf("Elemento %d: base=%u, limite=%u\n", i+1, elemento->base, elemento->limite);
+        log_trace(log_memoria, "Elemento %d: base=%u, limite=%u\n", i+1, elemento->base, elemento->limite);
     }
 }
 
 void print_lista_segmentos() {
-    printf("Lista de segmentos:\n");
+    log_trace(log_memoria, "Lista de segmentos:");
     for (int i = 0; i < list_size(LISTA_GLOBAL_SEGMENTOS); i++) {
         t_segmento_memoria* elemento = list_get(LISTA_GLOBAL_SEGMENTOS, i);
-        printf("PID %u: ID=%u, BASE=%u, LIMITE=%u\n", elemento->pid, elemento->id_segmento, elemento->direccion_base, elemento->tamanio_segmento);
+        log_trace(log_memoria, "PID %u: ID=%u, BASE=%u, LIMITE=%u\n", elemento->pid, elemento->id_segmento, elemento->direccion_base, elemento->tamanio_segmento);
     }
 }
 

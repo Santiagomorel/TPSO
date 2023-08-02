@@ -480,7 +480,7 @@ t_pcb* actualizar_pcb_lremove_devuelve_pcb(contexto_ejecucion* contexto_actualiz
     pthread_mutex_lock(&sem);
         t_pcb * pcb_a_actualizar = pcb_en_lista_coincide(lista_del_pcb, contexto_actualiza->id);
         bool valor_retorno_de_eliminacion_elemento = list_remove_element(lista_del_pcb, pcb_a_actualizar);
-        log_debug(kernel_logger, "el valor que me da cuando intento eliminar el elemento con id %d es %d", pcb_a_actualizar->id, valor_retorno_de_eliminacion_elemento);
+        log_trace(kernel_logger, "el valor que me da cuando intento eliminar el elemento con id %d es %d", pcb_a_actualizar->id, valor_retorno_de_eliminacion_elemento);
         actualizar_pcb(pcb_a_actualizar, contexto_actualiza);
     pthread_mutex_unlock(&sem);
 
@@ -919,7 +919,7 @@ void liberar_memoria(t_pcb* pcb)
     for (int i = 0; i < list_size(segmentos_activos); i++)
     {
         t_ent_ts* seg = list_get(segmentos_activos, i);
-        printf("SEG: %d, BASE: %d, TAM: %d, ACTIVO: %d\n", seg->id_seg, seg->base, seg->tam, seg->activo);
+        log_trace(kernel_logger,"SEG: %d, BASE: %d, TAM: %d, ACTIVO: %d\n", seg->id_seg, seg->base, seg->tam, seg->activo);
         solicitar_liberacion_segmento(seg->base, seg->tam, pcb->id, seg->id_seg);
     }
     list_destroy_and_destroy_elements(pcb->tabla_segmentos, (void*) free);
@@ -1654,14 +1654,14 @@ void atender_cierre_archivo(){
     free(entradaProceso);
     
     if(otrosUsanArchivo(nombreArchivo)){
-        log_debug(kernel_logger, "Entro al log que dice que hay otros usuarios abriendo el archivo");
+        log_trace(kernel_logger, "Entro al log que dice que hay otros usuarios abriendo el archivo");
         t_pcb* pcb_a_ejectuar = hallarPrimerPcb(nombreArchivo);
         enviar_ce(cpu_dispatch_connection, contextoDeEjecucion, EJECUTAR_CE, kernel_logger);
         reencolar_bloq_por_archivo(nombreArchivo,entradaGlobalAA);
     }
     
     else{
-        log_debug(kernel_logger, "no hay mas usuarios abriendo el archivo, mamawebo");
+        log_trace(kernel_logger, "no hay mas usuarios abriendo el archivo, mamawebo");
         t_list* listaFiltradaEnElse =  nombre_en_lista_coincide(tablaGlobalArchivosAbiertos,(char*) nombreArchivo);
         t_entradaTGAA* entradaGlobal = list_get(listaFiltradaEnElse,0);
         list_remove_element(tablaGlobalArchivosAbiertos,entradaGlobal);
@@ -1796,7 +1796,7 @@ void atender_lectura_archivo(){
     uint32_t estavariablenosirve = estructura_leer_archivo->entero3;
 
     t_list* lista_filtrada = nombre_en_lista_coincide_TAAP(pcb_lectura->tabla_archivos_abiertos_por_proceso, estructura_leer_archivo->string);
-    log_debug(kernel_logger, "La lista filtrada tiene %d cantidad de elementos", list_size(lista_filtrada));
+    log_trace(kernel_logger, "La lista filtrada tiene %d cantidad de elementos", list_size(lista_filtrada));
     t_entradaTAAP* entradaProceso = list_get(lista_filtrada,0);
     uint32_t puntero_archivo = entradaProceso->puntero;
 
@@ -2021,7 +2021,7 @@ void rutina_truncate(thread_args_truncate* args)
     
     uint32_t cod_op = recibir_operacion(file_system_connection);
 
-    log_debug(kernel_logger, "El codigo de operacion que llega dentro de la rutina truncate es: %d", cod_op);
+    log_trace(kernel_logger, "El codigo de operacion que llega dentro de la rutina truncate es: %d", cod_op);
 
     pthread_mutex_lock(&m_listaBloqueados);
         list_remove_element(listaBloqueados, pcb);
