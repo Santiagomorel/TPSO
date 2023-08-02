@@ -13,7 +13,7 @@ int iniciar_servidor(char *port, t_log *logger)
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;
 
-	getaddrinfo(IP, port, &hints, &servinfo);
+	getaddrinfo(NULL, port, &hints, &servinfo);
 	// Creamos el socket de escucha del servidor
 	socket_servidor = socket(servinfo->ai_family,
 							 servinfo->ai_socktype,
@@ -1077,7 +1077,7 @@ void enviar_string_5enteros(int client, char* string, uint32_t x, uint32_t y, ui
     eliminar_paquete(paquete);
 }
 
-t_string_2enteros* recibir_string_2enteros(int)
+t_string_2enteros* recibir_string_2enteros(int socket)
 {
 	t_string_2enteros* nuevo_string_2enteros = malloc(sizeof(t_string_2enteros));
 	int size = 0;
