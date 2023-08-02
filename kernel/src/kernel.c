@@ -317,18 +317,18 @@ char** parsearPorSaltosDeLinea(char* buffer)
 t_registro* crear_registros()
 {
     t_registro * nuevosRegistros = malloc(sizeof(t_registro));
-    strncpy(nuevosRegistros->AX , "HOLA", 4);
-    strncpy(nuevosRegistros->BX , "CHAU", 4);
-    strncpy(nuevosRegistros->CX , "TEST", 4);
-    strncpy(nuevosRegistros->DX , "ABCD", 4);
-	strncpy(nuevosRegistros->EAX , "PABLITOS", 8);
-	strncpy(nuevosRegistros->EBX , "HERMANOS", 8);
-	strncpy(nuevosRegistros->ECX , "12345678", 8);
-	strncpy(nuevosRegistros->EDX , "87654321", 8);
-	strncpy(nuevosRegistros->RAX , "PLISSTOPIMINPAIN", 16);
-	strncpy(nuevosRegistros->RBX , "PLISSTOPIMINPAIN", 16);
-	strncpy(nuevosRegistros->RCX , "PLISSTOPIMINPAIN", 16);
-	strncpy(nuevosRegistros->RDX , "PLISSTOPIMINPAIN", 16);
+    strncpy(nuevosRegistros->AX , "    ", 4);
+    strncpy(nuevosRegistros->BX , "    ", 4);
+    strncpy(nuevosRegistros->CX , "    ", 4);
+    strncpy(nuevosRegistros->DX , "    ", 4);
+	strncpy(nuevosRegistros->EAX , "        ", 8);
+	strncpy(nuevosRegistros->EBX , "        ", 8);
+	strncpy(nuevosRegistros->ECX , "        ", 8);
+	strncpy(nuevosRegistros->EDX , "        ", 8);
+	strncpy(nuevosRegistros->RAX , "                ", 16);
+	strncpy(nuevosRegistros->RBX , "                ", 16);
+	strncpy(nuevosRegistros->RCX , "                ", 16);
+	strncpy(nuevosRegistros->RDX , "                ", 16);
     return nuevosRegistros;
 }
 
@@ -354,17 +354,17 @@ bool existeArchivo(char* nombreArchivo){
   
     //t_list* nombreArchivosAbiertos = list_map(tablaGlobalArchivosAbiertos,(void*) obtener_nombre_archivo);
     // log_trace(kernel_logger, "La lista de nombres es de tamanio: %d", list_size(nombreArchivosAbiertos));
-    log_warning(kernel_logger, "La lista de nombres es de tamanio, con el list size: %d", list_size(tablaGlobalArchivosAbiertos));
+    log_trace(kernel_logger, "La lista de nombres es de tamanio, con el list size: %d", list_size(tablaGlobalArchivosAbiertos));
     if(list_size(tablaGlobalArchivosAbiertos)){
     t_entradaTGAA* aux = list_get(tablaGlobalArchivosAbiertos,0);
-    log_error(kernel_logger, "Aux tiene: %s de nombre y %d de tamanio", aux->nombreArchivo,aux->tamanioArchivo);
+    log_trace(kernel_logger, "Aux tiene: %s de nombre y %d de tamanio", aux->nombreArchivo,aux->tamanioArchivo);
     }
     t_list* archivoEnLista = nombre_en_lista_coincide(tablaGlobalArchivosAbiertos,nombreArchivo);
     // ver si se puede utilizar (de la commons) list_any_satisfy para comprobar si existe un archivo.
-    log_error(kernel_logger, "La lista de nombres es de tamanio: %d", list_size(archivoEnLista));
+    log_trace(kernel_logger, "La lista de nombres es de tamanio: %d", list_size(archivoEnLista));
     if(list_size(archivoEnLista)){
         t_entradaTGAA* entradaGlobal = list_get(archivoEnLista,0);
-        log_error(kernel_logger, "el nombre del archivo es: %s",entradaGlobal->nombreArchivo);
+        log_trace(kernel_logger, "el nombre del archivo es: %s",entradaGlobal->nombreArchivo);
         return strcmp(entradaGlobal->nombreArchivo, nombreArchivo) == 0;
     }else{
         return 0;
@@ -906,6 +906,8 @@ void finalizar_proceso(contexto_ejecucion* ce, int cod_op) // Saca de la lista d
 
 void liberar_memoria(t_pcb* pcb)
 {
+    enviar_paquete_entero(memory_connection, pcb->id, DELETE_PROCESS);
+    
     t_list* segmentos_activos = list_filter(pcb->tabla_segmentos, segmento_activo);
     for (int i = 0; i < list_size(segmentos_activos); i++)
     {
@@ -934,12 +936,12 @@ void solicitar_liberacion_segmento(uint32_t base, uint32_t tam, uint32_t pid, ui
 
     eliminar_paquete(paquete);
 
-    log_error(kernel_logger, "PID: %d - Eliminar Segmento - Id: %d - Tamaño: %d", pid, seg_id, tam);
+    log_info(kernel_logger, "PID: %d - Eliminar Segmento - Id: %d - Tamaño: %d", pid, seg_id, tam);
 }
 
 void liberar_archivos_abiertos(t_pcb*)
 {
-    log_error(kernel_logger, "Elimino los archivos abiertos del proceso que entra en EXIT");
+    log_trace(kernel_logger, "Elimino los archivos abiertos del proceso que entra en EXIT");
 }
 
 
@@ -947,13 +949,13 @@ void liberar_recursos_pedidos(t_pcb* pcb)
 {
     for (int i = 0; i < list_size(pcb->recursos_pedidos); i++)
     {
-        log_warning(kernel_logger, "El proceso con id: %d tiene %d recursos pedidos", pcb->id, list_size(pcb->recursos_pedidos));
-        log_warning(kernel_logger, "se libera un recurso al finalizar el proceso");
+        log_trace(kernel_logger, "El proceso con id: %d tiene %d recursos pedidos", pcb->id, list_size(pcb->recursos_pedidos));
+        log_trace(kernel_logger, "se libera un recurso al finalizar el proceso");
         int element = list_get(pcb->recursos_pedidos, i);
         sumar_instancia_exit(element, pcb);
-        log_warning(kernel_logger, "se suma la instancia");
+        log_trace(kernel_logger, "se suma la instancia");
         if (tiene_que_reencolar_bloq_recurso(element)) {
-            log_warning(kernel_logger, "se detecto un proceso a reencolar");
+            log_trace(kernel_logger, "se detecto un proceso a reencolar");
             reencolar_bloqueo_por_recurso(element);
         }
     }
@@ -1282,7 +1284,7 @@ void atender_crear_segmento()
         switch (cod_op_creacion)
         {
         case MENSAJE:
-            log_error(kernel_logger, "El codop dio mensaje");
+            log_trace(kernel_logger, "El codop dio mensaje");
         break;
         case OUT_OF_MEMORY:
             finalizar_proceso(contexto_crea_segmento, OUT_OF_MEMORY);
@@ -1314,7 +1316,7 @@ void atender_crear_segmento()
             obtener_ce_v2(pcb_crea_segmento, nuevo_contexto_crea_segmento);
 
             enviar_ce(cpu_dispatch_connection, nuevo_contexto_crea_segmento, EJECUTAR_CE, kernel_logger);
-            log_warning(kernel_logger, "Aca estoy en OK x3");
+            log_trace(kernel_logger, "Aca estoy en OK x3");
             liberar_ce(nuevo_contexto_crea_segmento);
 
             compactacion = 0;
@@ -1335,7 +1337,7 @@ void atender_compactacion(uint32_t id_proceso, uint32_t id_segmento, uint32_t ta
     enviar_CodOp(memory_connection, COMPACTAR);
 
     uint32_t cod_op_compactacion = recibir_operacion(memory_connection);
-    log_error(kernel_logger,"el codop es %d",cod_op_compactacion);
+    log_trace(kernel_logger,"el codop es %d",cod_op_compactacion);
     
     switch (cod_op_compactacion){
         case OK_COMPACTACION:
@@ -1480,7 +1482,7 @@ void atender_apertura_archivo()
     // pthread_mutex_unlock(&m_listaEjecutando);
     
     if(existeArchivo(nombreArchivo)){ // si existe en la tabla global de kernel
-        log_warning(kernel_logger, "Kernel dice que existe el archivo en la tabla global, does kernel miente?");
+        log_trace(kernel_logger, "Kernel dice que existe el archivo en la tabla global, does kernel miente?");
         t_entradaTAAP* entradaTAAP3= malloc(sizeof(t_entradaTAAP));
         crear_entrada_TAAP(nombreArchivo,entradaTAAP3);
         list_add(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso,entradaTAAP3);
@@ -1517,7 +1519,7 @@ void atender_apertura_archivo()
                 break;
 
             case EXISTE_ARCHIVO: // existe en el FS
-                log_error(kernel_logger, "El abrir archivo entro por aca");
+                log_trace(kernel_logger, "El abrir archivo entro por aca");
                 t_entradaTAAP* entradaTAAP2 = malloc(sizeof(t_entradaTAAP));
 
                 crear_entrada_TGAA(nombreArchivo, entradaTAAP2);
@@ -1572,7 +1574,7 @@ void crear_entrada_TAAP(char* nombre,t_entradaTAAP* nuevaEntrada){
     
     t_entradaTGAA* entradaGlobal = list_get(listaFiltrada,0);
     
-    log_warning(kernel_logger,"el elemento guardado en TAAP tiene:%s,  tamanio %d",entradaGlobal->nombreArchivo,entradaGlobal->tamanioArchivo);
+    log_trace(kernel_logger,"el elemento guardado en TAAP tiene:%s,  tamanio %d",entradaGlobal->nombreArchivo,entradaGlobal->tamanioArchivo);
     
     nuevaEntrada->tamanioArchivo = entradaGlobal->tamanioArchivo;
 
@@ -1628,7 +1630,7 @@ void atender_cierre_archivo(){
     
     t_list* listaFiltrada = nombre_en_lista_coincide(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso,(char*) nombreArchivo);
     
-    log_error(kernel_logger,"la lista tiene :%d elementos", list_size(listaFiltrada));
+    log_trace(kernel_logger,"la lista tiene :%d elementos", list_size(listaFiltrada));
 
     t_entradaTAAP* entradaProceso = list_get(listaFiltrada,0);
     
@@ -1636,11 +1638,11 @@ void atender_cierre_archivo(){
 
     list_remove_element(entradaGlobalAA->lista_block_archivo, pcb_en_ejecucion);
 
-    log_error(kernel_logger,"la TAAP tiene :%d elementos", list_size(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso));
+    log_trace(kernel_logger,"la TAAP tiene :%d elementos", list_size(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso));
 
     list_remove_element(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso, entradaProceso);
 
-    log_error(kernel_logger,"la TAAP tiene :%d elementos", list_size(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso));
+    log_trace(kernel_logger,"la TAAP tiene :%d elementos", list_size(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso));
     
     free(entradaProceso);
     
@@ -1656,7 +1658,7 @@ void atender_cierre_archivo(){
         t_list* listaFiltradaEnElse =  nombre_en_lista_coincide(tablaGlobalArchivosAbiertos,(char*) nombreArchivo);
         t_entradaTGAA* entradaGlobal = list_get(listaFiltradaEnElse,0);
         list_remove_element(tablaGlobalArchivosAbiertos,entradaGlobal);
-        log_warning(kernel_logger,"la TAAG tiene :%d",list_size(tablaGlobalArchivosAbiertos));
+        log_trace(kernel_logger,"la TAAG tiene :%d",list_size(tablaGlobalArchivosAbiertos));
         enviar_ce(cpu_dispatch_connection, contextoDeEjecucion, EJECUTAR_CE, kernel_logger);
         list_destroy(listaFiltradaEnElse);
         free(entradaGlobal);
@@ -1720,7 +1722,7 @@ return list_is_empty(entradaGlobal->lista_block_archivo) == 0;
 
 // ----------------------- Funciones ACTUALIZAR_PUNTERO ----------------------- //
 void atender_actualizar_puntero(){
-    log_error(kernel_logger,"entro");
+    log_trace(kernel_logger,"entro");
     t_ce_string_entero* estructura_actualizacion = malloc(sizeof(t_ce_string_entero));
     
     estructura_actualizacion = recibir_ce_string_entero(cpu_dispatch_connection);
@@ -1728,8 +1730,8 @@ void atender_actualizar_puntero(){
     uint32_t posicion = estructura_actualizacion->entero;
     char* nombreArchivo = estructura_actualizacion->string;
          
-    log_error(kernel_logger,"el nombre del archivo es %s",nombreArchivo);
-    log_error(kernel_logger,"el entero del paquete es %d",posicion);
+    log_trace(kernel_logger,"el nombre del archivo es %s",nombreArchivo);
+    log_trace(kernel_logger,"el entero del paquete es %d",posicion);
     // imprimir_ce(estructura_actualizacion->ce, kernel_logger);
     contexto_ejecucion* contextoDeEjecucion=estructura_actualizacion->ce;
 
@@ -1740,21 +1742,21 @@ void atender_actualizar_puntero(){
     // actualizar_pcb(pcb_en_ejecucion, contextoDeEjecucion);
     // pthread_mutex_unlock(&m_listaEjecutando);
 
-    log_error(kernel_logger,"estoy por filtrar lista");
+    log_trace(kernel_logger,"estoy por filtrar lista");
     
     t_list* listaFiltrada = nombre_en_lista_coincide(pcb_en_ejecucion->tabla_archivos_abiertos_por_proceso,nombreArchivo);
     
-    log_error(kernel_logger,"el tamanio de la lista es %d",list_size(listaFiltrada));
+    log_trace(kernel_logger,"el tamanio de la lista es %d",list_size(listaFiltrada));
 
     t_entradaTAAP* entradaProceso = list_get(listaFiltrada,0);
 
-    log_error(kernel_logger,"consegui posicion inicial %u",entradaProceso->puntero);
-    log_error(kernel_logger,"consegui entrada %s",entradaProceso->nombreArchivo);
-    log_error(kernel_logger,"consegui posicion 2da %d",posicion);
+    log_trace(kernel_logger,"consegui posicion inicial %u",entradaProceso->puntero);
+    log_trace(kernel_logger,"consegui entrada %s",entradaProceso->nombreArchivo);
+    log_trace(kernel_logger,"consegui posicion 2da %d",posicion);
     
     entradaProceso->puntero = (uint32_t) posicion;
 
-    log_error(kernel_logger,"consegui posicion %u",entradaProceso->puntero);
+    log_trace(kernel_logger,"consegui posicion %u",entradaProceso->puntero);
     
     contexto_ejecucion* contextoAEnviar =malloc(sizeof(contexto_ejecucion));
     obtener_ce_v2(pcb_en_ejecucion, contextoAEnviar);
@@ -1770,9 +1772,9 @@ void atender_actualizar_puntero(){
 void atender_lectura_archivo(){
 
     bloquear_FS();
-    log_error(kernel_logger,"por entrar a recibir ce string 3 enteros");
+    log_trace(kernel_logger,"por entrar a recibir ce string 3 enteros");
     t_ce_string_3enteros* estructura_leer_archivo= recibir_ce_string_3enteros(cpu_dispatch_connection);
-    log_error(kernel_logger,"el nombre es :%s",estructura_leer_archivo->string);
+    log_trace(kernel_logger,"el nombre es :%s",estructura_leer_archivo->string);
     contexto_ejecucion* ce_a_updatear = estructura_leer_archivo->ce;
 
     t_pcb * pcb_lectura = actualizar_pcb_lget_devuelve_pcb(ce_a_updatear, listaEjecutando, m_listaEjecutando);
@@ -1835,11 +1837,11 @@ void rutina_read(thread_args_read* args)
     uint32_t dir_fisica = args->dir_fisica;
 
     enviar_string_4enteros(file_system_connection, nombre, pcb->id, puntero,bytes, dir_fisica, F_READ);
-    log_error(kernel_logger,"Envio fread a fs");
+    log_trace(kernel_logger,"Envio fread a fs");
 
     uint32_t cod_op = recibir_operacion(file_system_connection);
 
-    log_warning(kernel_logger, "El codigo de operacion que recibo en la rutina read es: %d", cod_op);
+    log_trace(kernel_logger, "El codigo de operacion que recibo en la rutina read es: %d", cod_op);
     contexto_ejecucion* contexto = malloc(sizeof(contexto_ejecucion));
     obtener_ce_v2(pcb, contexto);
     t_pcb* pcb_activo = pcb_lremove(contexto, listaBloqueados, m_listaBloqueados);
@@ -1919,13 +1921,13 @@ void rutina_write(thread_args_write* args)
     uint32_t offset = args->offset;
     uint32_t dir_fisica = args->dir_fisica;
 
-      log_error(kernel_logger,"el nombre en rutina es :%s, el puntero es: %d",nombre, puntero);
+      log_trace(kernel_logger,"el nombre en rutina es :%s, el puntero es: %d",nombre, puntero);
     
     enviar_string_5enteros(file_system_connection, nombre, pcb->id, puntero,bytes,offset, dir_fisica, F_WRITE);
     
     uint32_t cod_op = recibir_operacion(file_system_connection);
 
-    log_warning(kernel_logger,"recibi CODOP de fwrite %d",cod_op);
+    log_trace(kernel_logger,"recibi CODOP de fwrite %d",cod_op);
 
     pthread_mutex_lock(&m_listaBloqueados);
         list_remove_element(listaBloqueados, pcb);
@@ -1961,9 +1963,9 @@ void atender_modificar_tamanio_archivo(){
     char nombre_archivo[100];
     strcpy(nombre_archivo,estructura_mod_tam_archivo->string);
 
-    log_error(kernel_logger,"el nombre es :%s",nombre_archivo);
+    log_trace(kernel_logger,"el nombre es :%s",nombre_archivo);
     uint32_t tamanio_archivo = estructura_mod_tam_archivo->entero;
-    log_error(kernel_logger,"el tamanio es :%d",tamanio_archivo);
+    log_trace(kernel_logger,"el tamanio es :%d",tamanio_archivo);
     
     log_info(kernel_logger, "PID: [%d] - Truncar Archivo: [%s] - Tamaño: [%d]", contexto_mod_tam_arch->id, nombre_archivo, tamanio_archivo);
 
@@ -1987,8 +1989,8 @@ void atender_modificar_tamanio_archivo(){
     strcpy(argumentos->nombre,nombre_archivo);
     argumentos->tamanio = tamanio_archivo;
 
-    log_error(kernel_logger,"el nombre en argumentos es :%s",argumentos->nombre);
-    log_error(kernel_logger,"el tamanio en argumentos es :%d",argumentos->tamanio);
+    log_trace(kernel_logger,"el nombre en argumentos es :%s",argumentos->nombre);
+    log_trace(kernel_logger,"el tamanio en argumentos es :%d",argumentos->tamanio);
 
     pthread_create(&hiloTruncate, NULL, (void*) rutina_truncate, (void*) (thread_args*) argumentos);
     pthread_detach(hiloTruncate);
@@ -2006,7 +2008,7 @@ void rutina_truncate(thread_args_truncate* args)
     strcpy(nombre,args->nombre);
     uint32_t tamanio = args->tamanio;
 
-    log_error(kernel_logger,"el nombre en rutina es :%s",nombre);
+    log_trace(kernel_logger,"el nombre en rutina es :%s",nombre);
     
     enviar_string_enterov2(file_system_connection, nombre, tamanio, F_TRUNCATE);
     

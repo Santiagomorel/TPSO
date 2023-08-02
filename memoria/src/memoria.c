@@ -284,7 +284,7 @@ int buscar_espacio_libre(uint32_t tam) {
             }
         }
 
-        log_info(log_memoria, "NO SE ENCONTRO UN ESPACIO LIBRE, SE NECESITA COMPACTAR");
+        log_trace(log_memoria, "NO SE ENCONTRO UN ESPACIO LIBRE, SE NECESITA COMPACTAR");
         return -1;
    
         break;
@@ -307,7 +307,7 @@ int buscar_espacio_libre(uint32_t tam) {
             return index_worst;
         } 
 
-        log_info(log_memoria, "NO SE ENCONTRO UN ESPACIO LIBRE, SE NECESITA COMPACTAR");
+        log_trace(log_memoria, "NO SE ENCONTRO UN ESPACIO LIBRE, SE NECESITA COMPACTAR");
         return -1;
 
         break;
@@ -334,7 +334,7 @@ int buscar_espacio_libre(uint32_t tam) {
             return index_best;
         } 
 
-        log_info(log_memoria, "NO SE ENCONTRO UN ESPACIO LIBRE, SE NECESITA COMPACTAR");
+        log_trace(log_memoria, "NO SE ENCONTRO UN ESPACIO LIBRE, SE NECESITA COMPACTAR");
         return -1;
 
         break;
@@ -350,8 +350,8 @@ op_code crear_segmento_memoria(uint32_t tam, uint32_t* base_resultante) {
     //printf("%d, %d\n", ESPACIO_LIBRE_TOTAL, tam);
     if (ESPACIO_LIBRE_TOTAL < tam)
     {
-        log_warning(log_memoria, "El espacio libre total de la memoria es: %d, mietras que el tamanio del parametro es: %d", ESPACIO_LIBRE_TOTAL, tam);
-        log_info(log_memoria, "NO HAY ESPACIO SUFICIENTE PARA CREAR ESE SEGMENTO");
+        log_trace(log_memoria, "El espacio libre total de la memoria es: %d, mietras que el tamanio del parametro es: %d", ESPACIO_LIBRE_TOTAL, tam);
+        log_trace(log_memoria, "NO HAY ESPACIO SUFICIENTE PARA CREAR ESE SEGMENTO");
         return OUT_OF_MEMORY;
         // Retornar codop indicando que no hay espacio suficiente.
     }
@@ -540,6 +540,14 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
             
             break;
 
+        case DELETE_PROCESS:
+            
+            uint32_t proceso = recibir_entero(SOCKET_CLIENTE_KERNEL, log_memoria);
+
+            log_info(log_memoria, "Eliminación de Proceso PID: %d", proceso);
+            
+            break;
+        
         case DELETE_SEGMENT:
             // Debe recibir el id del segmento que desea eliminar
             
@@ -557,6 +565,7 @@ void recibir_kernel(int SOCKET_CLIENTE_KERNEL)
 
          case COMPACTAR:
             
+            log_info(log_memoria, "Solicitud de Compactacion");
             compactar();
             for(int i = 0; i < list_size(LISTA_GLOBAL_SEGMENTOS); i++)
             {

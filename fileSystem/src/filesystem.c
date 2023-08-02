@@ -389,14 +389,14 @@ void procesar_conexion()
             }
 
 
-            log_trace(logger, "Abrir archivo: %s", nombre_archivo);
+            log_info(logger, "Abrir archivo: %s", nombre_archivo);
             break;
         case F_CREATE:
             char* nombre_archivo2 = recibir_string(cliente_socket, logger);
             log_trace(logger_filesystem,"recibi nombre_archivo f_create");
             crear_archivo(nombre_archivo);
 
-            log_trace(logger, "Crear archivo: %s", nombre_archivo);
+            log_info(logger, "Crear archivo: %s", nombre_archivo);
             break;
         case F_TRUNCATE:
             t_string_entero* estructura = recibir_string_enterov2(cliente_socket);
@@ -415,7 +415,7 @@ void procesar_conexion()
             uint32_t dir_fisica = estructura_string_4enteros_l->entero4;
 
 
-            log_trace(logger, "Leer archivo: %s - Puntero: %d - Memoria: %d - Tamaño: %d" ,f_name, offset, dir_fisica, cant);
+            log_info(logger, "Leer archivo: %s - Puntero: %d - Memoria: %d - Tamaño: %d" ,f_name, offset, dir_fisica, cant);
             char* stream = eferrid(f_name, offset, cant);
 
             

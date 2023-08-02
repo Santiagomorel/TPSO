@@ -423,7 +423,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             log_trace(cpu_logger, "ya traduje a dir fisica y es :%d",direccion_fisica);
             
             if(sigsegv){
-                //PID: <PID> - Error SEG_FAULT- Segmento: <NUMERO SEGMENTO> -Offset: <OFFSET> - Tamaño: <TAMAÑO>”
+                log_info(cpu_logger, "PID: [%d] - Error SEG_FAULT- Segmento: [%d] -Offset: [%d] - Tamaño: [%d]", ce->id, id_segmento_con_segfault, desplazamiento_segfault, tamanio_segfault);
                 enviar_ce(socket_kernel, ce, SEG_FAULT, cpu_logger);
                 sigsegv = 0;
             }else{
@@ -442,7 +442,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             direccion_fisica = traducir_direccion_logica(direccion_logica, ce, atoi(instruction[3]));
 
             if(sigsegv){
-                //PID: <PID> - Error SEG_FAULT- Segmento: <NUMERO SEGMENTO> -Offset: <OFFSET> - Tamaño: <TAMAÑO>”
+                log_info(cpu_logger, "PID: [%d] - Error SEG_FAULT- Segmento: [%d] -Offset: [%d] - Tamaño: [%d]", ce->id, id_segmento_con_segfault, desplazamiento_segfault, tamanio_segfault);
                 enviar_ce(socket_kernel, ce, SEG_FAULT, cpu_logger);
                 sigsegv = 0;
             }else{
@@ -505,7 +505,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
                 log_info(cpu_logger, "PID: %d - Acción: LEER - Segmento: %d - Dirección Fisica: %d", ce->id, id_segmento, direccion_fisica);
                 log_info(cpu_logger,"YA GUARDE VALOR EN REGISTRO!!");
             }else{
-                //“PID: <PID> - Error SEG_FAULT- Segmento: <NUMERO SEGMENTO> - Offset: <OFFSET> - Tamaño: <TAMAÑO>”
+                log_info(cpu_logger, "PID: [%d] - Error SEG_FAULT- Segmento: [%d] -Offset: [%d] - Tamaño: [%d]", ce->id, id_segmento_con_segfault, desplazamiento_segfault, tamanio_segfault);
                 enviar_ce(socket_kernel, ce, SEG_FAULT, cpu_logger);
                 sigsegv = 0;
                 sale_proceso = 1;
@@ -542,7 +542,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
                 }
 
             }else{
-                //“PID: <PID> - Error SEG_FAULT- Segmento: <NUMERO SEGMENTO> - Offset: <OFFSET> - Tamaño: <TAMAÑO>”
+                log_info(cpu_logger, "PID: [%d] - Error SEG_FAULT- Segmento: [%d] -Offset: [%d] - Tamaño: [%d]", ce->id, id_segmento_con_segfault, desplazamiento_segfault, tamanio_segfault);
                 enviar_ce(socket_kernel, ce, SEG_FAULT, cpu_logger);
                 sigsegv = 0;
                 sale_proceso = 1;
