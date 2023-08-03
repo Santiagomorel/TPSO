@@ -19,7 +19,7 @@ int main(int argc, char **argv)
 		levantar_config_filesystem();
 		levantar_superbloque();
 
-    log_trace(logger_filesystem, "Estoy antes de establecer conexion");
+    log_info(logger_filesystem, "INICIA EL MODULO DE FILESYSTEM");
 
 		establecer_conexion(logger_filesystem);
 
@@ -75,7 +75,7 @@ int main(int argc, char **argv)
 
 void levantar_loggers_filesystem()
 {
-  logger_filesystem = log_create("./runlogs/filesystem.log", "FILESYSTEM", true, LOG_LEVEL_TRACE);
+  logger_filesystem = log_create("./runlogs/filesystem.log", "FILESYSTEM", true, LOG_LEVEL_INFO);
 }
 
 void levantar_config_filesystem()

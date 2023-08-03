@@ -3,7 +3,7 @@
 int main(int argc, char **argv)
 {
 
-    log_memoria = log_create("./runlogs/memoria.log", "Memoria", 1, LOG_LEVEL_TRACE);
+    log_memoria = log_create("./runlogs/memoria.log", "Memoria", 1, LOG_LEVEL_INFO);
 
     /*Estructuras administrativas*/
 
@@ -40,7 +40,7 @@ int main(int argc, char **argv)
     log_trace(log_memoria, "puerto escucha %d", memoria_config.puerto_escucha);
 
     socket_servidor_memoria = iniciar_servidor(memoria_config.puerto_escucha, log_memoria);
-    log_trace(log_memoria, "Servidor Memoria listo para recibir al cliente");
+    log_info(log_memoria, "INICIA EL MODULO DE MEMORIA");
 
     pthread_t atiende_cliente_CPU, atiende_cliente_FILESYSTEM, atiende_cliente_KERNEL;
 
@@ -614,7 +614,7 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU)
             uint32_t tam_a_leer = mov_in_data->entero3;
             char* valor_in = leer(dir_fisica_in, tam_a_leer);
 
-            log_warning(log_memoria,"El valor en memoria es: %s",valor_in);
+            log_trace(log_memoria,"El valor en memoria es: %s",valor_in);
             
             //send(cliente_socket, valor_in, tam_a_leer, NULL);
             

@@ -7,7 +7,7 @@ int main(int argc, char ** argv)
 
 	// ----------------------- creo el log de la consola ----------------------- //
 
-	consola_logger = init_logger("./runlogs/consola.log", "Consola", 1, LOG_LEVEL_TRACE);
+	consola_logger = init_logger("./runlogs/consola.log", "Consola", 1, LOG_LEVEL_INFO);
 
 	// ----------------------- levanto la configuracion de la consola ----------------------- //
 

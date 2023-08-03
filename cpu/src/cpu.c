@@ -16,7 +16,7 @@ int main(int argc, char ** argv) {
     signal(SIGINT, end_cpu_module);
 
     /* ---------------- LOGGING ---------------- */
-	cpu_logger = init_logger("./runlogs/cpu.log", "CPU", 1, LOG_LEVEL_TRACE);
+	cpu_logger = init_logger("./runlogs/cpu.log", "CPU", 1, LOG_LEVEL_INFO);
 
     log_info(cpu_logger, "INICIA EL MODULO DE CPU");
 	
@@ -662,8 +662,8 @@ void enviar_ce_con_string_entero(int client_socket, contexto_ejecucion* ce, char
     t_paquete* paquete = crear_paquete_op_code(codOP);
 
     agregar_ce_a_paquete(paquete, ce, cpu_logger);
-          log_error(cpu_logger,"el entero del archivo es %s", x);
-        log_error(cpu_logger,"el entero del archivo es %s", parameter);
+          log_trace(cpu_logger,"el entero del archivo es %s", x);
+        log_trace(cpu_logger,"el entero del archivo es %s", parameter);
     agregar_entero_a_paquete(paquete, atoi(x));
 
     agregar_a_paquete(paquete, parameter,strlen(parameter)+1); 
@@ -794,7 +794,7 @@ void escribir_valor(uint32_t physical_address, char* register_value_mov_out, uin
     agregar_entero_a_paquete(package, pid);
     agregar_entero_a_paquete(package, size);
     enviar_paquete(package, conexion_cpu);
-    log_warning(cpu_logger,"envie: physical adress: %d, reg value :%s,pid:%d,size:%d",physical_address,register_value_mov_out,pid,size);
+    log_trace(cpu_logger,"envie: physical adress: %d, reg value :%s,pid:%d,size:%d",physical_address,register_value_mov_out,pid,size);
 
 }
 /*---------------------------------- MMU ----------------------------------*/
@@ -808,7 +808,7 @@ uint32_t traducir_direccion_logica(uint32_t logical_address, contexto_ejecucion*
 
    
     offset = desplazamiento_segmento;
-    log_error(cpu_logger,"desplazamiento segmento:%d",desplazamiento_segmento);
+    log_trace(cpu_logger,"desplazamiento segmento:%d",desplazamiento_segmento);
 
 
     t_list* segment_table_ce = ce->tabla_segmentos;
