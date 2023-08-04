@@ -3,7 +3,7 @@
 int main(int argc, char **argv)
 {
 
-    log_memoria = log_create("./runlogs/memoria.log", "Memoria", 1, LOG_LEVEL_TRACE);
+    log_memoria = log_create("./runlogs/memoria.log", "Memoria", 1, LOG_LEVEL_INFO);
 
     /*Estructuras administrativas*/
 
@@ -40,7 +40,7 @@ int main(int argc, char **argv)
     log_trace(log_memoria, "puerto escucha %d", memoria_config.puerto_escucha);
 
     socket_servidor_memoria = iniciar_servidor(memoria_config.puerto_escucha, log_memoria);
-    log_trace(log_memoria, "Servidor Memoria listo para recibir al cliente");
+    log_info(log_memoria, "INICIA EL MODULO DE MEMORIA");
 
     pthread_t atiende_cliente_CPU, atiende_cliente_FILESYSTEM, atiende_cliente_KERNEL;
 
@@ -214,18 +214,18 @@ bool comparador_base_segmento(void* data1, void* data2) {
 }
 
 void print_lista_esp(t_list* lista) {
-    printf("Lista de espacios libres:\n");
+    log_trace(log_memoria, "Lista de espacios libres:");
     for (int i = 0; i < list_size(lista); i++) {
         t_esp* elemento = list_get(lista, i);
-        printf("Elemento %d: base=%u, limite=%u\n", i+1, elemento->base, elemento->limite);
+        log_trace(log_memoria, "Elemento %d: base=%u, limite=%u\n", i+1, elemento->base, elemento->limite);
     }
 }
 
 void print_lista_segmentos() {
-    printf("Lista de segmentos:\n");
+    log_trace(log_memoria, "Lista de segmentos:");
     for (int i = 0; i < list_size(LISTA_GLOBAL_SEGMENTOS); i++) {
         t_segmento_memoria* elemento = list_get(LISTA_GLOBAL_SEGMENTOS, i);
-        printf("PID %u: ID=%u, BASE=%u, LIMITE=%u\n", elemento->pid, elemento->id_segmento, elemento->direccion_base, elemento->tamanio_segmento);
+        log_trace(log_memoria, "PID %u: ID=%u, BASE=%u, LIMITE=%u\n", elemento->pid, elemento->id_segmento, elemento->direccion_base, elemento->tamanio_segmento);
     }
 }
 
@@ -614,7 +614,7 @@ void recibir_cpu(int SOCKET_CLIENTE_CPU)
             uint32_t tam_a_leer = mov_in_data->entero3;
             char* valor_in = leer(dir_fisica_in, tam_a_leer);
 
-            log_warning(log_memoria,"El valor en memoria es: %s",valor_in);
+            log_trace(log_memoria,"El valor en memoria es: %s",valor_in);
             
             //send(cliente_socket, valor_in, tam_a_leer, NULL);
             

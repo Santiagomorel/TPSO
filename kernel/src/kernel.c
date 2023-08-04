@@ -414,6 +414,13 @@ int estadoActual(t_pcb* pcb)
 void agregar_a_lista_con_sems(t_pcb* pcb_a_agregar, t_list* lista, pthread_mutex_t m_sem)
 {
     pthread_mutex_lock(&m_sem);
+        list_add(lista, pcb_a_agregar);
+    pthread_mutex_unlock(&m_sem);
+}
+
+void agregar_a_lista_ready_con_sems(t_pcb* pcb_a_agregar, t_list* lista, pthread_mutex_t m_sem)
+{
+    pthread_mutex_lock(&m_sem);
         agregar_lista_ready_con_log(lista, pcb_a_agregar, kernel_config.algoritmo_planificacion);
     pthread_mutex_unlock(&m_sem);
 }
@@ -473,7 +480,7 @@ t_pcb* actualizar_pcb_lremove_devuelve_pcb(contexto_ejecucion* contexto_actualiz
     pthread_mutex_lock(&sem);
         t_pcb * pcb_a_actualizar = pcb_en_lista_coincide(lista_del_pcb, contexto_actualiza->id);
         bool valor_retorno_de_eliminacion_elemento = list_remove_element(lista_del_pcb, pcb_a_actualizar);
-        log_debug(kernel_logger, "el valor que me da cuando intento eliminar el elemento con id %d es %d", pcb_a_actualizar->id, valor_retorno_de_eliminacion_elemento);
+        log_trace(kernel_logger, "el valor que me da cuando intento eliminar el elemento con id %d es %d", pcb_a_actualizar->id, valor_retorno_de_eliminacion_elemento);
         actualizar_pcb(pcb_a_actualizar, contexto_actualiza);
     pthread_mutex_unlock(&sem);
 
@@ -511,7 +518,7 @@ void planificar_sig_to_ready()
 
         cambiar_estado_a(pcb_a_ready, READY, estadoActual(pcb_a_ready));
 
-        agregar_a_lista_con_sems(pcb_a_ready, listaReady, m_listaReady);
+        agregar_a_lista_ready_con_sems(pcb_a_ready, listaReady, m_listaReady);
 
         sem_post(&proceso_en_ready);
     }
@@ -912,7 +919,7 @@ void liberar_memoria(t_pcb* pcb)
     for (int i = 0; i < list_size(segmentos_activos); i++)
     {
         t_ent_ts* seg = list_get(segmentos_activos, i);
-        printf("SEG: %d, BASE: %d, TAM: %d, ACTIVO: %d\n", seg->id_seg, seg->base, seg->tam, seg->activo);
+        log_trace(kernel_logger,"SEG: %d, BASE: %d, TAM: %d, ACTIVO: %d\n", seg->id_seg, seg->base, seg->tam, seg->activo);
         solicitar_liberacion_segmento(seg->base, seg->tam, pcb->id, seg->id_seg);
     }
     list_destroy_and_destroy_elements(pcb->tabla_segmentos, (void*) free);
@@ -990,7 +997,7 @@ void atender_desalojo_yield()
     sacar_rafaga_ejecutada(pcb_a_reencolar); // hacer cada vez que sale de running
     iniciar_nueva_espera_ready(pcb_a_reencolar); // hacer cada vez que se mete en la lista de ready
     
-    agregar_a_lista_con_sems(pcb_a_reencolar, listaReady, m_listaReady);
+    agregar_a_lista_ready_con_sems(pcb_a_reencolar, listaReady, m_listaReady);
 
     sem_post(&proceso_en_ready);
     sem_post(&fin_ejecucion);
@@ -1190,7 +1197,7 @@ void reencolar_bloqueo_por_recurso(int id_recurso)
     
     iniciar_nueva_espera_ready(pcb_a_reencolar); // hacer cada vez que se mete en la lista de ready
     
-    agregar_a_lista_con_sems(pcb_a_reencolar, listaReady, m_listaReady);
+    agregar_a_lista_ready_con_sems(pcb_a_reencolar, listaReady, m_listaReady);
     
     sem_post(&proceso_en_ready);
 }
@@ -1253,7 +1260,7 @@ void rutina_io(thread_args* args)
     
     iniciar_nueva_espera_ready(pcb); // hacer cada vez que se mete en la lista de ready
     
-    agregar_a_lista_con_sems(pcb, listaReady, m_listaReady);
+    agregar_a_lista_ready_con_sems(pcb, listaReady, m_listaReady);
     
     sem_post(&proceso_en_ready);
 
@@ -1647,14 +1654,14 @@ void atender_cierre_archivo(){
     free(entradaProceso);
     
     if(otrosUsanArchivo(nombreArchivo)){
-        log_debug(kernel_logger, "Entro al log que dice que hay otros usuarios abriendo el archivo");
+        log_trace(kernel_logger, "Entro al log que dice que hay otros usuarios abriendo el archivo");
         t_pcb* pcb_a_ejectuar = hallarPrimerPcb(nombreArchivo);
         enviar_ce(cpu_dispatch_connection, contextoDeEjecucion, EJECUTAR_CE, kernel_logger);
         reencolar_bloq_por_archivo(nombreArchivo,entradaGlobalAA);
     }
     
     else{
-        log_debug(kernel_logger, "no hay mas usuarios abriendo el archivo, mamawebo");
+        log_trace(kernel_logger, "no hay mas usuarios abriendo el archivo, mamawebo");
         t_list* listaFiltradaEnElse =  nombre_en_lista_coincide(tablaGlobalArchivosAbiertos,(char*) nombreArchivo);
         t_entradaTGAA* entradaGlobal = list_get(listaFiltradaEnElse,0);
         list_remove_element(tablaGlobalArchivosAbiertos,entradaGlobal);
@@ -1677,7 +1684,7 @@ void reencolar_bloq_por_archivo(char* nombreArchivo,t_entradaTGAA* entrada){
     
     iniciar_nueva_espera_ready(pcb_a_reencolar); // hacer cada vez que se mete en la lista de ready
     
-    agregar_a_lista_con_sems(pcb_a_reencolar, listaReady, m_listaReady);
+    agregar_a_lista_ready_con_sems(pcb_a_reencolar, listaReady, m_listaReady);
     
     sem_post(&proceso_en_ready);
 }
@@ -1789,7 +1796,7 @@ void atender_lectura_archivo(){
     uint32_t estavariablenosirve = estructura_leer_archivo->entero3;
 
     t_list* lista_filtrada = nombre_en_lista_coincide_TAAP(pcb_lectura->tabla_archivos_abiertos_por_proceso, estructura_leer_archivo->string);
-    log_debug(kernel_logger, "La lista filtrada tiene %d cantidad de elementos", list_size(lista_filtrada));
+    log_trace(kernel_logger, "La lista filtrada tiene %d cantidad de elementos", list_size(lista_filtrada));
     t_entradaTAAP* entradaProceso = list_get(lista_filtrada,0);
     uint32_t puntero_archivo = entradaProceso->puntero;
 
@@ -1850,7 +1857,7 @@ void rutina_read(thread_args_read* args)
     
     iniciar_nueva_espera_ready(pcb_activo); // hacer cada vez que se mete en la lista de ready
     
-    agregar_a_lista_con_sems(pcb_activo, listaReady, m_listaReady);
+    agregar_a_lista_ready_con_sems(pcb_activo, listaReady, m_listaReady);
     liberar_ce(contexto);
     sem_post(&proceso_en_ready);
     desbloquear_FS();
@@ -1937,7 +1944,7 @@ void rutina_write(thread_args_write* args)
     
     iniciar_nueva_espera_ready(pcb); // hacer cada vez que se mete en la lista de ready
     
-    agregar_a_lista_con_sems(pcb, listaReady, m_listaReady);
+    agregar_a_lista_ready_con_sems(pcb, listaReady, m_listaReady);
     
     sem_post(&proceso_en_ready);
     desbloquear_FS();
@@ -2014,7 +2021,7 @@ void rutina_truncate(thread_args_truncate* args)
     
     uint32_t cod_op = recibir_operacion(file_system_connection);
 
-    log_debug(kernel_logger, "El codigo de operacion que llega dentro de la rutina truncate es: %d", cod_op);
+    log_trace(kernel_logger, "El codigo de operacion que llega dentro de la rutina truncate es: %d", cod_op);
 
     pthread_mutex_lock(&m_listaBloqueados);
         list_remove_element(listaBloqueados, pcb);
@@ -2024,7 +2031,7 @@ void rutina_truncate(thread_args_truncate* args)
     
     iniciar_nueva_espera_ready(pcb); // hacer cada vez que se mete en la lista de ready
     
-    agregar_a_lista_con_sems(pcb, listaReady, m_listaReady);
+    agregar_a_lista_ready_con_sems(pcb, listaReady, m_listaReady);
     
     sem_post(&proceso_en_ready);
 }

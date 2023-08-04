@@ -16,7 +16,7 @@ int main(int argc, char ** argv) {
     signal(SIGINT, end_cpu_module);
 
     /* ---------------- LOGGING ---------------- */
-	cpu_logger = init_logger("./runlogs/cpu.log", "CPU", 1, LOG_LEVEL_TRACE);
+	cpu_logger = init_logger("./runlogs/cpu.log", "CPU", 1, LOG_LEVEL_INFO);
 
     log_info(cpu_logger, "INICIA EL MODULO DE CPU");
 	
@@ -486,7 +486,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             break;
 
         case I_MOV_IN: //MOV_IN (Registro, Dirección Lógica)
-            log_info(cpu_logger, "Instruccion MOV_IN ejecutada");
+            log_trace(cpu_logger, "Instruccion MOV_IN ejecutada");
             log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s", ce->id, instruction[0], instruction[1], instruction[2]);
 
             char* register_mov_in = instruction[1];
@@ -503,7 +503,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
 
                 store_value_in_register(register_mov_in, value);
                 log_info(cpu_logger, "PID: %d - Acción: LEER - Segmento: %d - Dirección Fisica: %d", ce->id, id_segmento, direccion_fisica);
-                log_info(cpu_logger,"YA GUARDE VALOR EN REGISTRO!!");
+                log_trace(cpu_logger,"YA GUARDE VALOR EN REGISTRO!!");
             }else{
                 log_info(cpu_logger, "PID: [%d] - Error SEG_FAULT- Segmento: [%d] -Offset: [%d] - Tamaño: [%d]", ce->id, id_segmento_con_segfault, desplazamiento_segfault, tamanio_segfault);
                 enviar_ce(socket_kernel, ce, SEG_FAULT, cpu_logger);
@@ -514,7 +514,7 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             break;
 
         case I_MOV_OUT: ///MOV_OUT (Dirección Lógica, Registro):
-            log_info(cpu_logger, "Ejecutando Instruccion MOV_OUT ");
+            log_trace(cpu_logger, "Ejecutando Instruccion MOV_OUT ");
             log_info(cpu_logger, "PID: %d - Ejecutando: %s - %s - %s", ce->id, instruction[0], instruction[1], instruction[2]);
 
             uint32_t logical_address_mov_out = atoi(instruction[1]);
@@ -525,14 +525,14 @@ void execute_instruction(char** instruction, contexto_ejecucion* ce){
             direccion_fisica = traducir_direccion_logica(logical_address_mov_out, ce, size_movout);
 
             if(sigsegv != 1){
-                log_info(cpu_logger, "Recibimos una physical address valida!");
+                log_trace(cpu_logger, "Recibimos una physical address valida!");
                 char* register_value_mov_out = encontrarValorDeRegistro(register_mov_out);
                 
                 escribir_valor(direccion_fisica, register_value_mov_out, ce->id, size_movout);
 
                 free(register_value_mov_out);
                 int code_op = recibir_operacion(conexion_cpu); // Si ta todo ok prosigo, si no ta todo ok que hago?
-                log_info(cpu_logger, "recibo operacion :%d",code_op);
+                log_trace(cpu_logger, "recibo operacion :%d",code_op);
 
                 if(code_op == MOV_OUT_OK) {  
                     log_info(cpu_logger, "PID: %d - Acción: ESCRIBIR - Segmento: %d -  Dirección Fisica: %d", ce->id, id_segmento, direccion_fisica);
@@ -662,8 +662,8 @@ void enviar_ce_con_string_entero(int client_socket, contexto_ejecucion* ce, char
     t_paquete* paquete = crear_paquete_op_code(codOP);
 
     agregar_ce_a_paquete(paquete, ce, cpu_logger);
-          log_error(cpu_logger,"el entero del archivo es %s", x);
-        log_error(cpu_logger,"el entero del archivo es %s", parameter);
+          log_trace(cpu_logger,"el entero del archivo es %s", x);
+        log_trace(cpu_logger,"el entero del archivo es %s", parameter);
     agregar_entero_a_paquete(paquete, atoi(x));
 
     agregar_a_paquete(paquete, parameter,strlen(parameter)+1); 
@@ -794,7 +794,7 @@ void escribir_valor(uint32_t physical_address, char* register_value_mov_out, uin
     agregar_entero_a_paquete(package, pid);
     agregar_entero_a_paquete(package, size);
     enviar_paquete(package, conexion_cpu);
-    log_warning(cpu_logger,"envie: physical adress: %d, reg value :%s,pid:%d,size:%d",physical_address,register_value_mov_out,pid,size);
+    log_trace(cpu_logger,"envie: physical adress: %d, reg value :%s,pid:%d,size:%d",physical_address,register_value_mov_out,pid,size);
 
 }
 /*---------------------------------- MMU ----------------------------------*/
@@ -808,7 +808,7 @@ uint32_t traducir_direccion_logica(uint32_t logical_address, contexto_ejecucion*
 
    
     offset = desplazamiento_segmento;
-    log_error(cpu_logger,"desplazamiento segmento:%d",desplazamiento_segmento);
+    log_trace(cpu_logger,"desplazamiento segmento:%d",desplazamiento_segmento);
 
 
     t_list* segment_table_ce = ce->tabla_segmentos;
@@ -851,7 +851,7 @@ char* fetch_value_in_memory(uint32_t physical_adress, contexto_ejecucion* ce, ui
     
     enviar_paquete(package, conexion_cpu);
     eliminar_paquete(package);
-    log_info(cpu_logger, "MOV IN enviado");    
+    log_trace(cpu_logger, "MOV IN enviado");    
 
     while(1){
         int code_op = recibir_operacion(conexion_cpu);
@@ -860,9 +860,9 @@ char* fetch_value_in_memory(uint32_t physical_adress, contexto_ejecucion* ce, ui
                 log_error(cpu_logger, "Llego el codop 0");
                 break;
             case MOV_IN_OK:
-                log_info(cpu_logger, "CODIGO OPERACION RECIBIDO EN CPU: %d", code_op);
+                log_trace(cpu_logger, "CODIGO OPERACION RECIBIDO EN CPU: %d", code_op);
                 char* value_received = recibir_string(conexion_cpu, cpu_logger);
-                log_info(cpu_logger, "recibo string %s", value_received);
+                log_trace(cpu_logger, "recibo string %s", value_received);
                 return value_received;
                 break;
             default:
@@ -887,7 +887,7 @@ char* fetch_value_in_memory(uint32_t physical_adress, contexto_ejecucion* ce, ui
 
 void store_value_in_register(char* register_mov_in, char* value){
 
-    log_info(cpu_logger, "El registro %s quedara el valor: %s",register_mov_in ,value);
+    log_trace(cpu_logger, "El registro %s quedara el valor: %s",register_mov_in ,value);
 
     add_value_to_register(register_mov_in, value);
 }
